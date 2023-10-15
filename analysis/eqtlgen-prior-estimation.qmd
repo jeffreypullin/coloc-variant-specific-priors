@@ -1,0 +1,19 @@
+---
+title: "eqtlgen prior estimation"
+format: html
+editor: source
+---
+
+```{r libraries, message = FALSE, warning = FALSE}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(janitor)
+```
+
+```{r}
+eqtlgen <- read_tsv(here::here("data", "eqtlgen.tsv"),
+                    show_col_types = FALSE, 
+                    name_repair = make_clean_names) |> 
+  rename(p_value = pvalue)
+```
