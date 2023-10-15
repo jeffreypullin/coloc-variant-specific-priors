@@ -5,15 +5,56 @@ editor: source
 ---
 
 ```{r libraries, message = FALSE, warning = FALSE}
+library(conflicted)
 library(readr)
+library(MASS)
 library(dplyr)
 library(ggplot2)
 library(janitor)
+library(purrr)
+
+conflicts_prefer(dplyr::select)
+conflicts_prefer(dplyr::filter)
 ```
 
 ```{r}
 eqtlgen <- read_tsv(here::here("data", "eqtlgen.tsv"),
                     show_col_types = FALSE, 
                     name_repair = make_clean_names) |> 
-  rename(p_value = pvalue)
+  rename(p_value = pvalue) |> 
+  mutate(log10_dist = log(dist, base = 10)) |>
+  filter(log10_dist > 0) 
+```
+
+```{r}
+weibull_param <- eqtlgen |> 
+  pull(log10_dist) |> 
+  fitdistr("weibull", lower = c(0, 0)) |> 
+  pluck("estimate") |> 
+  as.list()
+
+normal_param <- eqtlgen |> 
+  pull(log10_dist) |> 
+  fitdistr("normal") |> 
+  pluck("estimate") |> 
+  as.list()
+
+gamma_param <- eqtlgen |> 
+  pull(log10_dist) |> 
+  fitdistr("gamma", lower = c(0, 0)) |> 
+  pluck("estimate") |> 
+  as.list()
+
+eqtlgen |> 
+  ggplot(aes(log10_dist)) + 
+  geom_histogram(aes(y = after_stat(density)), 
+                 binwidth = 0.25, colour = "black", fill = "lightgrey") + 
+  geom_function(fun = dweibull, args = weibull_param, colour = "red") +
+  geom_function(fun = dnorm, args = normal_param, colour = "blue") +
+  geom_function(fun = dgamma, args = gamma_param, colour = "green") +
+  labs(
+    y = "Count", 
+    x = "Log(10) distance from variant to TSS of cognate gene"
+  ) + 
+  theme_bw() 
 ```
