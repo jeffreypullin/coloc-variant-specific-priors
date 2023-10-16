@@ -1,0 +1,1 @@
+Sitemap: https://jeffreypullin.github.io/coloc-estimated-eqtl-priors/sitemap.xml
