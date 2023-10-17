@@ -152,13 +152,11 @@ gumbel_param <- gtex_lung |>
   pluck("estimate") |> 
   as.list()
 
-test_weibull_param <- list(shape = 5.4 , scale = 4.6)
-
 gtex_lung |> 
   ggplot(aes(log10_dist)) + 
   geom_histogram(aes(y = after_stat(density)), 
                  binwidth = 0.25, colour = "black", fill = "lightgrey") + 
-  geom_function(aes(col = "Weibull"), fun = dweibull, args = test_weibull_param) +
+  geom_function(aes(col = "Weibull"), fun = dweibull, args = weibull_param) +
   geom_function(aes(col = "Normal"), fun = dnorm, args = normal_param) +
   geom_function(aes(col = "Gamma"), fun = dgamma, args = gamma_param) +
   geom_function(aes(col = "Log-normal"), fun = dlnorm, args = lognormal_param) +
