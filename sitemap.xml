@@ -2,10 +2,14 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://jeffreypullin.github.io/coloc-estimated-eqtl-priors/index.html</loc>
-    <lastmod>2023-10-16T14:36:17.992Z</lastmod>
+    <lastmod>2023-10-17T15:57:13.527Z</lastmod>
+  </url>
+  <url>
+    <loc>https://jeffreypullin.github.io/coloc-estimated-eqtl-priors/gtex-prior-estimation.html</loc>
+    <lastmod>2023-10-17T15:57:46.238Z</lastmod>
   </url>
   <url>
     <loc>https://jeffreypullin.github.io/coloc-estimated-eqtl-priors/eqtlgen-prior-estimation.html</loc>
-    <lastmod>2023-10-16T14:36:23.175Z</lastmod>
+    <lastmod>2023-10-17T15:57:52.267Z</lastmod>
   </url>
 </urlset>
