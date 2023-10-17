@@ -1,0 +1,174 @@
+---
+title: "GTEx prior analysis"
+format: html
+editor: source
+---
+
+```{r libraries, message = FALSE, warning = FALSE}
+library(conflicted)
+library(readr)
+library(MASS)
+library(dplyr)
+library(ggplot2)
+library(janitor)
+library(purrr)
+library(fitdistrplus)
+library(VGAM)
+
+conflicts_prefer(dplyr::select)
+conflicts_prefer(dplyr::filter)
+```
+
+```{r}
+gtex_whole_blood_raw <- read_tsv(
+  here::here("data", "GTEx_Analysis_v8_eQTL", "Whole_Blood.v8.signif_variant_gene_pairs.txt"),
+  show_col_types = FALSE
+)
+
+# This processing reproduces the processing described in (Fauman and Hyde 2022)
+gtex_whole_blood <- gtex_whole_blood_raw |> 
+  group_by(gene_id) |> 
+  arrange(pval_nominal) |> 
+  filter(row_number() == 1) |> 
+  filter(pval_nominal < 5 * 10^-8) |> 
+  mutate(abs_tss_distance = abs(tss_distance)) |> 
+  mutate(log10_abs_tss_distance = log10(abs_tss_distance)) |> 
+  filter(log10_abs_tss_distance > 0) |> 
+  mutate(log10_dist = log10_abs_tss_distance)
+```
+
+```{r}
+weibull_param <- gtex_whole_blood |> 
+  pull(log10_dist) |> 
+  fitdistr("weibull", lower = c(0, 0)) |> 
+  pluck("estimate") |> 
+  as.list()
+
+lognormal_param <- gtex_whole_blood |> 
+  pull(log10_dist) |> 
+  fitdistr("lognormal", lower = c(0, 0)) |> 
+  pluck("estimate") |> 
+  as.list()
+
+normal_param <- gtex_whole_blood |> 
+  pull(log10_dist) |> 
+  fitdistr("normal") |> 
+  pluck("estimate") |> 
+  as.list()
+
+gamma_param <- gtex_whole_blood |> 
+  pull(log10_dist) |> 
+  fitdistr("gamma", lower = c(0, 0)) |> 
+  pluck("estimate") |> 
+  as.list()
+
+pgumbel <- function(q,...) {
+  if (length(q) == 0) {
+    numeric(0) 
+  } else {
+    VGAM::pgumbel(q,...)
+  }
+}
+
+gumbel_param <- gtex_whole_blood |> 
+  pull(log10_dist) |> 
+  fitdistrplus::fitdist("gumbel", start=list(location = 3, scale = 1)) |> 
+  pluck("estimate") |> 
+  as.list()
+
+gtex_whole_blood |> 
+  ggplot(aes(log10_dist)) + 
+  geom_histogram(aes(y = after_stat(density)), 
+                 binwidth = 0.25, colour = "black", fill = "lightgrey") + 
+  geom_function(aes(col = "Weibull"), fun = dweibull, args = weibull_param) +
+  geom_function(aes(col = "Normal"), fun = dnorm, args = normal_param) +
+  geom_function(aes(col = "Gamma"), fun = dgamma, args = gamma_param) +
+  geom_function(aes(col = "Log-normal"), fun = dlnorm, args = lognormal_param) +
+  geom_function(aes(col = "Gumbel"), fun = dgumbel, args = gumbel_param) +
+  scale_colour_manual(values = c("red","black","purple", "green", "blue")) + 
+  labs(
+    colour = "Distribution",
+    y = "Density", 
+    x = "Log(10) distance from variant to TSS",
+    title = "GTEx whole blood data"
+  ) + 
+  theme_bw() 
+```
+
+```{r}
+gtex_lung_raw <- read_tsv(
+  here::here("data", "GTEx_Analysis_v8_eQTL", "Lung.v8.signif_variant_gene_pairs.txt"),
+  show_col_types = FALSE
+)
+
+# This processing reproduces the processing described in (Fauman and Hyde 2022)
+gtex_lung <- gtex_lung_raw |> 
+  group_by(gene_id) |> 
+  arrange(pval_nominal) |> 
+  filter(row_number() == 1) |> 
+  filter(pval_nominal < 5 * 10^-8) |> 
+  mutate(abs_tss_distance = abs(tss_distance)) |> 
+  mutate(log10_abs_tss_distance = log10(abs_tss_distance)) |> 
+  filter(log10_abs_tss_distance > 0) |> 
+  mutate(log10_dist = log10_abs_tss_distance)
+```
+
+```{r}
+weibull_param <- gtex_lung |> 
+  pull(log10_dist) |> 
+  fitdistr("weibull", lower = c(0, 0)) |> 
+  pluck("estimate") |> 
+  as.list()
+
+lognormal_param <- gtex_lung |> 
+  pull(log10_dist) |> 
+  fitdistr("lognormal", lower = c(0, 0)) |> 
+  pluck("estimate") |> 
+  as.list()
+
+normal_param <- gtex_whole_blood |> 
+  pull(log10_dist) |> 
+  fitdistr("normal") |> 
+  pluck("estimate") |> 
+  as.list()
+
+gamma_param <- gtex_lung |> 
+  pull(log10_dist) |> 
+  fitdistr("gamma", lower = c(0, 0)) |> 
+  pluck("estimate") |> 
+  as.list()
+
+pgumbel <- function(q,...) {
+  if (length(q) == 0) {
+    numeric(0) 
+  } else {
+    VGAM::pgumbel(q,...)
+  }
+}
+
+gumbel_param <- gtex_lung |> 
+  pull(log10_dist) |> 
+  fitdistrplus::fitdist("gumbel", start=list(location = 3, scale = 1)) |> 
+  pluck("estimate") |> 
+  as.list()
+
+test_weibull_param <- list(shape = 5.4 , scale = 4.6)
+
+gtex_lung |> 
+  ggplot(aes(log10_dist)) + 
+  geom_histogram(aes(y = after_stat(density)), 
+                 binwidth = 0.25, colour = "black", fill = "lightgrey") + 
+  geom_function(aes(col = "Weibull"), fun = dweibull, args = test_weibull_param) +
+  geom_function(aes(col = "Normal"), fun = dnorm, args = normal_param) +
+  geom_function(aes(col = "Gamma"), fun = dgamma, args = gamma_param) +
+  geom_function(aes(col = "Log-normal"), fun = dlnorm, args = lognormal_param) +
+  geom_function(aes(col = "Gumbel"), fun = dgumbel, args = gumbel_param) +
+  scale_colour_manual(values = c("red","black","purple", "green", "blue")) + 
+  labs(
+    colour = "Distribution",
+    y = "Density", 
+    x = "Log(10) distance from variant to TSS",
+    title = "GTEx lung data"
+  ) + 
+  theme_bw() 
+```
