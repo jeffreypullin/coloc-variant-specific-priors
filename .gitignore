@@ -6,3 +6,5 @@
 .quarto
 data
 notes
+archive
+.snakemake
