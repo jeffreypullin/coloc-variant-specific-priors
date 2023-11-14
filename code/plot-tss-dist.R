@@ -7,6 +7,7 @@ library(janitor)
 library(biomaRt)
 library(glue)
 library(tools)
+library(forcats)
 
 eqtl_catalogue_metadata <- read_tsv(
   here::here("data", "eqtl-catalogue", "tabix_ftp_paths.tsv")
@@ -51,9 +52,9 @@ process_file_eqtl_catalogue <- function(path, mart) {
 mart <- useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl")
 
 eqtl_catalogue_data <- tibble(
-  path = list.files(here::here("data", "eqtl-catalogue", "gws-sumstats"), full.names = TRUE)
+  path = list.files(here::here("data", "eqtl-catalogue", "processed-sumstats"), full.names = TRUE)
 ) |>
-  mutate(file = gsub("gws-(.+).cc.tsv", "\\1", basename(path))) |>
+  mutate(file = gsub("(.+).cc.tsv", "\\1", basename(path))) |>
   rowwise() |>
   mutate(log10_abs_tss_distance = list(process_file_eqtl_catalogue(path, mart))) |>
   ungroup() |>
@@ -117,50 +118,42 @@ process_file_gtex <- function(path) {
   raw_data <- read_tsv(path,
                        col_select = c(gene_id, pval_nominal, tss_distance),
                        show_col_types = FALSE, progress = FALSE)
-
   raw_data |>
     filter(pval_nominal < 5 * 10^-8) |>
     group_by(gene_id) |>
     arrange(pval_nominal) |>
     filter(row_number() == 1) |>
     mutate(abs_tss_distance = abs(tss_distance)) |>
-    mutate(log10_abs_tss_distance = log10(abs_tss_distance)) |>
-    filter(log10_abs_tss_distance > 0) |>
+    filter(abs_tss_distance > 0) |>
     ungroup() |>
-    pull(log10_abs_tss_distance)
+    pull(abs_tss_distance)
 }
 
-gtex_data <- tibble(
-  path = list.files(here::here("data", "GTEx_Analysis_v8_eQTL"),
-                    pattern = "\\.signif_variant_gene_pairs.txt$",
-                    full.names = TRUE)
-) |>
+gtex_data <- tibble(path = list.files(here::here("data", "gtex-v8"), full.names = TRUE)) |>
   rowwise() |>
   mutate(tissue = gsub("_", " ", unlist(strsplit(basename(path), "[.]"))[[1]])) |>
-  mutate(log10_abs_tss_distance = list(process_file_gtex(path))) |>
+  mutate(abs_tss_distance = list(process_file_gtex(path))) |>
   ungroup() |>
-  unnest(cols = log10_abs_tss_distance)
+  unnest(cols = abs_tss_distance)
 
 gtex_data |>
-  ggplot(aes(log10_abs_tss_distance, tissue)) +
-  geom_density_ridges(fill = "grey") +
-  scale_y_discrete(expand = c(0, 0)) +
-  scale_x_continuous(expand = c(0, 0)) +
-  coord_cartesian(clip = "off") +
+  mutate(tissue = fct_rev(factor(tissue))) |>
+  ggplot(aes(tissue, abs_tss_distance)) +
+  geom_boxplot(fill = "grey", outlier.alpha = 0.1) +
   labs(
-    y = "Tissue",
-    x = "Absolute Log(10) distance from variant to TSS",
-    title = "eQTL distance distribution in GTEx v8"
+    x = "Tissue",
+    y = "Distance to TSS"
   ) +
-  theme_bw() +
-  theme(rect = element_rect(linewidth = 0))
+  coord_flip() +
+  theme_bw()
 
 gtex_data |>
-  ggplot(aes(log10_abs_tss_distance)) +
-  geom_histogram(binwidth = 0.1, colour = "black", fill = "grey") +
+  ggplot(aes(abs_tss_distance)) +
+  geom_histogram(binwidth = 1000, colour = "black", fill = "grey") +
+  coord_cartesian(xlim = c(0, 500000)) +
   labs(
     y = "Count",
-    x = "Absolute Log(10) distance from variant to TSS",
+    x = "Absolute distance from variant to TSS",
     title = "eQTL distance distribution in GTEx v8"
   ) +
   theme_bw()
