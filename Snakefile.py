@@ -5,10 +5,11 @@ endothelial_celltypes = ["Lymphatic", "Systemicvenous", "aCap", "arteriole", "gC
 
 rule all: 
   input: 
+    "output/plots/gtex-tss-distance-boxplot-by-tissue.pdf",
+    "output/plots/eqtl-catalogue-tss-distance-by-dataset.pdf",
     "data/fauman-hyde/eqtlgen.txt",
     "data/eqtlgen.txt",  
-    expand("data/gtex-v8/{tissue}.v8.signif_variant_gene_pairs.txt", tissue = config["gtex_tissues"]), 
-    expand("data/eqtl-catalogue/sumstats/{dataset_id}.cc.tsv.gz", dataset_id = config["eqtl_catalogue_dataset_ids"]),
+    "data/gencode-v19.gtf.gz",
     expand("data/adipos-express/marginal-eur/{chromosome}.txt", chromosome = chromosomes),
     expand("data/adipos-express/ab1-eur/{chromosome}.txt", chromosome = chromosomes),
     expand("data/lung-single-cell/endothelial/{celltype}.txt", celltype = endothelial_celltypes)
@@ -43,9 +44,14 @@ rule extract_gtex_files:
     """
     tar -Oxf {input} GTEx_Analysis_v8_eQTL/{wildcards.tissue}.v8.signif_variant_gene_pairs.txt.gz | gunzip -c > {output}
     """
+    
+rule plot_gtex_files: 
+  input: gtex_paths = expand("data/gtex-v8/{tissue}.v8.signif_variant_gene_pairs.txt", tissue = config["gtex_tissues"]), 
+  output: boxplot_by_tissue_path = "output/plots/gtex-tss-distance-boxplot-by-tissue.pdf"
+  script: "code/plot-gtex-tss-distance.R"
 
 rule download_etl_catalogue_metadata: 
-  output: "data/eqtl-catalogue/" + "eqtl-catalogue-metadata.tsv"
+  output: "data/eqtl-catalogue/eqtl-catalogue-metadata.tsv"
   shell:
     """
     wget -O {output} https://raw.githubusercontent.com/eQTL-Catalogue/eQTL-Catalogue-resources/master/tabix/tabix_ftp_paths.tsv
@@ -53,10 +59,27 @@ rule download_etl_catalogue_metadata:
 
 rule download_eqtl_catalogue_files: 
   input: 
-    metadata_file = "data/eqtl-catalogue/" + "eqtl-catalogue-metadata.tsv"
+    metadata_file = "data/eqtl-catalogue/eqtl-catalogue-metadata.tsv"
   output: 
-    dataset_file = "data/eqtl-catalogue/sumstats/" + "{dataset_id}.cc.tsv.gz"
+    dataset_file = "data/eqtl-catalogue/sumstats/{dataset_id}.cc.tsv.gz"
   script: "code/download-eqtl-catalogue.R"
+  
+rule process_eqtl_catalogue_files:
+  input: "data/eqtl-catalogue/sumstats/{dataset_id}.cc.tsv.gz"
+  output: "data/eqtl-catalogue/processed-sumstats/{dataset_id}.cc.tsv"
+  shell:
+    """
+    zcat {input} | awk 'NR == 1 {{ print }} NR != 1 {{ if ($9 <= 5E-8) {{ print }} }} ' > {output}
+    """
+
+rule plot_eqtl_catalogue_files:
+  input: 
+    eqtl_catalogue_metadata = "data/eqtl-catalogue/eqtl-catalogue-metadata.tsv",
+    eqtl_catalogue_paths = expand("data/eqtl-catalogue/processed-sumstats/{dataset_id}.cc.tsv", 
+                                  dataset_id = config["eqtl_catalogue_dataset_ids"]),
+  output: 
+    boxplot_by_dataset_path = "output/plots/eqtl-catalogue-tss-distance-by-dataset.pdf"
+  script: "code/plot-eqtl-catalogue-tss-distance.R"
   
 rule download_adipos_express_tars: 
   output: 
@@ -100,3 +123,13 @@ rule extract_lung_endothelial_files:
     """
     tar -Oxf {input} endothelial_{wildcards.celltype}_qtl_results_all.txt > {output}
     """
+
+# NB: v19 is the version used in Brotman et. al.
+rule download_gencode_v19_gtf_file:
+  output: "data/gencode-v19.gtf.gz"
+  shell: 
+    """
+    wget -O {output} https://www.encodeproject.org/files/gencode.v19.annotation/@@download/gencode.v19.annotation.gtf.gz
+    """
+    
+
