@@ -1,3 +1,7 @@
+#!/bin/bash
 
-module load R/4.2.2
-snakemake -s Snakefile.py --cores 1 --rerun-incomplete
+source ~/.bashrc
+module load R/4.2.0
+micromamba activate snakemake
+
+snakemake -s Snakefile.py --profile none
