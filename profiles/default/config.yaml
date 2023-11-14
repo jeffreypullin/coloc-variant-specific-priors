@@ -1,0 +1,22 @@
+cluster: "
+  sbatch
+  --parsable
+  --account MRC-BSU-SL2-CPU
+  -D /home/jp2045/coloc-estimated-eqtl-priors/
+  -p cclake
+  -t {resources.time_min}
+  --mem={resources.mem_mb}
+  -c {resources.cpus}
+  -o logs/{rule}_{wildcards}.out
+  -e logs/{rule}_{wildcards}.err
+"
+jobs: 100
+rerun-incomplete: true
+max-jobs-per-second: 2
+printshellcmds: true
+default-resources: [cpus=1, mem_mb=4000, time_min=20]
+nolock: true
+cluster-status: './profiles/default/cluster-status.py'
+cluster-cancel: 'scancel'
+max-status-checks-per-second: 10
+latency-wait: 20
