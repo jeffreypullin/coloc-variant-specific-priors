@@ -5,12 +5,13 @@ endothelial_celltypes = ["Lymphatic", "Systemicvenous", "aCap", "arteriole", "gC
 
 rule all: 
   input: 
-    "output/plots/gtex-tss-distance-boxplot-by-tissue.pdf",
-    "output/plots/eqtl-catalogue-tss-distance-by-dataset.pdf",
+    "data/plot-data/eqtl-catalogue.rds",
+    "data/plot-data/gtex.rds",
+    "data/plot-data/adipos-express-marginal.rds",
     "data/fauman-hyde/eqtlgen.txt",
-    "data/eqtlgen.txt",  
-    "data/gencode-v19.gtf.gz",
-    expand("data/adipos-express/marginal-eur/{chromosome}.txt", chromosome = chromosomes),
+    "data/eqtlgen.txt",
+    "data/onek1k.tsv",
+    expand("data/adipos-express/processed-marginal-eur/{chromosome}.txt", chromosome = chromosomes),
     expand("data/adipos-express/ab1-eur/{chromosome}.txt", chromosome = chromosomes),
     expand("data/lung-single-cell/endothelial/{celltype}.txt", celltype = endothelial_celltypes)
 
@@ -45,10 +46,10 @@ rule extract_gtex_files:
     tar -Oxf {input} GTEx_Analysis_v8_eQTL/{wildcards.tissue}.v8.signif_variant_gene_pairs.txt.gz | gunzip -c > {output}
     """
     
-rule plot_gtex_files: 
+rule extract_plot_data_gtex: 
   input: gtex_paths = expand("data/gtex-v8/{tissue}.v8.signif_variant_gene_pairs.txt", tissue = config["gtex_tissues"]), 
-  output: boxplot_by_tissue_path = "output/plots/gtex-tss-distance-boxplot-by-tissue.pdf"
-  script: "code/plot-gtex-tss-distance.R"
+  output: plot_data_path = "data/plot-data/gtex.rds"
+  script: "code/extract-plot-data-gtex.R"
 
 rule download_etl_catalogue_metadata: 
   output: "data/eqtl-catalogue/eqtl-catalogue-metadata.tsv"
@@ -72,14 +73,14 @@ rule process_eqtl_catalogue_files:
     zcat {input} | awk 'NR == 1 {{ print }} NR != 1 {{ if ($9 <= 5E-8) {{ print }} }} ' > {output}
     """
 
-rule plot_eqtl_catalogue_files:
-  input: 
+rule extract_plot_data_eqtl_catalogue:
+  input:
     eqtl_catalogue_metadata = "data/eqtl-catalogue/eqtl-catalogue-metadata.tsv",
-    eqtl_catalogue_paths = expand("data/eqtl-catalogue/processed-sumstats/{dataset_id}.cc.tsv", 
+    eqtl_catalogue_paths = expand("data/eqtl-catalogue/processed-sumstats/{dataset_id}.cc.tsv",
                                   dataset_id = config["eqtl_catalogue_dataset_ids"]),
-  output: 
-    boxplot_by_dataset_path = "output/plots/eqtl-catalogue-tss-distance-by-dataset.pdf"
-  script: "code/plot-eqtl-catalogue-tss-distance.R"
+  output:
+    plot_data_path = "data/plot-data/eqtl-catalogue.rds"
+  script: "code/extract-plot-data-eqtl-catalogue.R"
   
 rule download_adipos_express_tars: 
   output: 
@@ -100,6 +101,22 @@ rule extract_adipos_express_marginal_files:
     {output}
     """
     
+rule process_adipos_express_marginal_files:
+  input: "data/adipos-express/marginal-eur/{chromosome}.txt"
+  output: "data/adipos-express/processed-marginal-eur/{chromosome}.txt"
+  shell: 
+    """
+    awk 'NR == 1 {{ print }} NR != 1 {{ if ($10 <= 5E-8) {{ print }} }} ' {input} > {output}
+    """
+
+rule extract_plot_data_adipos_express_marginal:
+  input:
+    adipos_express_marginal_paths = expand("data/adipos-express/processed-marginal-eur/{chromosome}.txt",
+                                            chromosome = chromosomes)
+  output:
+    plot_data_path = "data/plot-data/adipos-express-marginal.rds"
+  script: "code/extract-plot-data-adipos-express-marginal.R"
+  
 rule extract_adipos_express_ab1_files:
   input: "data/adipos-express-ab1-eur-by-chr.tar",
   output: "data/adipos-express/ab1-eur/{chromosome}.txt"
@@ -107,6 +124,13 @@ rule extract_adipos_express_ab1_files:
     """
     tar -Oxf {input} AB1_byChr_EURonly/EURonly_AB1_local_eQTL_meta_{wildcards.chromosome}.txt > \
     {output}
+    """
+
+rule download_onek1k_data:
+  output: "data/onek1k.tsv"
+  shell:
+    """
+    wget https://onek1k.s3.ap-southeast-2.amazonaws.com/esnp/esnp_table.tsv.gz -O - | gunzip -c > {output}
     """
 
 rule download_lung_endothelial_tar:
@@ -124,12 +148,6 @@ rule extract_lung_endothelial_files:
     tar -Oxf {input} endothelial_{wildcards.celltype}_qtl_results_all.txt > {output}
     """
 
-# NB: v19 is the version used in Brotman et. al.
-rule download_gencode_v19_gtf_file:
-  output: "data/gencode-v19.gtf.gz"
-  shell: 
-    """
-    wget -O {output} https://www.encodeproject.org/files/gencode.v19.annotation/@@download/gencode.v19.annotation.gtf.gz
-    """
+
     
 
