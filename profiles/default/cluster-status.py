@@ -1,62 +1,19 @@
 #!/usr/bin/env python
-import argparse
 import subprocess
-import time
+import sys
 
-STATE_MAP = {
-    "BOOT_FAIL": "failed",
-    "CANCELLED": "failed",
-    "COMPLETED": "success",
-    "CONFIGURING": "running",
-    "COMPLETING": "running",
-    "DEADLINE": "failed",
-    "FAILED": "failed",
-    "NODE_FAIL": "failed",
-    "OUT_OF_MEMORY": "failed",
-    "PENDING": "running",
-    "PREEMPTED": "failed",
-    "RUNNING": "running",
-    "RESIZING": "running",
-    "SUSPENDED": "running",
-    "TIMEOUT": "failed",
-    "UNKNOWN": "running"
-}
+# NB: See docs here: https://snakemake.readthedocs.io/en/stable/tutorial/additional_features.html#using-cluster-status
 
+jobid = sys.argv[1]
 
-def fetch_status(batch_id):
-    """fetch the status for the batch id"""
-    sacct_args = ["sacct", "-j",  batch_id, "-o", "State", "--parsable2",
-                  "--noheader"]
+output = str(subprocess.check_output(f"sacct -j {jobid} --format State --noheader | head -1 | awk '{{print $1}}'", shell = True).strip())
 
-    try:
-        output = subprocess.check_output(sacct_args).decode("utf-8").strip()
-    except Exception:
-        # If sacct fails for whatever reason, assume its temporary and return 'running'
-        output = 'UNKNOWN'
+# TODO This is probably not comprehensive, what other states?
+running_status = ["PENDING", "RUNNING"]
 
-    # The first output is the state of the overall job
-    # See
-    # https://stackoverflow.com/questions/52447602/slurm-sacct-shows-batch-and-extern-job-names
-    # for details
-    job_status = output.split("\n")[0]
-
-    # If the job was cancelled manually, it will say by who, e.g "CANCELLED by 12345"
-    # We only care that it was cancelled
-    if job_status.startswith("CANCELLED by"):
-        job_status = "CANCELLED"
-
-    # Otherwise, return the status
-    try:
-        return STATE_MAP[job_status]
-    except KeyError:
-        raise NotImplementedError(f"Encountered unknown status {job_status} "
-                                  f"when parsing output:\n{output}")
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("batch_id", type=str)
-    args = parser.parse_args()
-
-    status = fetch_status(args.batch_id)
-    print(status)
+if "COMPLETED" in output:
+    print("success")
+elif any(r in output for r in running_status):
+    print("running")
+else:
+    print("failed")
