@@ -1,9 +1,9 @@
 cluster: "
   sbatch
   --parsable
-  --account MRC-BSU-SL2-CPU
-  -D /home/jp2045/coloc-estimated-eqtl-priors/
+  -A mrc-bsu-sl2-cpu
   -p cclake
+  -D /home/jp2045/coloc-estimated-eqtl-priors/
   -t {resources.time_min}
   --mem={resources.mem_mb}
   -c {resources.cpus}
@@ -14,7 +14,7 @@ jobs: 100
 rerun-incomplete: true
 max-jobs-per-second: 2
 printshellcmds: true
-default-resources: [cpus=1, mem_mb=4000, time_min=20]
+default-resources: [cpus=1, mem_mb=3000, time_min=10]
 nolock: true
 cluster-status: './profiles/default/cluster-status.py'
 cluster-cancel: 'scancel'
