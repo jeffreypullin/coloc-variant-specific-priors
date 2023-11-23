@@ -28,10 +28,10 @@ rule download_eqtlgen_data:
     mv 2019-12-11-cis-eQTLsFDR0.05-ProbeLevel-CohortInfoRemoved-BonferroniAdded.txt {output}
     """
     
-rule extract_plot_data_eqtlgen:
+rule proceess_eqtlgen_data:
   input: eqtlgen_path =  "data/eqtlgen.txt"
   output: plot_data_path = "data/plot-data/eqtlgen.rds"
-  script: "code/extract-plot-data-eqtlgen.R"
+  script: "code/process-data/process-eqtlgen-data.R"
     
 rule download_gtex_tar: 
   output: temporary("data/gtex-v8.tar")
@@ -48,10 +48,11 @@ rule extract_gtex_files:
     tar -Oxf {input} GTEx_Analysis_v8_eQTL/{wildcards.tissue}.v8.signif_variant_gene_pairs.txt.gz | gunzip -c > {output}
     """
     
-rule extract_plot_data_gtex: 
-  input: gtex_paths = expand("data/gtex-v8/{tissue}.v8.signif_variant_gene_pairs.txt", tissue = config["gtex_tissues"]), 
-  output: plot_data_path = "data/plot-data/gtex.rds"
-  script: "code/extract-plot-data-gtex.R"
+rule process_gtex_data: 
+  input: gtex_paths = expand("data/gtex-v8/{tissue}.v8.signif_variant_gene_pairs.txt", 
+                             tissue = config["gtex_tissues"]), 
+  output: plot_data_path = "data/processed-data/gtex.rds"
+  script: "code/process-gtex-data.R"
 
 rule download_etl_catalogue_metadata: 
   output: "data/eqtl-catalogue/eqtl-catalogue-metadata.tsv"
@@ -65,7 +66,7 @@ rule download_eqtl_catalogue_files:
   output: dataset_file = "data/eqtl-catalogue/sumstats/{dataset_id}.cc.tsv.gz"
   script: "code/download-eqtl-catalogue.R"
   
-rule process_eqtl_catalogue_files:
+rule filter_eqtl_catalogue_files:
   input: "data/eqtl-catalogue/sumstats/{dataset_id}.cc.tsv.gz"
   output: "data/eqtl-catalogue/processed-sumstats/{dataset_id}.cc.tsv"
   shell:
@@ -73,14 +74,14 @@ rule process_eqtl_catalogue_files:
     zcat {input} | awk 'NR == 1 {{ print }} NR != 1 {{ if ($9 <= 5E-8) {{ print }} }} ' > {output}
     """
 
-rule extract_plot_data_eqtl_catalogue:
+rule process_eqtl_catalogue_data:
   input:
     eqtl_catalogue_metadata = "data/eqtl-catalogue/eqtl-catalogue-metadata.tsv",
     eqtl_catalogue_paths = expand("data/eqtl-catalogue/processed-sumstats/{dataset_id}.cc.tsv",
                                   dataset_id = config["eqtl_catalogue_dataset_ids"]),
   output:
-    plot_data_path = "data/plot-data/eqtl-catalogue.rds"
-  script: "code/extract-plot-data-eqtl-catalogue.R"
+    plot_data_path = "data/processed-data/eqtl-catalogue.rds"
+  script: "code/process-data/process-eqtl-catalogue.R-data"
   
 rule download_adipos_express_tars: 
   output: temporary("data/adipos-express-marginal-eur-by-chr.tar"),
@@ -98,7 +99,7 @@ rule extract_adipos_express_marginal_files:
     {output}
     """
     
-rule process_adipos_express_marginal_files:
+rule filter_adipos_express_marginal_files:
   input: "data/adipos-express/marginal-eur/{chromosome}.txt"
   output: "data/adipos-express/processed-marginal-eur/{chromosome}.txt"
   shell: 
@@ -106,13 +107,13 @@ rule process_adipos_express_marginal_files:
     awk 'NR == 1 {{ print }} NR != 1 {{ if ($10 <= 5E-8) {{ print }} }} ' {input} > {output}
     """
 
-rule extract_plot_data_adipos_express_marginal:
+rule process_adipos_express_marginal_data:
   input:
     adipos_express_marginal_paths = expand("data/adipos-express/processed-marginal-eur/{chromosome}.txt",
                                             chromosome = chromosomes)
   output:
-    plot_data_path = "data/plot-data/adipos-express-marginal.rds"
-  script: "code/extract-plot-data-adipos-express-marginal.R"
+    plot_data_path = "data/processed-data/adipos-express-marginal.rds"
+  script: "code/process-adipos-express-marginal-data.R"
   
 rule download_onek1k_data:
   output: "data/onek1k.tsv"
@@ -121,7 +122,7 @@ rule download_onek1k_data:
     wget https://onek1k.s3.ap-southeast-2.amazonaws.com/esnp/esnp_table.tsv.gz -O - | gunzip -c > {output}
     """
     
-rule extract_plot_data_onek1k:
+rule process_onek1k_data:
   input: onek1k_path =  "data/onek1k.tsv"
   output: plot_data_path = "data/plot-data/onek1k.rds"
-  script: "code/extract-plot-data-onek1k.R"
+  script: "code/process-data/processe-onek1k-data.R"
