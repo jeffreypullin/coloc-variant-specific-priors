@@ -4,14 +4,20 @@ chromosomes = ["chr" + str(x) for x in range(1, 23)] + ["chrX"]
 
 rule all: 
   input: 
-    "data/plot-data/eqtl-catalogue.rds",
-    "data/plot-data/gtex.rds",
-    "data/plot-data/adipos-express-marginal.rds",
-    "data/plot-data/eqtlgen.rds",
-    "data/plot-data/onek1k.rds",
+    "data/processed-data/eqtl-catalogue.rds",
+    "data/processed-data/gtex.rds",
+    "data/processed-data/adipos-express-marginal.rds",
+    "data/processed-data/eqtlgen.rds",
+    "data/processed-data/onek1k.rds",
     "data/fauman-hyde/eqtlgen.txt",
+    "data/tss-data/hg19-tss-data.rds",
     expand("data/adipos-express/processed-ab1-eur/{chromosome}.txt", chromosome = chromosomes),
 
+rule download_tss_data: 
+  output: hg19_tss_data_path = "data/tss-data/hg19-tss-data.rds",
+          hg38_tss_data_path = "data/tss-data/hg38-tss-data.rds"
+  script: "code/download-tss-data.R"
+    
 rule download_fauman_hyde_eqtlgen_data: 
   output: "data/fauman-hyde/eqtlgen.txt"
   shell:
@@ -28,9 +34,9 @@ rule download_eqtlgen_data:
     mv 2019-12-11-cis-eQTLsFDR0.05-ProbeLevel-CohortInfoRemoved-BonferroniAdded.txt {output}
     """
     
-rule proceess_eqtlgen_data:
+rule process_eqtlgen_data:
   input: eqtlgen_path =  "data/eqtlgen.txt"
-  output: plot_data_path = "data/plot-data/eqtlgen.rds"
+  output: processed_data_path = "data/processed-data/eqtlgen.rds"
   script: "code/process-data/process-eqtlgen-data.R"
     
 rule download_gtex_tar: 
@@ -49,10 +55,9 @@ rule extract_gtex_files:
     """
     
 rule process_gtex_data: 
-  input: gtex_paths = expand("data/gtex-v8/{tissue}.v8.signif_variant_gene_pairs.txt", 
-                             tissue = config["gtex_tissues"]), 
-  output: plot_data_path = "data/processed-data/gtex.rds"
-  script: "code/process-gtex-data.R"
+  input: gtex_paths = expand("data/gtex-v8/{tissue}.v8.signif_variant_gene_pairs.txt", tissue = config["gtex_tissues"])
+  output: processed_data_path = "data/processed-data/gtex.rds"
+  script: "code/process-data/process-gtex-data.R"
 
 rule download_etl_catalogue_metadata: 
   output: "data/eqtl-catalogue/eqtl-catalogue-metadata.tsv"
@@ -77,11 +82,12 @@ rule filter_eqtl_catalogue_files:
 rule process_eqtl_catalogue_data:
   input:
     eqtl_catalogue_metadata = "data/eqtl-catalogue/eqtl-catalogue-metadata.tsv",
+    tss_data_path = "data/tss-data/hg38-tss-data.rds",
     eqtl_catalogue_paths = expand("data/eqtl-catalogue/processed-sumstats/{dataset_id}.cc.tsv",
                                   dataset_id = config["eqtl_catalogue_dataset_ids"]),
   output:
-    plot_data_path = "data/processed-data/eqtl-catalogue.rds"
-  script: "code/process-data/process-eqtl-catalogue.R-data"
+    processed_data_path = "data/processed-data/eqtl-catalogue.rds"
+  script: "code/process-data/process-eqtl-catalogue-data.R"
   
 rule download_adipos_express_tars: 
   output: temporary("data/adipos-express-marginal-eur-by-chr.tar"),
@@ -110,10 +116,11 @@ rule filter_adipos_express_marginal_files:
 rule process_adipos_express_marginal_data:
   input:
     adipos_express_marginal_paths = expand("data/adipos-express/processed-marginal-eur/{chromosome}.txt",
-                                            chromosome = chromosomes)
+                                            chromosome = chromosomes),
+    tss_data_path = "data/tss_data/hg19-tss-data.rds"                                      
   output:
-    plot_data_path = "data/processed-data/adipos-express-marginal.rds"
-  script: "code/process-adipos-express-marginal-data.R"
+    processed_data_path = "data/processed-data/adipos-express-marginal.rds"
+  script: "code/process-data/process-adipos-express-marginal-data.R"
   
 rule download_onek1k_data:
   output: "data/onek1k.tsv"
@@ -123,6 +130,7 @@ rule download_onek1k_data:
     """
     
 rule process_onek1k_data:
-  input: onek1k_path =  "data/onek1k.tsv"
-  output: plot_data_path = "data/plot-data/onek1k.rds"
-  script: "code/process-data/processe-onek1k-data.R"
+  input: onek1k_path =  "data/onek1k.tsv",
+    tss_data_path = "data/tss_data/hg19-tss-data.rds"
+  output: processed_data_path = "data/processed-data/onek1k.rds"
+  script: "code/process-data/process-onek1k-data.R"

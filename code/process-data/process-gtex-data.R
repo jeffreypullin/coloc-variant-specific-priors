@@ -1,13 +1,11 @@
 source(here::here("renv/activate.R"))
 
-library(readr)
-library(ggplot2)
 library(dplyr, warn.conflicts = FALSE)
+library(readr)
 library(tidyr)
-library(forcats)
 
 gtex_paths <- snakemake@input[["gtex_paths"]]
-plot_data_path <- snakemake@output[["plot_data_path"]]
+processed_data_path <- snakemake@output[["processed_data_path"]]
 
 process_file_gtex <- function(path) {
 
@@ -19,17 +17,20 @@ process_file_gtex <- function(path) {
     group_by(gene_id) |>
     arrange(pval_nominal) |>
     filter(row_number() == 1) |>
-    mutate(abs_tss_distance = abs(tss_distance)) |>
-    filter(abs_tss_distance > 0) |>
     ungroup() |>
-    pull(abs_tss_distance)
+    pull(tss_distance)
 }
 
 gtex_data <- tibble(path = gtex_paths) |>
   rowwise() |>
   mutate(tissue = gsub("_", " ", unlist(strsplit(basename(path), "[.]"))[[1]])) |>
-  mutate(abs_tss_distance = list(process_file_gtex(path))) |>
+  mutate(tss_distance = list(process_file_gtex(path))) |>
   ungroup() |>
-  unnest(cols = abs_tss_distance)
+  unnest(cols = tss_distance) |>
+  mutate(
+    abs_tss_distance = abs(tss_distance),
+    log10_tss_distance = log10(tss_distance),
+    log10_abs_tss_distance = log10(abs_tss_distance)
+  )
 
-saveRDS(gtex_data, here::here(plot_data_path))
+saveRDS(gtex_data, processed_data_path)
