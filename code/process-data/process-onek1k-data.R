@@ -6,8 +6,8 @@ library(tidyr)
 library(janitor)
 
 onek1k_path <- snakemake@input[["onek1k_path"]]
+tss_data_path <- snakemake@input[["tss_data_path"]]
 processed_data_path <- snakemake@output[["processed_data_path"]]
-tss_data_path <- snakemake@output[["tss_data_path"]]
 
 hg19_tss_data <- readRDS(tss_data_path)
 

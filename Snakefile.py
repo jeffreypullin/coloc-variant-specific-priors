@@ -130,7 +130,8 @@ rule download_onek1k_data:
     """
     
 rule process_onek1k_data:
-  input: onek1k_path =  "data/onek1k.tsv",
-    tss_data_path = "data/tss_data/hg19-tss-data.rds"
+  input: 
+    onek1k_path =  "data/onek1k.tsv",
+    tss_data_path = "data/tss-data/hg19-tss-data.rds"
   output: processed_data_path = "data/processed-data/onek1k.rds"
   script: "code/process-data/process-onek1k-data.R"

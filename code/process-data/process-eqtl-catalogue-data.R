@@ -24,7 +24,7 @@ process_file_eqtl_catalogue <- function(path, tss_data) {
     left_join(tss_data, by = join_by(gene_id == ensembl_gene_id)) |>
     # NOTE: Remove genes that do not have a corresponding TSS.
     filter(!is.na(tss)) |>
-    mutate(tss_distance = abs(position - tss)) |>
+    mutate(tss_distance = position - tss) |>
     pull(tss_distance)
 }
 
