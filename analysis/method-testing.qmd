@@ -1,0 +1,190 @@
+---
+title: "Method testing"
+format: html
+editor: source
+---
+
+```{r}
+library(readr)
+library(janitor)
+library(dplyr)
+library(patchwork)
+library(tidyr)
+```
+
+```{r}
+hg38_data <- readRDS("/home/jp2045/coloc-estimated-eqtl-priors/data/tss-data/hg38-tss-data.rds")
+```
+
+```{r functions}
+plot_bfs <- function(bfs, snps, tss = NULL, with_prior = FALSE) {
+ 
+  # Only take the first susie signal.
+  bfs <- bfs[1, snps]
+  # Assume SNPS are in chr:bp format.
+  bps <- vapply(strsplit(snps, ":"), \(x) as.numeric(x[[2]]), numeric(1))
+  
+  if (!is.null(tss) & with_prior) {
+    prior_vec <- 10^-4 * length(bps) * coloc:::calculate_non_uniform_p(bps, tss)
+    bfs <- bfs + log(prior_vec)
+  }
+  
+  p <- tibble(bf = bfs, bp = bps) |> 
+    ggplot(aes(bp, bf)) + 
+    geom_point()
+  
+  if (!is.null(tss)) {
+    p <- p + geom_vline(xintercept = tss, colour = "red")
+  }
+  
+  p + 
+    labs(x = "", y = "BF") + 
+    theme_bw()
+}
+
+lookup_tss <- function(trait) {
+  gene_id <- unlist(strsplit(trait, ".", fixed = TRUE))[[2]]
+  hg38_data |> 
+    filter(ensembl_gene_id == gene_id) |> 
+    pull(tss)
+}
+```
+
+```{r}
+load("/rds/project/cew54/rds-cew54-basis/People/CHRIS/colocs_for_jeffrey.RData")
+devtools::load_all("~/coloc")
+
+# 27 rows have 'too small overlap' warnings.
+method_comparison_data <- COLOC |> 
+  # The BLUEPRINT Bayes factors are empty.
+  filter(!(substr(trait1, 1, 9) == "BLUEPRINT" | substr(trait2, 1, 9) == "BLUEPRINT")) |> 
+  as_tibble() |> 
+  mutate(
+    gene1 = grepl("ENSG", trait1, fixed = TRUE),
+    gene2 = grepl("ENSG", trait2, fixed = TRUE)
+  ) |> 
+  filter(gene1 | gene2) |> 
+  rowwise() |> 
+  # Assume that only 1 trait is an expression trait.
+  mutate(tss = ifelse(gene1, lookup_tss(trait1), lookup_tss(trait2))) |> 
+  select(trait1, trait2, block, tss, gene1) |>
+  mutate(coloc_unif = list(coloc.bf_bf(BF[[block]][[trait1]], BF[[block]][[trait2]]))) |> 
+  mutate(coloc_non_unif = ifelse(
+    gene1, 
+    list(coloc.bf_bf(BF[[block]][[trait1]], BF[[block]][[trait2]], tss1 = tss)), 
+    list(coloc.bf_bf(BF[[block]][[trait1]], BF[[block]][[trait2]], tss2 = tss))
+  )) |> 
+  rowwise() |> 
+  mutate(h4_unif = list(coloc_unif$summary$PP.H4.abf)) |> 
+  mutate(h4_non_unif = list(coloc_non_unif$summary$PP.H4.abf)) |> 
+  filter(!any(is.na(h4_unif))) |> 
+  filter(!any(is.na(h4_non_unif)))
+```
+
+```{r}
+method_comparison_data |> 
+  mutate(
+    h4_non_unif = max(h4_non_unif), 
+    h4_unif = max(h4_unif)
+  ) |> 
+  ggplot(aes(h4_unif, h4_non_unif)) + 
+  geom_point() + 
+  geom_segment(aes(xend = h4_unif, yend = h4_unif), color = "grey") +
+  geom_abline(col = "grey") + 
+  labs(
+    x = "H4: Uniform priors", 
+    y = "H4: Non-uniform priors"
+  ) + 
+  theme_bw()
+```
+
+```{r}
+method_comparison_data |> 
+  mutate(
+    h4_non_unif = max(h4_non_unif), 
+    h4_unif = max(h4_unif)
+  ) |> 
+  filter(h4_unif <= 0.6 & h4_non_unif > 0.6)
+```
+
+```{r}
+method_comparison_data |> 
+  mutate(
+    h4_non_unif = max(h4_non_unif), 
+    h4_unif = max(h4_unif)
+  ) |>  
+  mutate(h4_diff = h4_unif - h4_non_unif) |> 
+  ggplot(aes(h4_diff)) + 
+  geom_histogram(binwidth = 0.005)
+```
+
+```{r}
+method_comparison_data |> 
+  mutate(
+    h4_non_unif = max(h4_non_unif), 
+    h4_unif = max(h4_unif)
+  ) |>  
+  mutate(h4_diff = h4_unif - h4_non_unif) |> 
+  mutate(abs_h4_diff = abs(h4_diff)) |> 
+  arrange(desc(abs_h4_diff))
+
+method_comparison_data |> 
+  mutate(
+    h4_non_unif = max(h4_non_unif), 
+    h4_unif = max(h4_unif)
+  ) |>  
+  mutate(h4_diff = h4_unif - h4_non_unif) |> 
+  mutate(abs_h4_diff = abs(h4_diff)) |> 
+  arrange(abs_h4_diff)
+```
+
+Lower Pr(H4) with the non-uniform priors.
+
+```{r}
+snps1 <- colnames(BF[["chr3_block79"]][["CCL19_Zhao_37563310_1-hg38.tsv.gz"]])
+snps2 <- colnames(BF[["chr3_block79"]][["GENCORD_ge_fibroblast.ENSG00000113971"]])
+isnps <- intersect(snps1, snps2)
+hg38_data |> 
+  filter(ensembl_gene_id == "ENSG00000113971")
+
+plot_bfs(BF[["chr3_block79"]][["CCL19_Zhao_37563310_1-hg38.tsv.gz"]], isnps) + 
+ plot_bfs(BF[["chr3_block79"]][["GENCORD_ge_fibroblast.ENSG00000113971"]], isnps, 
+          tss = 132721707)  
+```
+
+Higher Pr(H4) with the non-uniform priors.
+
+```{r}
+snps1 <- colnames(BF[["chr2_block25"]][["Lepik_2017_ge_blood.ENSG00000234936"]])
+snps2 <- colnames(BF[["chr2_block25"]][["UC_DeLange_28067908_1-hg38.tsv.gz"]])
+isnps <- intersect(snps1, snps2)
+hg38_data |> 
+  filter(ensembl_gene_id == "ENSG00000234936")
+
+plot_bfs(BF[["chr2_block25"]][["Lepik_2017_ge_blood.ENSG00000234936"]], isnps) + 
+ plot_bfs(BF[["chr2_block25"]][["UC_DeLange_28067908_1-hg38.tsv.gz"]], isnps, 
+          tss = 43229573, with_prior = TRUE)  
+```
+
+No change, high Pr(H4)
+
+```{r}
+snps1 <- colnames(BF[["chr2_block130"]][["GENCORD_ge_T-cell.ENSG00000115009"]])
+snps2 <- colnames(BF[["chr2_block130"]][["ASTCO_Ferreira_30929738_1-hg38.tsv.gz"]])
+isnps <- intersect(snps1, snps2)
+hg38_data |> 
+  filter(ensembl_gene_id == "ENSG00000115009")
+
+plot_bfs(BF[["chr2_block130"]][["GENCORD_ge_T-cell.ENSG00000115009"]], isnps) + 
+ plot_bfs(BF[["chr2_block130"]][["ASTCO_Ferreira_30929738_1-hg38.tsv.gz"]], isnps, 
+          tss = 227813842)  
+
+coloc.bf_bf(BF[["chr2_block130"]][["GENCORD_ge_T-cell.ENSG00000115009"]], 
+            BF[["chr2_block130"]][["ASTCO_Ferreira_30929738_1-hg38.tsv.gz"]])
+
+coloc.bf_bf(BF[["chr2_block130"]][["GENCORD_ge_T-cell.ENSG00000115009"]], 
+            BF[["chr2_block130"]][["ASTCO_Ferreira_30929738_1-hg38.tsv.gz"]], 
+            tss2 = 227813842)
+```
+
+Q: How to you make the ultimate colocalisation? Is the 'sharpness' of the peak important?
