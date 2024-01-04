@@ -153,422 +153,103 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(readr)</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(janitor)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>
-Attaching package: 'janitor'</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>The following objects are masked from 'package:stats':
-
-    chisq.test, fisher.test</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>
-Attaching package: 'dplyr'</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>The following objects are masked from 'package:stats':
-
-    filter, lag</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>The following objects are masked from 'package:base':
-
-    intersect, setdiff, setequal, union</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(patchwork)</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(janitor)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(patchwork)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>hg38_data <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"/home/jp2045/coloc-estimated-eqtl-priors/data/tss-data/hg38-tss-data.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>hg38_data <span class="ot">&lt;-</span> <span class="fu">readRDS</span>(<span class="st">"/home/jp2045/coloc-estimated-eqtl-priors/data/tss-data/hg38-tss-data.rds"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>plot_bfs <span class="ot">&lt;-</span> <span class="cf">function</span>(bfs, snps, <span class="at">tss =</span> <span class="cn">NULL</span>, <span class="at">with_prior =</span> <span class="cn">FALSE</span>) {</span>
-<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a> </span>
-<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Only take the first susie signal.</span></span>
-<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>  bfs <span class="ot">&lt;-</span> bfs[<span class="dv">1</span>, snps]</span>
-<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Assume SNPS are in chr:bp format.</span></span>
-<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  bps <span class="ot">&lt;-</span> <span class="fu">vapply</span>(<span class="fu">strsplit</span>(snps, <span class="st">":"</span>), \(x) <span class="fu">as.numeric</span>(x[[<span class="dv">2</span>]]), <span class="fu">numeric</span>(<span class="dv">1</span>))</span>
-<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(tss) <span class="sc">&amp;</span> with_prior) {</span>
-<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    prior_vec <span class="ot">&lt;-</span> <span class="dv">10</span><span class="sc">^-</span><span class="dv">4</span> <span class="sc">*</span> <span class="fu">length</span>(bps) <span class="sc">*</span> coloc<span class="sc">:::</span><span class="fu">calculate_non_uniform_p</span>(bps, tss)</span>
-<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    bfs <span class="ot">&lt;-</span> bfs <span class="sc">+</span> <span class="fu">log</span>(prior_vec)</span>
-<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>  p <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">bf =</span> bfs, <span class="at">bp =</span> bps) <span class="sc">|&gt;</span> </span>
-<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(<span class="fu">aes</span>(bp, bf)) <span class="sc">+</span> </span>
-<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_point</span>()</span>
-<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(tss)) {</span>
-<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>    p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> tss, <span class="at">colour =</span> <span class="st">"red"</span>)</span>
-<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>  }</span>
-<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>  p <span class="sc">+</span> </span>
-<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">""</span>, <span class="at">y =</span> <span class="st">"BF"</span>) <span class="sc">+</span> </span>
-<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_bw</span>()</span>
-<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>}</span>
-<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>lookup_tss <span class="ot">&lt;-</span> <span class="cf">function</span>(trait) {</span>
-<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a>  gene_id <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">strsplit</span>(trait, <span class="st">"."</span>, <span class="at">fixed =</span> <span class="cn">TRUE</span>))[[<span class="dv">2</span>]]</span>
-<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>  hg38_data <span class="sc">|&gt;</span> </span>
-<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(ensembl_gene_id <span class="sc">==</span> gene_id) <span class="sc">|&gt;</span> </span>
-<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a>    <span class="fu">pull</span>(tss)</span>
-<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>plot_bfs <span class="ot">&lt;-</span> <span class="cf">function</span>(bfs, snps, <span class="at">tss =</span> <span class="cn">NULL</span>, <span class="at">with_prior =</span> <span class="cn">FALSE</span>) {</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a> </span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Only take the first susie signal.</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  bfs <span class="ot">&lt;-</span> bfs[<span class="dv">1</span>, snps]</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Assume SNPS are in chr:bp format.</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  bps <span class="ot">&lt;-</span> <span class="fu">vapply</span>(<span class="fu">strsplit</span>(snps, <span class="st">":"</span>), \(x) <span class="fu">as.numeric</span>(x[[<span class="dv">2</span>]]), <span class="fu">numeric</span>(<span class="dv">1</span>))</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(tss) <span class="sc">&amp;</span> with_prior) {</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    prior_vec <span class="ot">&lt;-</span> <span class="dv">10</span><span class="sc">^-</span><span class="dv">4</span> <span class="sc">*</span> <span class="fu">length</span>(bps) <span class="sc">*</span> coloc<span class="sc">:::</span><span class="fu">calculate_non_uniform_p</span>(bps, tss)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    bfs <span class="ot">&lt;-</span> bfs <span class="sc">+</span> <span class="fu">log</span>(prior_vec)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  p <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">bf =</span> bfs, <span class="at">bp =</span> bps) <span class="sc">|&gt;</span> </span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>    <span class="fu">ggplot</span>(<span class="fu">aes</span>(bp, bf)) <span class="sc">+</span> </span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_point</span>()</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(tss)) {</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>    p <span class="ot">&lt;-</span> p <span class="sc">+</span> <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> tss, <span class="at">colour =</span> <span class="st">"red"</span>)</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>  p <span class="sc">+</span> </span>
+<span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">x =</span> <span class="st">""</span>, <span class="at">y =</span> <span class="st">"BF"</span>) <span class="sc">+</span> </span>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_bw</span>()</span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb3-25"><a href="#cb3-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-26"><a href="#cb3-26" aria-hidden="true" tabindex="-1"></a>lookup_tss <span class="ot">&lt;-</span> <span class="cf">function</span>(trait) {</span>
+<span id="cb3-27"><a href="#cb3-27" aria-hidden="true" tabindex="-1"></a>  gene_id <span class="ot">&lt;-</span> <span class="fu">unlist</span>(<span class="fu">strsplit</span>(trait, <span class="st">"."</span>, <span class="at">fixed =</span> <span class="cn">TRUE</span>))[[<span class="dv">2</span>]]</span>
+<span id="cb3-28"><a href="#cb3-28" aria-hidden="true" tabindex="-1"></a>  hg38_data <span class="sc">|&gt;</span> </span>
+<span id="cb3-29"><a href="#cb3-29" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(ensembl_gene_id <span class="sc">==</span> gene_id) <span class="sc">|&gt;</span> </span>
+<span id="cb3-30"><a href="#cb3-30" aria-hidden="true" tabindex="-1"></a>    <span class="fu">pull</span>(tss)</span>
+<span id="cb3-31"><a href="#cb3-31" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="st">"/rds/project/cew54/rds-cew54-basis/People/CHRIS/colocs_for_jeffrey.RData"</span>)</span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">load_all</span>(<span class="st">"~/coloc"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>ℹ Loading coloc
-This is coloc version 6.0.0</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 27 rows have 'too small overlap' warnings.</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>method_comparison_data <span class="ot">&lt;-</span> COLOC <span class="sc">|&gt;</span> </span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="co"># The BLUEPRINT Bayes factors are empty.</span></span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span>(<span class="fu">substr</span>(trait1, <span class="dv">1</span>, <span class="dv">9</span>) <span class="sc">==</span> <span class="st">"BLUEPRINT"</span> <span class="sc">|</span> <span class="fu">substr</span>(trait2, <span class="dv">1</span>, <span class="dv">9</span>) <span class="sc">==</span> <span class="st">"BLUEPRINT"</span>)) <span class="sc">|&gt;</span> </span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span> </span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">gene1 =</span> <span class="fu">grepl</span>(<span class="st">"ENSG"</span>, trait1, <span class="at">fixed =</span> <span class="cn">TRUE</span>),</span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">gene2 =</span> <span class="fu">grepl</span>(<span class="st">"ENSG"</span>, trait2, <span class="at">fixed =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span> </span>
-<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(gene1 <span class="sc">|</span> gene2) <span class="sc">|&gt;</span> </span>
-<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rowwise</span>() <span class="sc">|&gt;</span> </span>
-<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Assume that only 1 trait is an expression trait.</span></span>
-<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">tss =</span> <span class="fu">ifelse</span>(gene1, <span class="fu">lookup_tss</span>(trait1), <span class="fu">lookup_tss</span>(trait2))) <span class="sc">|&gt;</span> </span>
-<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(trait1, trait2, block, tss, gene1) <span class="sc">|&gt;</span></span>
-<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">coloc_unif =</span> <span class="fu">list</span>(<span class="fu">coloc.bf_bf</span>(BF[[block]][[trait1]], BF[[block]][[trait2]]))) <span class="sc">|&gt;</span> </span>
-<span id="cb13-16"><a href="#cb13-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">coloc_non_unif =</span> <span class="fu">ifelse</span>(</span>
-<span id="cb13-17"><a href="#cb13-17" aria-hidden="true" tabindex="-1"></a>    gene1, </span>
-<span id="cb13-18"><a href="#cb13-18" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list</span>(<span class="fu">coloc.bf_bf</span>(BF[[block]][[trait1]], BF[[block]][[trait2]], <span class="at">tss1 =</span> tss)), </span>
-<span id="cb13-19"><a href="#cb13-19" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list</span>(<span class="fu">coloc.bf_bf</span>(BF[[block]][[trait1]], BF[[block]][[trait2]], <span class="at">tss2 =</span> tss))</span>
-<span id="cb13-20"><a href="#cb13-20" aria-hidden="true" tabindex="-1"></a>  )) <span class="sc">|&gt;</span> </span>
-<span id="cb13-21"><a href="#cb13-21" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rowwise</span>() <span class="sc">|&gt;</span> </span>
-<span id="cb13-22"><a href="#cb13-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">h4_unif =</span> <span class="fu">list</span>(coloc_unif<span class="sc">$</span>summary<span class="sc">$</span>PP.H4.abf)) <span class="sc">|&gt;</span> </span>
-<span id="cb13-23"><a href="#cb13-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">h4_non_unif =</span> <span class="fu">list</span>(coloc_non_unif<span class="sc">$</span>summary<span class="sc">$</span>PP.H4.abf)) <span class="sc">|&gt;</span> </span>
-<span id="cb13-24"><a href="#cb13-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">any</span>(<span class="fu">is.na</span>(h4_unif))) <span class="sc">|&gt;</span> </span>
-<span id="cb13-25"><a href="#cb13-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">any</span>(<span class="fu">is.na</span>(h4_non_unif)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1]  0.000000  3.436044 14.618498 18.052445 18.101204
-[1]  0.000000  1.948767 33.915430 35.863319 35.041244
-[1]  0.000000  4.581298 13.373412 17.943260 19.693805
-[1]  0.000000  4.534226 38.839260 43.371160 43.523088
-[1]  0.000000  5.653502 38.839260 44.482378 46.134734
-[1]  0.000000  2.090469 38.839260 40.929726 34.625374
-[1]  0.000000  4.576136 11.512717 16.084663 16.826224
-[1]  0.000000  5.665359 11.512717 17.177507 15.920879
-[1]  0.000000  2.089753 11.512717 13.602468  7.040921
-[1]  0.000000  4.576136 66.647669 71.219182 72.059311
-[1]  0.000000  5.665359 66.647669 72.299968 74.182946
-[1]  0.000000  2.089753 66.647669 68.737419 62.468731
-[1]  0.000000  4.585888 26.157696 30.741967 30.529796
-[1]  0.000000  5.670456 26.157696 31.819625 33.273889
-[1]  0.000000  2.089752 26.157696 28.247444 21.909308
-[1]  0.000000  4.585888 32.275794 36.859908 36.741119
-[1]  0.000000  5.670456 32.275794 37.938613 39.282237
-[1]  0.000000  2.089752 32.275794 34.365543 28.011129
-[1]  0.000000  4.585888 56.482535 61.066785 60.867738
-[1]  0.000000  5.670456 56.482535 62.144306 63.617074
-[1]  0.000000  2.089752 56.482535 58.572283 52.239666
-[1]  0.000000  4.585888 44.978121 49.562462 49.305916
-[1]  0.000000  5.670456 44.978121 50.639401 52.167423
-[1]  0.000000  2.089752 44.978121 47.067870 40.743809
-[1]  0.000000  4.585888 43.545580 48.129840 47.924947
-[1]  0.000000  5.670456 43.545580 49.207388 50.675952
-[1]  0.000000  2.089752 43.545580 45.635329 39.300970
-[1]  0.00000  4.58061 25.96191 30.53420 31.96407
-[1]  0.000000  5.670445 25.961909 31.627649 32.485262
-[1]  0.000000  2.089875 25.961909 28.051780 21.642525
-[1]  0.00000  4.58061 40.84318 45.42166 45.48376
-[1]  0.000000  5.670445 40.843177 46.503575 48.122720
-[1]  0.000000  2.089875 40.843177 42.933048 36.638438
-[1]  0.000000  4.581065 18.917174 23.495018 23.972972
-[1]  0.000000  5.670445 18.917174 24.575298 26.399599
-[1]  0.00000  2.08993 18.91717 21.00710 14.71222
-[1]   0.00000  85.78974  17.33510 103.10833 105.22734
-[1]  0.00000 65.64934 17.33510 82.97869 84.03762
-[1]  0.00000 20.44418 13.87903 34.32243 33.38077
-[1]  0.00000 14.52816 13.87903 28.37511 31.16624
-[1]  0.00000 13.85114 12.03247 25.88282 24.95174
-[1]  0.00000 13.87903 10.81715 24.65804 27.62512
-[1]  0.00000 13.87903 13.84474 27.69015 30.52867
-[1]  0.000000  6.656625  5.410223 12.032952 14.880082
-[1]  0.00000 27.11649  5.41031 32.51725 34.08552
-[1]  0.00000 47.69470  5.41031 53.09577 54.63074
-[1]  0.000000 48.564693  5.410344 51.179220 60.126635
-[1]  0.000000 30.263209  5.410259 35.661165 37.484005
-[1]  0.000000 20.206809  5.410317 25.607729 27.159641
-[1]  0.000000 16.661253  5.410317 22.060519 23.775466
-[1]  0.000000  3.585473  6.656625 10.209938 13.003661
-[1]  0.000000 23.438381  6.656625 30.093285 29.944198
-[1]  0.000000  6.275950  6.656625 12.932575  3.469234
-[1]  0.000000  3.585674 27.116489 30.688078 32.647064
-[1]  0.00000 23.43838 27.11649 50.20474 55.55006
-[1]  0.000000  6.276006 27.116489 33.392494 22.445290
-[1]  0.000000  3.585674 47.694696 51.264974 53.313658
-[1]  0.00000 23.43838 47.69470 70.73193 76.24038
-[1]  0.000000  6.276006 47.694696 53.970702 43.022315
-[1]  0.000000  3.585938 48.564693 49.458149 58.295125
-[1]  0.00000 23.43838 48.56469 72.00246 70.82233
-[1]  0.000000  6.242429 48.564693 54.807122 44.156110
-[1]  0.000000  3.585592 30.263209 33.841008 35.204956
-[1]  0.00000 23.43838 30.26321 53.58752 57.68878
-[1]  0.000000  6.237921 30.263209 36.501130 25.598680
-[1]  0.000000  3.585897 20.206809 23.779484 25.674791
-[1]  0.00000 23.43838 20.20681 43.33338 48.54259
-[1]  0.000000  6.275974 20.206809 26.482783 15.536359
-[1]  0.000000  3.585897 16.661253 20.239108 21.634687
-[1]  0.00000 23.43838 16.66125 39.94971 44.34257
-[1]  0.000000  6.275974 16.661253 22.937227 11.995675
-[1]  0.000000  9.511969  1.948924 11.460172 10.440524
-[1] 0.000000 7.625481 1.950405 9.575008 8.751891
-[1]  0.000000 10.448452  1.952637 12.399486 12.178829
-[1] 0.000000 2.134556 5.128081 7.261257 6.891083
-[1]  0.000000  5.430767  5.128080 10.523975 13.399991
-[1]   0.00000 262.64774  11.78125 274.42899 258.81276
-[1]   0.00000 288.87042  11.78125 300.65166 285.04695
-[1]  0.000000  1.772766 38.676334 40.448602 39.058987
-[1]  0.00000 20.44549 12.30459 32.60123 36.98630
-[1]  0.00000 13.53074 12.30459 25.81842 27.96183
-[1]  0.00000 25.77206 12.30459 37.96282 42.06182
-[1]  0.00000 48.18737 12.30459 60.34408 64.72216
-[1]  0.00000 30.95916 12.30458 42.99047 48.04753
-[1]  0.00000 34.01796 11.98339 45.96709 48.82511
-[1]  0.00000 82.15284 12.30459 94.30581 98.71081
-[1]  0.00000 29.92351 12.30459 42.07758 46.47470
-[1]  0.00000 13.87410 12.30459 26.06888 30.12991
-[1]   0.00000 102.03301  12.30457 114.33625 113.92926
-[1]  0.00000 21.95552 12.30457 34.25893 33.71790
-[1]  0.00000 66.47205 12.30457 78.62403 83.03589
-[1]   0.00000 116.56839  12.30457 128.86850 129.67261
-[1]  0.00000 41.74225 12.30457 54.04600 53.14959
-[1]  0.00000 23.75674 12.30457 36.06050 35.15218
-[1]  0.00000 66.65893 12.30457 78.81442 83.20120
-[1]  0.00000 37.83097 12.30457 50.13411 49.79223
-[1]  0.00000 16.07581 12.30457 28.37891 28.06407
-[1]  0.00000 15.18643 12.30459 27.40385 31.22242
-[1]  0.000000 12.304587  9.433516 21.638018 25.601354
-[1]  0.00000 29.31519 12.90712 42.22193 40.55781
-[1]  0.000000  7.706806 29.305879 36.996507 39.095174
-[1]  0.000000 29.305879  8.268131 37.550844 40.012008
-[1]  0.00000 29.30588 13.56698 42.85229 45.19321
-[1]  0.00000 69.80057 15.74253 85.53489 86.95150
-[1]  0.000000  6.616972  7.458660 14.063148 15.900677
-[1]  0.000000  6.155098  7.458660 13.603392 15.253903
-[1]  0.000000  6.616988 21.459799 28.032425 31.153914
-[1]  0.00000  6.15509 21.45980 27.56130 30.87635
-[1]  0.000000  6.551703  7.929663 14.443857 17.394093
-[1]  0.000000  6.142046  7.929663 14.019881 17.300691
-[1]  0.000000  6.619704 15.315854 21.894915 24.927000
-[1]  0.000000  6.154176 15.315854 21.429213 24.465634
-[1]  0.000000  6.616978 25.703093 32.283857 35.198318
-[1]  0.000000  6.152852 25.703093 31.801376 35.135101
-[1]  0.000000  6.616978 16.760690 23.342056 26.239431
-[1]  0.000000  6.152852 16.760690 22.860014 26.173954
-[1]  0.000000  6.616978 62.190537 68.771800 71.672124
-[1]  0.000000  6.152852 62.190537 68.288151 71.634406
-[1]  0.000000  6.616858 21.587134 28.165462 31.143083
-[1]  0.00000  6.15520 21.58713 27.70715 30.59215
-[1]  0.000000  6.616858 35.345493 41.924228 44.891039
-[1]  0.00000  6.15520 35.34549 41.43963 44.88915
-[1]  0.000000  6.616858 18.157833 24.741012 27.581637
-[1]  0.00000  6.15520 18.15783 24.26002 27.56402
-[1]  0.000000 41.663081  5.982885 47.629744 49.731047
-[1]  0.000000  5.982853 17.151629 23.121572 24.992879
-[1]  0.000000 16.193106  3.858079 20.050281 19.256493
-[1]  0.000000 13.997900  4.187695 18.178626 19.430372
-[1]  0.000000 29.960673  4.188022 34.145784 34.522799
-[1]  0.000000  9.776530  4.186475 13.936257 16.542983
-[1]  0.000000 11.441619  4.188255 15.612658 17.774020
-[1]   0.000000 122.247760   4.184851 126.424262 127.857441
-[1]   0.000000 110.403686   4.117562 114.489452 117.271599
-[1]  0.000000 26.983986  4.188002 31.154974 33.304408
-[1]  0.000000 13.593478  4.188002 17.760134 20.138576</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: There were 27 warnings in `mutate()`.
-The first warning was:
-ℹ In argument: `coloc_unif = list(coloc.bf_bf(BF[[block]][[trait1]],
-  BF[[block]][[trait2]]))`.
-ℹ In row 1.
-Caused by warning in `coloc.bf_bf()`:
-! snp overlap too small between datasets: too few snps with high posterior in one trait represented in other
-ℹ Run `dplyr::last_dplyr_warnings()` to see the 26 remaining warnings.</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1]  0.000000  3.436044 16.704686 20.138458 20.267333
-[1]  0.000000  1.948767 32.753253 34.701120 33.902787
-[1]  0.000000  4.581298 12.687252 17.258105 18.916297
-[1]  0.000000  4.534226 37.483043 42.014453 42.357809
-[1]  0.000000  5.653502 37.483838 43.125773 44.886627
-[1]  0.000000  2.090469 37.483838 39.574304 33.284494
-[1]  0.000000  4.576136 13.682646 18.253100 19.300103
-[1]  0.000000  5.665359 13.683210 19.347962 18.156105
-[1]  0.000000  2.089753 13.683210 15.772961  9.218671
-[1]  0.000000  4.576136 65.448513 70.018620 71.125041
-[1]  0.000000  5.665359 65.446603 71.097774 73.064193
-[1]  0.000000  2.089753 65.446603 67.536353 61.271907
-[1]  0.000000  4.585888 24.804803 29.389059 29.186278
-[1]  0.000000  5.670456 24.810082 30.472134 31.911900
-[1]  0.000000  2.089752 24.810082 26.899831 20.559078
-[1]  0.000000  4.585888 30.995519 35.579611 35.472419
-[1]  0.000000  5.670456 31.000798 36.663757 37.988882
-[1]  0.000000  2.089752 31.000798 33.090547 26.733313
-[1]  0.000000  4.585888 55.134859 59.719092 59.530558
-[1]  0.000000  5.670456 55.140138 60.802019 62.261990
-[1]  0.000000  2.089752 55.140138 57.229887 50.895268
-[1]  0.000000  4.585888 43.591930 48.176267 47.922734
-[1]  0.000000  5.670456 43.597210 49.258523 50.782911
-[1]  0.000000  2.089752 43.597210 45.686958 39.362232
-[1]  0.000000  4.585888 42.195786 46.780030 46.584711
-[1]  0.000000  5.670456 42.201065 47.862985 49.318393
-[1]  0.000000  2.089752 42.201065 44.290814 37.954218
-[1]  0.00000  4.58061 27.66176 32.23480 33.56893
-[1]  0.000000  5.670445 27.664689 33.331915 33.809587
-[1]  0.000000  2.089875 27.664689 29.754561 23.313669
-[1]  0.00000  4.58061 39.80030 44.37772 44.84431
-[1]  0.000000  5.670445 39.803227 45.464493 46.992851
-[1]  0.000000  2.089875 39.803227 41.893098 35.578718
-[1]  0.000000  4.581065 17.721274 22.297809 23.117675
-[1]  0.000000  5.670445 17.723668 23.380601 25.297757
-[1]  0.00000  2.08993 17.72367 19.81359 13.52592
-[1]   0.0000  83.6010  17.3351 100.9201 103.0080
-[1]  0.00000 64.20562 17.33510 81.53497 82.59389
-[1]  0.00000 21.85912 13.87903 35.73783 33.89620
-[1]  0.00000 15.02998 13.87903 28.87792 31.63712
-[1]  0.00000 13.85114 12.21003 26.06093 23.94688
-[1]  0.00000 13.87903 11.19791 25.04036 27.96487
-[1]  0.00000 13.87903 14.30629 28.15590 30.85926
-[1]  0.000000  9.558963  5.410223 14.936353 17.751090
-[1]  0.00000 29.89889  5.41031 35.29963 36.86957
-[1]  0.00000 50.47116  5.41031 55.87224 57.40723
-[1]  0.000000 51.357075  5.410344 53.971603 62.919018
-[1]  0.000000 33.086345  5.410259 38.484305 40.306855
-[1]  0.000000 22.996800  5.410317 28.397691 29.952794
-[1]  0.000000 19.473193  5.410317 24.872422 26.590735
-[1]  0.000000  3.585473  9.558963 13.113193 15.877521
-[1]  0.000000 23.438381  9.558963 32.995676 32.815497
-[1]  0.000000  6.275950  9.558963 15.834914  6.191235
-[1]  0.000000  3.585674 29.898886 33.470544 35.424662
-[1]  0.00000 23.43838 29.89889 52.98953 58.32674
-[1]  0.000000  6.276006 29.898886 36.174892 25.227748
-[1]  0.000000  3.585674 50.471165 54.041443 56.090063
-[1]  0.00000 23.43838 50.47116 73.50844 79.01677
-[1]  0.000000  6.276006 50.471165 56.747170 45.798784
-[1]  0.000000  3.585938 51.357075 52.250532 61.087508
-[1]  0.00000 23.43838 51.35708 74.79484 73.61471
-[1]  0.000000  6.242429 51.357075 57.599505 46.948492
-[1]  0.000000  3.585592 33.086345 36.664326 38.004576
-[1]  0.00000 23.43838 33.08635 56.41445 60.47991
-[1]  0.000000  6.237921 33.086345 39.324267 28.421943
-[1]  0.000000  3.585897 22.996800 26.569588 28.456364
-[1]  0.00000 23.43838 22.99680 46.12705 51.32245
-[1]  0.000000  6.275974 22.996800 29.272775 18.326451
-[1]  0.000000  3.585897 19.473193 23.051217 24.425512
-[1]  0.00000 23.43838 19.47319 42.76630 47.12530
-[1]  0.000000  6.275974 19.473193 25.749168 14.807721
-[1]  0.000000 11.664515  1.948924 13.612102 13.210393
-[1]  0.000000  9.866833  1.950405 11.815732 11.532680
-[1]  0.000000  8.991960  1.952637 10.943385 10.442859
-[1] 0.000000 2.134556 7.585277 9.718930 8.923568
-[1]  0.000000  5.430767  7.583787 12.966160 16.176670
-[1]   0.00000 265.37541  11.78125 277.15666 261.54043
-[1]   0.00000 291.59807  11.78125 303.37932 287.77462
-[1]  0.000000  1.772766 41.425972 43.198240 41.807628
-[1]  0.00000 22.82056 12.30459 34.97568 39.36530
-[1]  0.00000 15.77894 12.30459 28.06441 30.33170
-[1]  0.00000 27.98789 12.30459 40.15831 44.43202
-[1]  0.00000 50.57556 12.30459 62.73250 67.10889
-[1]  0.00000 33.22197 12.30458 45.25103 50.31749
-[1]  0.00000 36.60502 11.98339 48.56000 51.22802
-[1]   0.00000  84.54635  12.30459  96.69951 101.10311
-[1]  0.00000 32.31730 12.30459 44.47156 48.86730
-[1]  0.00000 16.03984 12.30459 28.21285 32.46576
-[1]   0.00000 103.74127  12.30457 116.04407 115.91901
-[1]  0.00000 22.71317 12.30457 35.01610 34.81644
-[1]  0.00000 68.84962 12.30457 81.00179 85.41227
-[1]   0.00000 118.06227  12.30457 130.35845 131.79579
-[1]  0.00000 42.58666 12.30457 54.89040 54.01246
-[1]  0.00000 22.98109 12.30457 35.28483 34.39560
-[1]  0.00000 69.04126 12.30457 81.19697 85.58217
-[1]  0.00000 38.69565 12.30457 50.99838 50.91220
-[1]  0.00000 15.37661 12.30457 27.67921 27.66215
-[1]  0.00000 17.42329 12.30459 29.63286 33.54166
-[1]  0.00000 12.30459 11.61686 23.81066 27.88101
-[1]  0.00000 29.31519 11.43866 40.75355 38.85824
-[1]  0.000000  9.700429 29.305879 38.989108 41.149509
-[1]  0.00000 29.30588 10.52403 39.80734 42.24225
-[1]  0.00000 29.30588 15.53401 44.81997 47.12891
-[1]  0.00000 69.80057 16.27065 86.06962 85.84879
-[1]  0.000000  6.616972 10.062206 16.663258 18.745696
-[1]  0.000000  6.155098 10.062206 16.202901 18.184356
-[1]  0.000000  6.616988 24.225873 30.797821 33.934817
-[1]  0.00000  6.15509 24.22587 30.32222 33.73182
-[1]  0.000000  6.551703 10.898311 17.412814 20.354599
-[1]  0.000000  6.142046 10.898311 16.990990 20.221910
-[1]  0.000000  6.619704 17.854716 24.434140 27.457064
-[1]  0.000000  6.154176 17.854716 23.963924 27.099278
-[1]  0.000000  6.616978 28.656520 35.236597 38.170189
-[1]  0.000000  6.152852 28.656520 34.755065 38.083853
-[1]  0.000000  6.616978 19.706940 26.287268 29.213898
-[1]  0.000000  6.152852 19.706940 25.805836 29.127958
-[1]  0.000000  6.616978 65.157314 71.737806 74.659878
-[1]  0.000000  6.152852 65.157314 71.255315 74.594343
-[1]  0.000000  6.616858 24.211336 30.788660 33.792495
-[1]  0.00000  6.15520 24.21134 30.32828 33.29873
-[1]  0.000000  6.616858 37.832122 44.411713 47.355378
-[1]  0.00000  6.15520 37.83212 43.92758 47.35455
-[1]  0.000000  6.616858 21.126609 27.709889 30.547456
-[1]  0.00000  6.15520 21.12661 27.23146 30.48263
-[1]  0.000000 43.530493  5.982885 49.497086 51.602757
-[1]  0.000000  5.982853 19.478958 25.447864 27.396998
-[1]  0.000000 18.724014  3.858079 22.581210 21.764305
-[1]  0.000000 16.703631  4.187695 20.885241 22.000821
-[1]  0.000000 32.046674  4.188022 36.229837 37.120098
-[1]  0.000000 12.651277  4.186475 16.819660 19.031031
-[1]  0.000000 14.406667  4.188255 18.582957 20.377816
-[1]   0.000000 126.142006   4.184851 130.318492 131.753502
-[1]   0.000000 113.550894   4.117562 117.650823 119.836305
-[1]  0.000000 30.108395  4.188002 34.284401 36.081835
-[1]  0.000000 16.720665  4.188002 20.894892 22.831574</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: There were 27 warnings in `mutate()`.
-The first warning was:
-ℹ In argument: `coloc_non_unif = ifelse(...)`.
-ℹ In row 1.
-Caused by warning in `coloc.bf_bf()`:
-! snp overlap too small between datasets: too few snps with high posterior in one trait represented in other
-ℹ Run `dplyr::last_dplyr_warnings()` to see the 26 remaining warnings.</code></pre>
-</div>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">load</span>(<span class="st">"/rds/project/cew54/rds-cew54-basis/People/CHRIS/colocs_for_jeffrey.RData"</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">load_all</span>(<span class="st">"~/coloc"</span>)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 27 rows have 'too small overlap' warnings.</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>method_comparison_data <span class="ot">&lt;-</span> COLOC <span class="sc">|&gt;</span> </span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>  <span class="co"># The BLUEPRINT Bayes factors are empty.</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span>(<span class="fu">substr</span>(trait1, <span class="dv">1</span>, <span class="dv">9</span>) <span class="sc">==</span> <span class="st">"BLUEPRINT"</span> <span class="sc">|</span> <span class="fu">substr</span>(trait2, <span class="dv">1</span>, <span class="dv">9</span>) <span class="sc">==</span> <span class="st">"BLUEPRINT"</span>)) <span class="sc">|&gt;</span> </span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">gene1 =</span> <span class="fu">grepl</span>(<span class="st">"ENSG"</span>, trait1, <span class="at">fixed =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">gene2 =</span> <span class="fu">grepl</span>(<span class="st">"ENSG"</span>, trait2, <span class="at">fixed =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span> </span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(gene1 <span class="sc">|</span> gene2) <span class="sc">|&gt;</span> </span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rowwise</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>  <span class="co"># Assume that only 1 trait is an expression trait.</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">tss =</span> <span class="fu">ifelse</span>(gene1, <span class="fu">lookup_tss</span>(trait1), <span class="fu">lookup_tss</span>(trait2))) <span class="sc">|&gt;</span> </span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(trait1, trait2, block, tss, gene1) <span class="sc">|&gt;</span></span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">coloc_unif =</span> <span class="fu">list</span>(<span class="fu">coloc.bf_bf</span>(BF[[block]][[trait1]], BF[[block]][[trait2]]))) <span class="sc">|&gt;</span> </span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">coloc_non_unif =</span> <span class="fu">ifelse</span>(</span>
+<span id="cb4-20"><a href="#cb4-20" aria-hidden="true" tabindex="-1"></a>    gene1, </span>
+<span id="cb4-21"><a href="#cb4-21" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list</span>(<span class="fu">coloc.bf_bf</span>(BF[[block]][[trait1]], BF[[block]][[trait2]], <span class="at">tss1 =</span> tss)), </span>
+<span id="cb4-22"><a href="#cb4-22" aria-hidden="true" tabindex="-1"></a>    <span class="fu">list</span>(<span class="fu">coloc.bf_bf</span>(BF[[block]][[trait1]], BF[[block]][[trait2]], <span class="at">tss2 =</span> tss))</span>
+<span id="cb4-23"><a href="#cb4-23" aria-hidden="true" tabindex="-1"></a>  )) <span class="sc">|&gt;</span> </span>
+<span id="cb4-24"><a href="#cb4-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rowwise</span>() <span class="sc">|&gt;</span> </span>
+<span id="cb4-25"><a href="#cb4-25" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">h4_unif =</span> <span class="fu">list</span>(coloc_unif<span class="sc">$</span>summary<span class="sc">$</span>PP.H4.abf)) <span class="sc">|&gt;</span> </span>
+<span id="cb4-26"><a href="#cb4-26" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">h4_non_unif =</span> <span class="fu">list</span>(coloc_non_unif<span class="sc">$</span>summary<span class="sc">$</span>PP.H4.abf)) <span class="sc">|&gt;</span> </span>
+<span id="cb4-27"><a href="#cb4-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">any</span>(<span class="fu">is.na</span>(h4_unif))) <span class="sc">|&gt;</span> </span>
+<span id="cb4-28"><a href="#cb4-28" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">any</span>(<span class="fu">is.na</span>(h4_non_unif)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>method_comparison_data <span class="sc">|&gt;</span> </span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">h4_non_unif =</span> <span class="fu">max</span>(h4_non_unif), </span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">h4_unif =</span> <span class="fu">max</span>(h4_unif)</span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span> </span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(h4_unif, h4_non_unif)) <span class="sc">+</span> </span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_segment</span>(<span class="fu">aes</span>(<span class="at">xend =</span> h4_unif, <span class="at">yend =</span> h4_unif), <span class="at">color =</span> <span class="st">"grey"</span>) <span class="sc">+</span></span>
-<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">col =</span> <span class="st">"grey"</span>) <span class="sc">+</span> </span>
-<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
-<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"H4: Uniform priors"</span>, </span>
-<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"H4: Non-uniform priors"</span></span>
-<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span> </span>
-<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>method_comparison_data <span class="sc">|&gt;</span> </span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">h4_non_unif =</span> <span class="fu">max</span>(h4_non_unif), </span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">h4_unif =</span> <span class="fu">max</span>(h4_unif)</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span> </span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(h4_unif, h4_non_unif)) <span class="sc">+</span> </span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_segment</span>(<span class="fu">aes</span>(<span class="at">xend =</span> h4_unif, <span class="at">yend =</span> h4_unif), <span class="at">color =</span> <span class="st">"grey"</span>) <span class="sc">+</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">col =</span> <span class="st">"grey"</span>) <span class="sc">+</span> </span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">x =</span> <span class="st">"H4: Uniform priors"</span>, </span>
+<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">y =</span> <span class="st">"H4: Non-uniform priors"</span></span>
+<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">+</span> </span>
+<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="method-testing_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>method_comparison_data <span class="sc">|&gt;</span> </span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">h4_non_unif =</span> <span class="fu">max</span>(h4_non_unif), </span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">h4_unif =</span> <span class="fu">max</span>(h4_unif)</span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span> </span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(h4_unif <span class="sc">&lt;=</span> <span class="fl">0.6</span> <span class="sc">&amp;</span> h4_non_unif <span class="sc">&gt;</span> <span class="fl">0.6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>method_comparison_data <span class="sc">|&gt;</span> </span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">h4_non_unif =</span> <span class="fu">max</span>(h4_non_unif), </span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">h4_unif =</span> <span class="fu">max</span>(h4_unif)</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span> </span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(h4_unif <span class="sc">&lt;=</span> <span class="fl">0.6</span> <span class="sc">&amp;</span> h4_non_unif <span class="sc">&gt;</span> <span class="fl">0.6</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 2 × 9
 # Rowwise: 
@@ -580,27 +261,27 @@ Caused by warning in `coloc.bf_bf()`:
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>method_comparison_data <span class="sc">|&gt;</span> </span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">h4_non_unif =</span> <span class="fu">max</span>(h4_non_unif), </span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">h4_unif =</span> <span class="fu">max</span>(h4_unif)</span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span>  </span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">h4_diff =</span> h4_unif <span class="sc">-</span> h4_non_unif) <span class="sc">|&gt;</span> </span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(h4_diff)) <span class="sc">+</span> </span>
-<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.005</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>method_comparison_data <span class="sc">|&gt;</span> </span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">h4_non_unif =</span> <span class="fu">max</span>(h4_non_unif), </span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">h4_unif =</span> <span class="fu">max</span>(h4_unif)</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span>  </span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">h4_diff =</span> h4_unif <span class="sc">-</span> h4_non_unif) <span class="sc">|&gt;</span> </span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(h4_diff)) <span class="sc">+</span> </span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_histogram</span>(<span class="at">binwidth =</span> <span class="fl">0.005</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="method-testing_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>method_comparison_data <span class="sc">|&gt;</span> </span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">h4_non_unif =</span> <span class="fu">max</span>(h4_non_unif), </span>
-<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">h4_unif =</span> <span class="fu">max</span>(h4_unif)</span>
-<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span>  </span>
-<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">h4_diff =</span> h4_unif <span class="sc">-</span> h4_non_unif) <span class="sc">|&gt;</span> </span>
-<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">abs_h4_diff =</span> <span class="fu">abs</span>(h4_diff)) <span class="sc">|&gt;</span> </span>
-<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(abs_h4_diff))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>method_comparison_data <span class="sc">|&gt;</span> </span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">h4_non_unif =</span> <span class="fu">max</span>(h4_non_unif), </span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">h4_unif =</span> <span class="fu">max</span>(h4_unif)</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span>  </span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">h4_diff =</span> h4_unif <span class="sc">-</span> h4_non_unif) <span class="sc">|&gt;</span> </span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">abs_h4_diff =</span> <span class="fu">abs</span>(h4_diff)) <span class="sc">|&gt;</span> </span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(abs_h4_diff))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 117 × 11
 # Rowwise: 
@@ -608,105 +289,105 @@ Caused by warning in `coloc.bf_bf()`:
    &lt;chr&gt;           &lt;chr&gt;  &lt;chr&gt;  &lt;dbl&gt; &lt;lgl&gt; &lt;list&gt;       &lt;list&gt;           &lt;dbl&gt;
  1 CCL19_Zhao_375… GENCO… chr3… 1.33e8 FALSE &lt;named list&gt; &lt;named list&gt;     0.805
  2 CD_DeLange_280… GTEx_… chr2… 2.48e7 FALSE &lt;named list&gt; &lt;named list&gt;     0.283
- 3 Alasoo_2018_ge… CD_De… chr2… 2.49e7 TRUE  &lt;named list&gt; &lt;named list&gt;     0.281
- 4 Lepik_2017_ge_… UC_De… chr2… 4.32e7 TRUE  &lt;named list&gt; &lt;named list&gt;     0.240
- 5 Nedelec_2016_g… UC_De… chr2… 4.32e7 TRUE  &lt;named list&gt; &lt;named list&gt;     0.278
- 6 Quach_2016_ge_… TWEAK… chr3… 9.87e7 TRUE  &lt;named list&gt; &lt;named list&gt;     0.691
+ 3 AITD_Saevarsdo… Quach… chr3… 1.06e8 FALSE &lt;named list&gt; &lt;named list&gt;     0.159
+ 4 Schmiedel_2018… UC_De… chr2… 4.32e7 TRUE  &lt;named list&gt; &lt;named list&gt;     0.413
+ 5 Alasoo_2018_ge… CD_De… chr2… 2.49e7 TRUE  &lt;named list&gt; &lt;named list&gt;     0.281
+ 6 Lepik_2017_ge_… UC_De… chr2… 4.32e7 TRUE  &lt;named list&gt; &lt;named list&gt;     0.240
  7 Bossini-Castil… VIT_J… chr4… 1.01e8 TRUE  &lt;named list&gt; &lt;named list&gt;     0.590
- 8 ASTCO_Ferreira… Schmi… chr2… 1.98e8 FALSE &lt;named list&gt; &lt;named list&gt;     0.513
- 9 AITD_Saevarsdo… GTEx_… chr2… 6.23e7 FALSE &lt;named list&gt; &lt;named list&gt;     0.380
-10 CD_DeLange_280… Schmi… chr2… 1.98e8 FALSE &lt;named list&gt; &lt;named list&gt;     0.701
+ 8 Nedelec_2016_g… UC_De… chr2… 4.32e7 TRUE  &lt;named list&gt; &lt;named list&gt;     0.278
+ 9 Quach_2016_ge_… TWEAK… chr3… 9.87e7 TRUE  &lt;named list&gt; &lt;named list&gt;     0.691
+10 ASTCO_Ferreira… Schmi… chr2… 1.98e8 FALSE &lt;named list&gt; &lt;named list&gt;     0.513
 # ℹ 107 more rows
 # ℹ 3 more variables: h4_non_unif &lt;dbl&gt;, h4_diff &lt;dbl&gt;, abs_h4_diff &lt;dbl&gt;</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>method_comparison_data <span class="sc">|&gt;</span> </span>
-<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">h4_non_unif =</span> <span class="fu">max</span>(h4_non_unif), </span>
-<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">h4_unif =</span> <span class="fu">max</span>(h4_unif)</span>
-<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span>  </span>
-<span id="cb24-6"><a href="#cb24-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">h4_diff =</span> h4_unif <span class="sc">-</span> h4_non_unif) <span class="sc">|&gt;</span> </span>
-<span id="cb24-7"><a href="#cb24-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">abs_h4_diff =</span> <span class="fu">abs</span>(h4_diff)) <span class="sc">|&gt;</span> </span>
-<span id="cb24-8"><a href="#cb24-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(abs_h4_diff)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>method_comparison_data <span class="sc">|&gt;</span> </span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">h4_non_unif =</span> <span class="fu">max</span>(h4_non_unif), </span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">h4_unif =</span> <span class="fu">max</span>(h4_unif)</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span>  </span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">h4_diff =</span> h4_unif <span class="sc">-</span> h4_non_unif) <span class="sc">|&gt;</span> </span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">abs_h4_diff =</span> <span class="fu">abs</span>(h4_diff)) <span class="sc">|&gt;</span> </span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(abs_h4_diff)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 117 × 11
 # Rowwise: 
    trait1          trait2 block    tss gene1 coloc_unif   coloc_non_unif h4_unif
    &lt;chr&gt;           &lt;chr&gt;  &lt;chr&gt;  &lt;dbl&gt; &lt;lgl&gt; &lt;list&gt;       &lt;list&gt;           &lt;dbl&gt;
  1 Quach_2016_ge_… TRANC… chr3… 1.73e8 TRUE  &lt;named list&gt; &lt;named list&gt;   1.65e-7
- 2 GTEx_ge_blood.… UC_De… chr2… 2.28e8 TRUE  &lt;named list&gt; &lt;named list&gt;   1.00e+0
- 3 AITD_Saevarsdo… GTEx_… chr2… 2.28e8 FALSE &lt;named list&gt; &lt;named list&gt;   1.00e+0
- 4 Quach_2016_ge_… TRANC… chr3… 1.73e8 TRUE  &lt;named list&gt; &lt;named list&gt;   1.67e-7
+ 2 Quach_2016_ge_… TRANC… chr3… 1.73e8 TRUE  &lt;named list&gt; &lt;named list&gt;   1.67e-7
+ 3 GTEx_ge_blood.… UC_De… chr2… 2.28e8 TRUE  &lt;named list&gt; &lt;named list&gt;   1.00e+0
+ 4 AITD_Saevarsdo… GTEx_… chr2… 2.28e8 FALSE &lt;named list&gt; &lt;named list&gt;   1.00e+0
  5 TwinsUK_ge_ski… UC_De… chr2… 1.99e8 TRUE  &lt;named list&gt; &lt;named list&gt;   7.42e-1
- 6 ASTCO_Ferreira… GTEx_… chr2… 2.28e8 FALSE &lt;named list&gt; &lt;named list&gt;   2.35e-1
- 7 ASTCO_Ferreira… GENCO… chr2… 2.28e8 FALSE &lt;named list&gt; &lt;named list&gt;   9.96e-1
- 8 GENCORD_ge_T-c… UC_De… chr2… 2.28e8 TRUE  &lt;named list&gt; &lt;named list&gt;   8.22e-1
- 9 AITD_Saevarsdo… GENCO… chr2… 2.28e8 FALSE &lt;named list&gt; &lt;named list&gt;   8.83e-1
-10 Quach_2016_ge_… TWEAK… chr3… 9.87e7 TRUE  &lt;named list&gt; &lt;named list&gt;   9.88e-1
+ 6 ASTCO_Ferreira… GENCO… chr2… 2.28e8 FALSE &lt;named list&gt; &lt;named list&gt;   9.96e-1
+ 7 GENCORD_ge_fib… TWEAK… chr3… 9.87e7 TRUE  &lt;named list&gt; &lt;named list&gt;   9.94e-1
+ 8 MIGGC_OConnor_… Schmi… chr3… 1.86e8 FALSE &lt;named list&gt; &lt;named list&gt;   1.76e-1
+ 9 ASTCO_Ferreira… GENCO… chr2… 2.28e8 FALSE &lt;named list&gt; &lt;named list&gt;   9.95e-1
+10 Alasoo_2018_ge… TWEAK… chr3… 9.87e7 TRUE  &lt;named list&gt; &lt;named list&gt;   9.88e-1
 # ℹ 107 more rows
 # ℹ 3 more variables: h4_non_unif &lt;dbl&gt;, h4_diff &lt;dbl&gt;, abs_h4_diff &lt;dbl&gt;</code></pre>
 </div>
 </div>
 <p>Lower Pr(H4) with the non-uniform priors.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>snps1 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr3_block79"</span>]][[<span class="st">"CCL19_Zhao_37563310_1-hg38.tsv.gz"</span>]])</span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>snps2 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr3_block79"</span>]][[<span class="st">"GENCORD_ge_fibroblast.ENSG00000113971"</span>]])</span>
-<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>isnps <span class="ot">&lt;-</span> <span class="fu">intersect</span>(snps1, snps2)</span>
-<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>hg38_data <span class="sc">|&gt;</span> </span>
-<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(ensembl_gene_id <span class="sc">==</span> <span class="st">"ENSG00000113971"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>snps1 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr3_block79"</span>]][[<span class="st">"CCL19_Zhao_37563310_1-hg38.tsv.gz"</span>]])</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>snps2 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr3_block79"</span>]][[<span class="st">"GENCORD_ge_fibroblast.ENSG00000113971"</span>]])</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>isnps <span class="ot">&lt;-</span> <span class="fu">intersect</span>(snps1, snps2)</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>hg38_data <span class="sc">|&gt;</span> </span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(ensembl_gene_id <span class="sc">==</span> <span class="st">"ENSG00000113971"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 1 × 2
   ensembl_gene_id       tss
   &lt;chr&gt;               &lt;dbl&gt;
 1 ENSG00000113971 132721707</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_bfs</span>(BF[[<span class="st">"chr3_block79"</span>]][[<span class="st">"CCL19_Zhao_37563310_1-hg38.tsv.gz"</span>]], isnps) <span class="sc">+</span> </span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a> <span class="fu">plot_bfs</span>(BF[[<span class="st">"chr3_block79"</span>]][[<span class="st">"GENCORD_ge_fibroblast.ENSG00000113971"</span>]], isnps, </span>
-<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">tss =</span> <span class="dv">132721707</span>)  </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_bfs</span>(BF[[<span class="st">"chr3_block79"</span>]][[<span class="st">"CCL19_Zhao_37563310_1-hg38.tsv.gz"</span>]], isnps) <span class="sc">+</span> </span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a> <span class="fu">plot_bfs</span>(BF[[<span class="st">"chr3_block79"</span>]][[<span class="st">"GENCORD_ge_fibroblast.ENSG00000113971"</span>]], isnps, </span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">tss =</span> <span class="dv">132721707</span>)  </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="method-testing_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>Higher Pr(H4) with the non-uniform priors.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb29"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>snps1 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr2_block25"</span>]][[<span class="st">"Lepik_2017_ge_blood.ENSG00000234936"</span>]])</span>
-<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>snps2 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr2_block25"</span>]][[<span class="st">"UC_DeLange_28067908_1-hg38.tsv.gz"</span>]])</span>
-<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a>isnps <span class="ot">&lt;-</span> <span class="fu">intersect</span>(snps1, snps2)</span>
-<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a>hg38_data <span class="sc">|&gt;</span> </span>
-<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(ensembl_gene_id <span class="sc">==</span> <span class="st">"ENSG00000234936"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>snps1 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr2_block25"</span>]][[<span class="st">"Lepik_2017_ge_blood.ENSG00000234936"</span>]])</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>snps2 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr2_block25"</span>]][[<span class="st">"UC_DeLange_28067908_1-hg38.tsv.gz"</span>]])</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>isnps <span class="ot">&lt;-</span> <span class="fu">intersect</span>(snps1, snps2)</span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>hg38_data <span class="sc">|&gt;</span> </span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(ensembl_gene_id <span class="sc">==</span> <span class="st">"ENSG00000234936"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 1 × 2
   ensembl_gene_id      tss
   &lt;chr&gt;              &lt;dbl&gt;
 1 ENSG00000234936 43229573</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_bfs</span>(BF[[<span class="st">"chr2_block25"</span>]][[<span class="st">"Lepik_2017_ge_blood.ENSG00000234936"</span>]], isnps) <span class="sc">+</span> </span>
-<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a> <span class="fu">plot_bfs</span>(BF[[<span class="st">"chr2_block25"</span>]][[<span class="st">"UC_DeLange_28067908_1-hg38.tsv.gz"</span>]], isnps, </span>
-<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">tss =</span> <span class="dv">43229573</span>, <span class="at">with_prior =</span> <span class="cn">TRUE</span>)  </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_bfs</span>(BF[[<span class="st">"chr2_block25"</span>]][[<span class="st">"Lepik_2017_ge_blood.ENSG00000234936"</span>]], isnps) <span class="sc">+</span> </span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a> <span class="fu">plot_bfs</span>(BF[[<span class="st">"chr2_block25"</span>]][[<span class="st">"UC_DeLange_28067908_1-hg38.tsv.gz"</span>]], isnps, </span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">tss =</span> <span class="dv">43229573</span>)  </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="method-testing_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>No change, high Pr(H4)</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>snps1 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"GENCORD_ge_T-cell.ENSG00000115009"</span>]])</span>
-<span id="cb32-2"><a href="#cb32-2" aria-hidden="true" tabindex="-1"></a>snps2 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"ASTCO_Ferreira_30929738_1-hg38.tsv.gz"</span>]])</span>
-<span id="cb32-3"><a href="#cb32-3" aria-hidden="true" tabindex="-1"></a>isnps <span class="ot">&lt;-</span> <span class="fu">intersect</span>(snps1, snps2)</span>
-<span id="cb32-4"><a href="#cb32-4" aria-hidden="true" tabindex="-1"></a>hg38_data <span class="sc">|&gt;</span> </span>
-<span id="cb32-5"><a href="#cb32-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(ensembl_gene_id <span class="sc">==</span> <span class="st">"ENSG00000115009"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>snps1 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"GENCORD_ge_T-cell.ENSG00000115009"</span>]])</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>snps2 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"ASTCO_Ferreira_30929738_1-hg38.tsv.gz"</span>]])</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>isnps <span class="ot">&lt;-</span> <span class="fu">intersect</span>(snps1, snps2)</span>
+<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>hg38_data <span class="sc">|&gt;</span> </span>
+<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(ensembl_gene_id <span class="sc">==</span> <span class="st">"ENSG00000115009"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 1 × 2
   ensembl_gene_id        tss
   &lt;chr&gt;                &lt;dbl&gt;
 1 ENSG00000115009 227813842.</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_bfs</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"GENCORD_ge_T-cell.ENSG00000115009"</span>]], isnps) <span class="sc">+</span> </span>
-<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a> <span class="fu">plot_bfs</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"ASTCO_Ferreira_30929738_1-hg38.tsv.gz"</span>]], isnps, </span>
-<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">tss =</span> <span class="dv">227813842</span>)  </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_bfs</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"GENCORD_ge_T-cell.ENSG00000115009"</span>]], isnps) <span class="sc">+</span> </span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a> <span class="fu">plot_bfs</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"ASTCO_Ferreira_30929738_1-hg38.tsv.gz"</span>]], isnps, </span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">tss =</span> <span class="dv">227813842</span>)  </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="method-testing_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid" width="672"></p>
 </div>
-<div class="sourceCode cell-code" id="cb35"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a><span class="fu">coloc.bf_bf</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"GENCORD_ge_T-cell.ENSG00000115009"</span>]], </span>
-<span id="cb35-2"><a href="#cb35-2" aria-hidden="true" tabindex="-1"></a>            BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"ASTCO_Ferreira_30929738_1-hg38.tsv.gz"</span>]])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">coloc.bf_bf</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"GENCORD_ge_T-cell.ENSG00000115009"</span>]], </span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>            BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"ASTCO_Ferreira_30929738_1-hg38.tsv.gz"</span>]])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1]  0.00000 47.69470 23.43838 70.73193 76.24038
 [1]  0.000000 47.694696  6.276006 53.970702 43.022315</code></pre>
@@ -738,21 +419,21 @@ $priors
    p1    p2   p12 
 1e-04 1e-04 5e-06 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb38"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb38-1"><a href="#cb38-1" aria-hidden="true" tabindex="-1"></a><span class="fu">coloc.bf_bf</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"GENCORD_ge_T-cell.ENSG00000115009"</span>]], </span>
-<span id="cb38-2"><a href="#cb38-2" aria-hidden="true" tabindex="-1"></a>            BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"ASTCO_Ferreira_30929738_1-hg38.tsv.gz"</span>]], </span>
-<span id="cb38-3"><a href="#cb38-3" aria-hidden="true" tabindex="-1"></a>            <span class="at">tss2 =</span> <span class="dv">227813842</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">coloc.bf_bf</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"GENCORD_ge_T-cell.ENSG00000115009"</span>]], </span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>            BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"ASTCO_Ferreira_30929738_1-hg38.tsv.gz"</span>]], </span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>            <span class="at">tss2 =</span> <span class="dv">227813842</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code>[1]  0.00000 47.69470 26.21557 73.50952 79.01677
-[1]  0.000000 47.694696  7.742072 55.436768 45.798784</code></pre>
+<pre><code>[1]  0.00000 47.69470 26.26311 73.55611 79.06624
+[1]  0.000000 47.694696  7.794885 55.489582 45.845926</code></pre>
 </div>
 <div class="cell-output cell-output-stdout">
 <pre><code>$summary
    nsnps        hit1        hit2    PP.H0.abf    PP.H1.abf    PP.H2.abf
-1:  4740 2:227805859 2:227805721 4.804996e-35 2.484486e-14 1.166733e-23
-2:  4740 2:227805859 2:227887158 8.392679e-25 4.339544e-04 1.933035e-21
+1:  4740 2:227805859 2:227805721 4.573163e-35 2.364614e-14 1.164508e-23
+2:  4740 2:227805859 2:227887158 7.961115e-25 4.116398e-04 1.933079e-21
      PP.H3.abf    PP.H4.abf idx1 idx2
-1: 0.004040824 9.959592e-01    1    1
-2: 0.999500874 6.517184e-05    1    2
+1: 0.004029298 9.959707e-01    1    1
+2: 0.999523555 6.480471e-05    1    2
 
 $results
               snp SNP.PP.H4.row1 SNP.PP.H4.row2
