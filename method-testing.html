@@ -281,113 +281,87 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span>  </span>
 <span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">h4_diff =</span> h4_unif <span class="sc">-</span> h4_non_unif) <span class="sc">|&gt;</span> </span>
 <span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">abs_h4_diff =</span> <span class="fu">abs</span>(h4_diff)) <span class="sc">|&gt;</span> </span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(abs_h4_diff))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(abs_h4_diff)) <span class="sc">|&gt;</span> </span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(trait1, trait2, h4_unif, h4_non_unif)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 117 × 11
+<pre><code># A tibble: 117 × 4
 # Rowwise: 
-   trait1          trait2 block    tss gene1 coloc_unif   coloc_non_unif h4_unif
-   &lt;chr&gt;           &lt;chr&gt;  &lt;chr&gt;  &lt;dbl&gt; &lt;lgl&gt; &lt;list&gt;       &lt;list&gt;           &lt;dbl&gt;
- 1 CCL19_Zhao_375… GENCO… chr3… 1.33e8 FALSE &lt;named list&gt; &lt;named list&gt;     0.805
- 2 CD_DeLange_280… GTEx_… chr2… 2.48e7 FALSE &lt;named list&gt; &lt;named list&gt;     0.283
- 3 AITD_Saevarsdo… Quach… chr3… 1.06e8 FALSE &lt;named list&gt; &lt;named list&gt;     0.159
- 4 Schmiedel_2018… UC_De… chr2… 4.32e7 TRUE  &lt;named list&gt; &lt;named list&gt;     0.413
- 5 Alasoo_2018_ge… CD_De… chr2… 2.49e7 TRUE  &lt;named list&gt; &lt;named list&gt;     0.281
- 6 Lepik_2017_ge_… UC_De… chr2… 4.32e7 TRUE  &lt;named list&gt; &lt;named list&gt;     0.240
- 7 Bossini-Castil… VIT_J… chr4… 1.01e8 TRUE  &lt;named list&gt; &lt;named list&gt;     0.590
- 8 Nedelec_2016_g… UC_De… chr2… 4.32e7 TRUE  &lt;named list&gt; &lt;named list&gt;     0.278
- 9 Quach_2016_ge_… TWEAK… chr3… 9.87e7 TRUE  &lt;named list&gt; &lt;named list&gt;     0.691
-10 ASTCO_Ferreira… Schmi… chr2… 1.98e8 FALSE &lt;named list&gt; &lt;named list&gt;     0.513
-# ℹ 107 more rows
-# ℹ 3 more variables: h4_non_unif &lt;dbl&gt;, h4_diff &lt;dbl&gt;, abs_h4_diff &lt;dbl&gt;</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>method_comparison_data <span class="sc">|&gt;</span> </span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">h4_non_unif =</span> <span class="fu">max</span>(h4_non_unif), </span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">h4_unif =</span> <span class="fu">max</span>(h4_unif)</span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span>  </span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">h4_diff =</span> h4_unif <span class="sc">-</span> h4_non_unif) <span class="sc">|&gt;</span> </span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">abs_h4_diff =</span> <span class="fu">abs</span>(h4_diff)) <span class="sc">|&gt;</span> </span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(abs_h4_diff)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 117 × 11
-# Rowwise: 
-   trait1          trait2 block    tss gene1 coloc_unif   coloc_non_unif h4_unif
-   &lt;chr&gt;           &lt;chr&gt;  &lt;chr&gt;  &lt;dbl&gt; &lt;lgl&gt; &lt;list&gt;       &lt;list&gt;           &lt;dbl&gt;
- 1 Quach_2016_ge_… TRANC… chr3… 1.73e8 TRUE  &lt;named list&gt; &lt;named list&gt;   1.65e-7
- 2 Quach_2016_ge_… TRANC… chr3… 1.73e8 TRUE  &lt;named list&gt; &lt;named list&gt;   1.67e-7
- 3 GTEx_ge_blood.… UC_De… chr2… 2.28e8 TRUE  &lt;named list&gt; &lt;named list&gt;   1.00e+0
- 4 AITD_Saevarsdo… GTEx_… chr2… 2.28e8 FALSE &lt;named list&gt; &lt;named list&gt;   1.00e+0
- 5 TwinsUK_ge_ski… UC_De… chr2… 1.99e8 TRUE  &lt;named list&gt; &lt;named list&gt;   7.42e-1
- 6 ASTCO_Ferreira… GENCO… chr2… 2.28e8 FALSE &lt;named list&gt; &lt;named list&gt;   9.96e-1
- 7 GENCORD_ge_fib… TWEAK… chr3… 9.87e7 TRUE  &lt;named list&gt; &lt;named list&gt;   9.94e-1
- 8 MIGGC_OConnor_… Schmi… chr3… 1.86e8 FALSE &lt;named list&gt; &lt;named list&gt;   1.76e-1
- 9 ASTCO_Ferreira… GENCO… chr2… 2.28e8 FALSE &lt;named list&gt; &lt;named list&gt;   9.95e-1
-10 Alasoo_2018_ge… TWEAK… chr3… 9.87e7 TRUE  &lt;named list&gt; &lt;named list&gt;   9.88e-1
-# ℹ 107 more rows
-# ℹ 3 more variables: h4_non_unif &lt;dbl&gt;, h4_diff &lt;dbl&gt;, abs_h4_diff &lt;dbl&gt;</code></pre>
+   trait1                                             trait2 h4_unif h4_non_unif
+   &lt;chr&gt;                                              &lt;chr&gt;    &lt;dbl&gt;       &lt;dbl&gt;
+ 1 CCL19_Zhao_37563310_1-hg38.tsv.gz                  GENCO…   0.805     0.416  
+ 2 CD_DeLange_28067908_1-hg38.tsv.gz                  GTEx_…   0.283     0.110  
+ 3 AITD_Saevarsdottir_32581359_1-hg38.tsv.gz          Quach…   0.159     0.00121
+ 4 Schmiedel_2018_ge_CD8_T-cell_naive.ENSG00000279873 UC_De…   0.413     0.262  
+ 5 Alasoo_2018_ge_macrophage_naive.ENSG00000138031    CD_De…   0.281     0.136  
+ 6 Lepik_2017_ge_blood.ENSG00000234936                UC_De…   0.240     0.368  
+ 7 Bossini-Castillo_2019_ge_Treg_naive.ENSG000002545… VIT_J…   0.590     0.705  
+ 8 Nedelec_2016_ge_macrophage_naive.ENSG00000234936   UC_De…   0.278     0.392  
+ 9 Quach_2016_ge_monocyte_Pam3CSK4.ENSG00000239445    TWEAK…   0.691     0.798  
+10 ASTCO_Ferreira_30929738_1-hg38.tsv.gz              Schmi…   0.513     0.613  
+# ℹ 107 more rows</code></pre>
 </div>
 </div>
 <p>Lower Pr(H4) with the non-uniform priors.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>snps1 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr3_block79"</span>]][[<span class="st">"CCL19_Zhao_37563310_1-hg38.tsv.gz"</span>]])</span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>snps2 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr3_block79"</span>]][[<span class="st">"GENCORD_ge_fibroblast.ENSG00000113971"</span>]])</span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>isnps <span class="ot">&lt;-</span> <span class="fu">intersect</span>(snps1, snps2)</span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>hg38_data <span class="sc">|&gt;</span> </span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(ensembl_gene_id <span class="sc">==</span> <span class="st">"ENSG00000113971"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>snps1 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr3_block79"</span>]][[<span class="st">"CCL19_Zhao_37563310_1-hg38.tsv.gz"</span>]])</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>snps2 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr3_block79"</span>]][[<span class="st">"GENCORD_ge_fibroblast.ENSG00000113971"</span>]])</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>isnps <span class="ot">&lt;-</span> <span class="fu">intersect</span>(snps1, snps2)</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>hg38_data <span class="sc">|&gt;</span> </span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(ensembl_gene_id <span class="sc">==</span> <span class="st">"ENSG00000113971"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 1 × 2
   ensembl_gene_id       tss
   &lt;chr&gt;               &lt;dbl&gt;
 1 ENSG00000113971 132721707</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_bfs</span>(BF[[<span class="st">"chr3_block79"</span>]][[<span class="st">"CCL19_Zhao_37563310_1-hg38.tsv.gz"</span>]], isnps) <span class="sc">+</span> </span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a> <span class="fu">plot_bfs</span>(BF[[<span class="st">"chr3_block79"</span>]][[<span class="st">"GENCORD_ge_fibroblast.ENSG00000113971"</span>]], isnps, </span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">tss =</span> <span class="dv">132721707</span>)  </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_bfs</span>(BF[[<span class="st">"chr3_block79"</span>]][[<span class="st">"CCL19_Zhao_37563310_1-hg38.tsv.gz"</span>]], isnps) <span class="sc">+</span> </span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a> <span class="fu">plot_bfs</span>(BF[[<span class="st">"chr3_block79"</span>]][[<span class="st">"GENCORD_ge_fibroblast.ENSG00000113971"</span>]], isnps, </span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">tss =</span> <span class="dv">132721707</span>)  </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="method-testing_files/figure-html/unnamed-chunk-8-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>Higher Pr(H4) with the non-uniform priors.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a>snps1 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr2_block25"</span>]][[<span class="st">"Lepik_2017_ge_blood.ENSG00000234936"</span>]])</span>
-<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>snps2 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr2_block25"</span>]][[<span class="st">"UC_DeLange_28067908_1-hg38.tsv.gz"</span>]])</span>
-<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>isnps <span class="ot">&lt;-</span> <span class="fu">intersect</span>(snps1, snps2)</span>
-<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a>hg38_data <span class="sc">|&gt;</span> </span>
-<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(ensembl_gene_id <span class="sc">==</span> <span class="st">"ENSG00000234936"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>snps1 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr2_block25"</span>]][[<span class="st">"Lepik_2017_ge_blood.ENSG00000234936"</span>]])</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>snps2 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr2_block25"</span>]][[<span class="st">"UC_DeLange_28067908_1-hg38.tsv.gz"</span>]])</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>isnps <span class="ot">&lt;-</span> <span class="fu">intersect</span>(snps1, snps2)</span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>hg38_data <span class="sc">|&gt;</span> </span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(ensembl_gene_id <span class="sc">==</span> <span class="st">"ENSG00000234936"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 1 × 2
   ensembl_gene_id      tss
   &lt;chr&gt;              &lt;dbl&gt;
 1 ENSG00000234936 43229573</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_bfs</span>(BF[[<span class="st">"chr2_block25"</span>]][[<span class="st">"Lepik_2017_ge_blood.ENSG00000234936"</span>]], isnps) <span class="sc">+</span> </span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a> <span class="fu">plot_bfs</span>(BF[[<span class="st">"chr2_block25"</span>]][[<span class="st">"UC_DeLange_28067908_1-hg38.tsv.gz"</span>]], isnps, </span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">tss =</span> <span class="dv">43229573</span>)  </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_bfs</span>(BF[[<span class="st">"chr2_block25"</span>]][[<span class="st">"Lepik_2017_ge_blood.ENSG00000234936"</span>]], isnps) <span class="sc">+</span> </span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a> <span class="fu">plot_bfs</span>(BF[[<span class="st">"chr2_block25"</span>]][[<span class="st">"UC_DeLange_28067908_1-hg38.tsv.gz"</span>]], isnps, </span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">tss =</span> <span class="dv">43229573</span>)  </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="method-testing_files/figure-html/unnamed-chunk-9-1.png" class="img-fluid" width="672"></p>
 </div>
 </div>
 <p>No change, high Pr(H4)</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>snps1 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"GENCORD_ge_T-cell.ENSG00000115009"</span>]])</span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>snps2 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"ASTCO_Ferreira_30929738_1-hg38.tsv.gz"</span>]])</span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>isnps <span class="ot">&lt;-</span> <span class="fu">intersect</span>(snps1, snps2)</span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>hg38_data <span class="sc">|&gt;</span> </span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(ensembl_gene_id <span class="sc">==</span> <span class="st">"ENSG00000115009"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>snps1 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"GENCORD_ge_T-cell.ENSG00000115009"</span>]])</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>snps2 <span class="ot">&lt;-</span> <span class="fu">colnames</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"ASTCO_Ferreira_30929738_1-hg38.tsv.gz"</span>]])</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>isnps <span class="ot">&lt;-</span> <span class="fu">intersect</span>(snps1, snps2)</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>hg38_data <span class="sc">|&gt;</span> </span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(ensembl_gene_id <span class="sc">==</span> <span class="st">"ENSG00000115009"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 1 × 2
   ensembl_gene_id        tss
   &lt;chr&gt;                &lt;dbl&gt;
 1 ENSG00000115009 227813842.</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_bfs</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"GENCORD_ge_T-cell.ENSG00000115009"</span>]], isnps) <span class="sc">+</span> </span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a> <span class="fu">plot_bfs</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"ASTCO_Ferreira_30929738_1-hg38.tsv.gz"</span>]], isnps, </span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">tss =</span> <span class="dv">227813842</span>)  </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_bfs</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"GENCORD_ge_T-cell.ENSG00000115009"</span>]], isnps) <span class="sc">+</span> </span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a> <span class="fu">plot_bfs</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"ASTCO_Ferreira_30929738_1-hg38.tsv.gz"</span>]], isnps, </span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>          <span class="at">tss =</span> <span class="dv">227813842</span>)  </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="method-testing_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid" width="672"></p>
 </div>
-<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">coloc.bf_bf</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"GENCORD_ge_T-cell.ENSG00000115009"</span>]], </span>
-<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>            BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"ASTCO_Ferreira_30929738_1-hg38.tsv.gz"</span>]])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a><span class="fu">coloc.bf_bf</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"GENCORD_ge_T-cell.ENSG00000115009"</span>]], </span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>            BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"ASTCO_Ferreira_30929738_1-hg38.tsv.gz"</span>]])</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1]  0.00000 47.69470 23.43838 70.73193 76.24038
 [1]  0.000000 47.694696  6.276006 53.970702 43.022315</code></pre>
@@ -419,9 +393,9 @@ $priors
    p1    p2   p12 
 1e-04 1e-04 5e-06 </code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="fu">coloc.bf_bf</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"GENCORD_ge_T-cell.ENSG00000115009"</span>]], </span>
-<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a>            BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"ASTCO_Ferreira_30929738_1-hg38.tsv.gz"</span>]], </span>
-<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a>            <span class="at">tss2 =</span> <span class="dv">227813842</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">coloc.bf_bf</span>(BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"GENCORD_ge_T-cell.ENSG00000115009"</span>]], </span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>            BF[[<span class="st">"chr2_block130"</span>]][[<span class="st">"ASTCO_Ferreira_30929738_1-hg38.tsv.gz"</span>]], </span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>            <span class="at">tss2 =</span> <span class="dv">227813842</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[1]  0.00000 47.69470 26.26311 73.55611 79.06624
 [1]  0.000000 47.694696  7.794885 55.489582 45.845926</code></pre>
