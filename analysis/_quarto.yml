@@ -7,10 +7,6 @@ website:
     left:
       - href: index.qmd
         text: Home
-      - href: eqtlgen-prior-estimation.qmd
-        text: eQTLGen analysis
-      - href: gtex-prior-estimation.qmd
-        text: GTEx analysis
 
 format:
   html:

@@ -4,7 +4,7 @@ format: html
 editor: source
 ---
 
-```{r}
+```{r, warning = FALSE, message = FALSE}
 library(readr)
 library(janitor)
 library(dplyr)
@@ -50,7 +50,7 @@ lookup_tss <- function(trait) {
 }
 ```
 
-```{r}
+```{r, output = FALSE}
 load("/rds/project/cew54/rds-cew54-basis/People/CHRIS/colocs_for_jeffrey.RData")
 devtools::load_all("~/coloc")
 
@@ -126,16 +126,8 @@ method_comparison_data |>
   ) |>  
   mutate(h4_diff = h4_unif - h4_non_unif) |> 
   mutate(abs_h4_diff = abs(h4_diff)) |> 
-  arrange(desc(abs_h4_diff))
-
-method_comparison_data |> 
-  mutate(
-    h4_non_unif = max(h4_non_unif), 
-    h4_unif = max(h4_unif)
-  ) |>  
-  mutate(h4_diff = h4_unif - h4_non_unif) |> 
-  mutate(abs_h4_diff = abs(h4_diff)) |> 
-  arrange(abs_h4_diff)
+  arrange(desc(abs_h4_diff)) |> 
+  select(trait1, trait2, h4_unif, h4_non_unif)
 ```
 
 Lower Pr(H4) with the non-uniform priors.
@@ -163,7 +155,7 @@ hg38_data |>
 
 plot_bfs(BF[["chr2_block25"]][["Lepik_2017_ge_blood.ENSG00000234936"]], isnps) + 
  plot_bfs(BF[["chr2_block25"]][["UC_DeLange_28067908_1-hg38.tsv.gz"]], isnps, 
-          tss = 43229573, with_prior = TRUE)  
+          tss = 43229573)  
 ```
 
 No change, high Pr(H4)
