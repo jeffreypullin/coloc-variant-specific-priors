@@ -29,6 +29,10 @@ plot_bfs <- function(bfs, snps, tss = NULL, with_prior = FALSE) {
     bfs <- bfs + log(prior_vec)
   }
   
+  if (is.null(tss) & with_prior) {
+    bfs <- bfs + log(10^-4)
+  }
+  
   p <- tibble(bf = bfs, bp = bps) |> 
     ggplot(aes(bp, bf)) + 
     geom_point()
@@ -36,9 +40,14 @@ plot_bfs <- function(bfs, snps, tss = NULL, with_prior = FALSE) {
   if (!is.null(tss)) {
     p <- p + geom_vline(xintercept = tss, colour = "red")
   }
-  
+ 
+  if (with_prior) {
+    p <- p + labs(x = "", y = "BF + log(p)")
+  } else {
+    p <- p + labs(x = "", y = "BF")
+  }
+   
   p + 
-    labs(x = "", y = "BF") + 
     theme_bw()
 }
 
@@ -65,9 +74,10 @@ method_comparison_data <- COLOC |>
   ) |> 
   filter(gene1 | gene2) |> 
   rowwise() |> 
+  mutate(expr_hit = ifelse(gene1, hit1, hit2)) |> 
   # Assume that only 1 trait is an expression trait.
   mutate(tss = ifelse(gene1, lookup_tss(trait1), lookup_tss(trait2))) |> 
-  select(trait1, trait2, block, tss, gene1) |>
+  select(trait1, trait2, block, tss, gene1, expr_hit, hit1.margz, hit2.margz) |>
   mutate(coloc_unif = list(coloc.bf_bf(BF[[block]][[trait1]], BF[[block]][[trait2]]))) |> 
   mutate(coloc_non_unif = ifelse(
     gene1, 
@@ -87,14 +97,44 @@ method_comparison_data |>
     h4_non_unif = max(h4_non_unif), 
     h4_unif = max(h4_unif)
   ) |> 
-  ggplot(aes(h4_unif, h4_non_unif)) + 
+  separate_wider_delim(expr_hit, delim = ":", names = c("hit_chr", "hit_bp")) |> 
+  mutate(log_hit_tss_distance = log10(abs(tss - as.numeric(hit_bp)))) |> 
+  ggplot(aes(h4_unif, h4_non_unif, col = log_hit_tss_distance)) + 
   geom_point() + 
   geom_segment(aes(xend = h4_unif, yend = h4_unif), color = "grey") +
   geom_abline(col = "grey") + 
   labs(
     x = "H4: Uniform priors", 
-    y = "H4: Non-uniform priors"
+    y = "H4: Non-uniform priors",
+    col = "TSS\ndistance"
   ) + 
+  theme_bw()
+```
+
+```{r}
+method_comparison_data |> 
+  mutate(
+    h4_non_unif = max(h4_non_unif), 
+    h4_unif = max(h4_unif)
+  ) |> 
+  separate_wider_delim(expr_hit, delim = ":", names = c("hit_chr", "hit_bp")) |> 
+  mutate(log_hit_tss_distance = log10(abs(tss - as.numeric(hit_bp)))) |>
+  mutate(h4_diff = h4_unif - h4_non_unif) |> 
+  ggplot(aes(log_hit_tss_distance, h4_diff)) + 
+  geom_point() + 
+  theme_bw()
+```
+
+```{r}
+method_comparison_data |> 
+  mutate(
+    h4_non_unif = max(h4_non_unif), 
+    h4_unif = max(h4_unif)
+  ) |> 
+  mutate(margz_diff = abs(hit1.margz - hit2.margz)) |> 
+  mutate(h4_diff = h4_unif - h4_non_unif) |> 
+  ggplot(aes(margz_diff, h4_diff)) + 
+  geom_point() + 
   theme_bw()
 ```
 
@@ -127,8 +167,201 @@ method_comparison_data |>
   mutate(h4_diff = h4_unif - h4_non_unif) |> 
   mutate(abs_h4_diff = abs(h4_diff)) |> 
   arrange(desc(abs_h4_diff)) |> 
-  select(trait1, trait2, h4_unif, h4_non_unif)
+  select(trait1, trait2, h4_unif, h4_non_unif, block, expr_hit, gene1, tss)
 ```
+
+```{r}
+snps1 <- colnames(BF[["chr2_block13"]][["CD_DeLange_28067908_1-hg38.tsv.gz"]])
+snps2 <- colnames(BF[["chr2_block13"]][["GTEx_ge_blood.ENSG00000138092"]])
+isnps <- intersect(snps1, snps2)
+filter(hg38_data, ensembl_gene_id == "ENSG00000138092")
+
+plot_bfs(BF[["chr2_block13"]][["CD_DeLange_28067908_1-hg38.tsv.gz"]], isnps, 
+          tss = 24793445) + 
+  plot_bfs(BF[["chr2_block13"]][["GTEx_ge_blood.ENSG00000138092"]], isnps) +
+  plot_bfs(BF[["chr2_block13"]][["GTEx_ge_blood.ENSG00000138092"]], isnps, 
+          with_prior = TRUE) + 
+  plot_bfs(BF[["chr2_block13"]][["GTEx_ge_blood.ENSG00000138092"]], isnps, 
+          tss = 24793445, with_prior = TRUE) + 
+  plot_bfs(BF[["chr2_block13"]][["GTEx_ge_blood.ENSG00000138092"]], isnps, 
+          tss = 24900000, with_prior = TRUE) + 
+  plot_bfs(BF[["chr2_block13"]][["GTEx_ge_blood.ENSG00000138092"]], isnps, 
+          tss = 24877299, with_prior = TRUE)
+
+sum_bfs <- as.matrix(
+  BF[["chr2_block13"]][["CD_DeLange_28067908_1-hg38.tsv.gz"]][, isnps] + 
+  BF[["chr2_block13"]][["GTEx_ge_blood.ENSG00000138092"]][, isnps], 
+) |> 
+  t()
+
+plot_bfs(BF[["chr2_block13"]][["CD_DeLange_28067908_1-hg38.tsv.gz"]], isnps) + 
+  plot_bfs(BF[["chr2_block13"]][["GTEx_ge_blood.ENSG00000138092"]], isnps) + 
+  plot_bfs(sum_bfs, isnps) + 
+    geom_vline(xintercept = 24877299, colour = "red") + 
+    geom_vline(xintercept = 24793445, colour = "blue")
+```
+
+```{r}
+devtools::load_all("~/coloc")
+
+coloc.bf_bf(
+  BF[["chr3_block79"]][["CCL19_Zhao_37563310_1-hg38.tsv.gz"]],
+  BF[["chr3_block79"]][["GENCORD_ge_fibroblast.ENSG00000113971"]],
+  tss2 = 132721707
+)
+
+coloc.bf_bf(
+  BF[["chr3_block79"]][["CCL19_Zhao_37563310_1-hg38.tsv.gz"]],
+  BF[["chr3_block79"]][["GENCORD_ge_fibroblast.ENSG00000113971"]],
+)
+
+snps1 <- colnames(BF[["chr3_block79"]][["CCL19_Zhao_37563310_1-hg38.tsv.gz"]])
+snps2 <- colnames(BF[["chr3_block79"]][["GENCORD_ge_fibroblast.ENSG00000113971"]])
+isnps <- intersect(snps1, snps2)
+bps <- vapply(strsplit(isnps, ":"), \(x) as.numeric(x[[2]]), numeric(1))
+
+ind <- seq(1, length(bps), by = 100)
+h4 <- numeric(length(ind))
+h3 <- numeric(length(ind))
+for (i in seq_along(ind)) {
+  coloc_out <- coloc.bf_bf(
+    BF[["chr3_block79"]][["CCL19_Zhao_37563310_1-hg38.tsv.gz"]],
+    BF[["chr3_block79"]][["GENCORD_ge_fibroblast.ENSG00000113971"]],
+    tss2 = bps[[ind[[i]]]]
+  )
+  h4[[i]] <- coloc_out$summary[, "PP.H4.abf"][[1]]
+  h3[[i]] <- coloc_out$summary[, "PP.H3.abf"][[1]]
+}
+
+h3_data <- tibble(h3, tss = bps[ind])
+
+h3_data |> 
+  ggplot(aes(tss, h3)) + 
+  geom_point() + 
+  theme_bw()
+
+h4_data <- tibble(h4, tss = bps[ind])
+
+h4_data |> 
+  ggplot(aes(tss, h4)) + 
+  geom_point() + 
+  theme_bw()
+
+lH3 <- numeric(length(ind))
+lH4 <- numeric(length(ind))
+H3 <- numeric(length(ind))
+H4 <- numeric(length(ind))
+rho <- numeric(length(ind))
+for (i in seq_along(ind)) {
+  p1_vec <- rep(1e-4, length(isnps))
+  p2_vec <- coloc:::calculate_non_uniform_p(bps, bps[[ind[[i]]]])
+  p12_vec <- p1_vec * p2_vec * (1e-5 / (1e-4 * 1e-4))
+  l1 <- BF[["chr3_block79"]][["CCL19_Zhao_37563310_1-hg38.tsv.gz"]][, isnps]
+  l2 <- BF[["chr3_block79"]][["GENCORD_ge_fibroblast.ENSG00000113971"]][, isnps]
+  lsum <- l1 + l2
+  lH3_abf <- coloc:::logdiff(coloc:::logsum(log(p1_vec) + l1) +
+                             coloc:::logsum(log(p2_vec) + l2),
+                     coloc:::logsum(log(p1_vec) + log(p2_vec) + lsum))
+  lH4_abf <- coloc:::logsum(log(p12_vec) + lsum)
+  rho[[i]] <- cor(log(p12_vec), lsum) 
+  lH3[[i]] <- lH3_abf
+  lH4[[i]] <- lH4_abf
+  H4[[i]] <- exp(lH4[[i]] - coloc:::logsum(c(lH3[[i]], lH4[[i]])))
+  H3[[i]] <- exp(lH3[[i]] - coloc:::logsum(c(lH3[[i]], lH4[[i]])))
+}
+
+
+highlight_tss <- c(132486727, 132535246, 132590143, 132649677)
+tibble(tss = bps[ind], lH3) |> 
+  mutate(highlight = tss %in% highlight_tss) |> 
+  ggplot(aes(tss, lH3, col = highlight)) + 
+  geom_point() + 
+  coord_cartesian(ylim = c(83, 95)) + 
+tibble(tss = bps[ind], lH4) |> 
+  mutate(highlight = tss %in% highlight_tss) |> 
+  ggplot(aes(tss, lH4, col = highlight)) + 
+  geom_point() + 
+  coord_cartesian(ylim = c(83, 95)) + 
+tibble(tss = bps[ind], H4) |> 
+  mutate(highlight = tss %in% highlight_tss) |> 
+  ggplot(aes(tss, H4, col = highlight)) + 
+  geom_point() + 
+  plot_layout(guides = "collect")
+
+tibble(tss = bps[ind], rho) |> 
+  mutate(highlight = tss %in% highlight_tss) |> 
+  ggplot(aes(tss, rho, col = highlight)) + 
+  geom_point() + 
+  plot_layout(guides = "collect")
+
+sum_bfs <- as.matrix(
+  BF[["chr3_block79"]][["CCL19_Zhao_37563310_1-hg38.tsv.gz"]][, isnps] + 
+  BF[["chr3_block79"]][["GENCORD_ge_fibroblast.ENSG00000113971"]][, isnps], 
+) |> 
+  t()
+
+plot_bfs(BF[["chr3_block79"]][["CCL19_Zhao_37563310_1-hg38.tsv.gz"]], isnps) + 
+  geom_vline(aes(xintercept = tss, colour = h4), h4_data, linewidth = 1) + 
+  scale_color_distiller(palette = 1, direction = 1, type = "div") + 
+  plot_bfs(BF[["chr3_block79"]][["GENCORD_ge_fibroblast.ENSG00000113971"]], isnps) + 
+  geom_vline(aes(xintercept = tss, colour = h4), h4_data, linewidth = 1) + 
+  scale_color_distiller(palette = 1, direction = 1, type = "div") + 
+  plot_bfs(sum_bfs, isnps) + 
+  geom_vline(aes(xintercept = tss, colour = h4), h4_data, linewidth = 1) + 
+  scale_color_distiller(palette = 1, direction = 1, type = "div") + 
+  plot_layout(guides = "collect")
+
+tibble(bf = sum_bfs[1, ], bps = bps) |> 
+  mutate(g = rep(seq(1, n(), by = 100), each = 100, length.out = n())) |> 
+  summarise(bf = mean(bf), bps = median(bps), .by = g) |> 
+  ggplot(aes(bps, bf)) + 
+  geom_point()
+```
+
+```{r}
+x <- seq(0.05, 0.95, by = 0.05)
+y <- 0.5
+plot(x, x / (x + y))
+```
+
+```{r}
+devtools::load_all("~/coloc")
+
+coloc.bf_bf(
+  BF[["chr2_block13"]][["CD_DeLange_28067908_1-hg38.tsv.gz"]],
+  BF[["chr2_block13"]][["GTEx_ge_blood.ENSG00000138092"]],
+  tss2 = 24793445
+)
+
+coloc.bf_bf(
+  BF[["chr2_block13"]][["CD_DeLange_28067908_1-hg38.tsv.gz"]],
+  BF[["chr2_block13"]][["GTEx_ge_blood.ENSG00000138092"]],
+  tss2 = 24877299
+)$summary[, "PP.H4.abf"]
+
+snps1 <- colnames(BF[["chr2_block13"]][["CD_DeLange_28067908_1-hg38.tsv.gz"]])
+snps2 <- colnames(BF[["chr2_block13"]][["GTEx_ge_blood.ENSG00000138092"]])
+isnps <- intersect(snps1, snps2)
+bps <- vapply(strsplit(isnps, ":"), \(x) as.numeric(x[[2]]), numeric(1))
+
+ind <- seq(1, length(bps), by = 100)
+h4 <- numeric(length(ind))
+for (i in seq_along(ind)) {
+  h4[[i]] <- coloc.bf_bf(
+    BF[["chr2_block13"]][["CD_DeLange_28067908_1-hg38.tsv.gz"]],
+    BF[["chr2_block13"]][["GTEx_ge_blood.ENSG00000138092"]],
+    tss2 = bps[[ind[[i]]]]
+  )$summary[, "PP.H4.abf"][[1]]
+}
+
+h4_data <- tibble(h4, tss = bps[ind])
+
+h4_data |> 
+  ggplot(aes(tss, h4)) + 
+  geom_point() + 
+  theme_bw()
+```
+
 
 Lower Pr(H4) with the non-uniform priors.
 
@@ -141,8 +374,37 @@ hg38_data |>
 
 plot_bfs(BF[["chr3_block79"]][["CCL19_Zhao_37563310_1-hg38.tsv.gz"]], isnps) + 
  plot_bfs(BF[["chr3_block79"]][["GENCORD_ge_fibroblast.ENSG00000113971"]], isnps, 
-          tss = 132721707)  
+          tss = 132721707) + 
+ plot_bfs(BF[["chr3_block79"]][["GENCORD_ge_fibroblast.ENSG00000113971"]], isnps, 
+          tss = 132721707, with_prior = TRUE)
+
+plot_bfs(BF[["chr3_block79"]][["GENCORD_ge_fibroblast.ENSG00000113971"]], isnps, 
+          tss = 132721707) + 
+ plot_bfs(BF[["chr3_block79"]][["GENCORD_ge_fibroblast.ENSG00000113971"]], isnps, 
+          tss = 132721707, with_prior = TRUE) + 
+ plot_bfs(BF[["chr3_block79"]][["GENCORD_ge_fibroblast.ENSG00000113971"]], isnps, 
+          with_prior = TRUE)  
 ```
+
+```{r}
+coloc.bf_bf(
+  BF[["chr3_block79"]][["CCL19_Zhao_37563310_1-hg38.tsv.gz"]],
+  BF[["chr3_block79"]][["GENCORD_ge_fibroblast.ENSG00000113971"]]
+)
+
+coloc.bf_bf(
+  BF[["chr3_block79"]][["CCL19_Zhao_37563310_1-hg38.tsv.gz"]],
+  BF[["chr3_block79"]][["GENCORD_ge_fibroblast.ENSG00000113971"]],
+  tss2 = 132721707
+) 
+
+coloc.bf_bf(
+  BF[["chr3_block79"]][["CCL19_Zhao_37563310_1-hg38.tsv.gz"]],
+  BF[["chr3_block79"]][["GENCORD_ge_fibroblast.ENSG00000113971"]],
+  tss2 = 132500000
+) 
+```
+
 
 Higher Pr(H4) with the non-uniform priors.
 
@@ -155,7 +417,16 @@ hg38_data |>
 
 plot_bfs(BF[["chr2_block25"]][["Lepik_2017_ge_blood.ENSG00000234936"]], isnps) + 
  plot_bfs(BF[["chr2_block25"]][["UC_DeLange_28067908_1-hg38.tsv.gz"]], isnps, 
-          tss = 43229573)  
+          tss = 43229573) + 
+ plot_bfs(BF[["chr2_block25"]][["UC_DeLange_28067908_1-hg38.tsv.gz"]], isnps, 
+          tss = 43229573, with_prior = TRUE)
+
+coloc.bf_bf(
+  BF[["chr2_block25"]][["Lepik_2017_ge_blood.ENSG00000234936"]],
+  BF[["chr2_block25"]][["UC_DeLange_28067908_1-hg38.tsv.gz"]],
+  tss2 = 43229573
+)
+
 ```
 
 No change, high Pr(H4)
@@ -167,16 +438,77 @@ isnps <- intersect(snps1, snps2)
 hg38_data |> 
   filter(ensembl_gene_id == "ENSG00000115009")
 
-plot_bfs(BF[["chr2_block130"]][["GENCORD_ge_T-cell.ENSG00000115009"]], isnps) + 
+plot_bfs(BF[["chr2_block130"]][["GENCORD_ge_T-cell.ENSG00000115009"]], isnps, 
+         tss = 227813842) + 
  plot_bfs(BF[["chr2_block130"]][["ASTCO_Ferreira_30929738_1-hg38.tsv.gz"]], isnps, 
-          tss = 227813842)  
+          tss = 227813842) + 
+ plot_bfs(BF[["chr2_block130"]][["ASTCO_Ferreira_30929738_1-hg38.tsv.gz"]], isnps, 
+          tss = 227813842, with_prior = TRUE)  
 
-coloc.bf_bf(BF[["chr2_block130"]][["GENCORD_ge_T-cell.ENSG00000115009"]], 
-            BF[["chr2_block130"]][["ASTCO_Ferreira_30929738_1-hg38.tsv.gz"]])
+coloc.bf_bf(
+  BF[["chr2_block130"]][["ASTCO_Ferreira_30929738_1-hg38.tsv.gz"]],
+  BF[["chr2_block130"]][["GENCORD_ge_T-cell.ENSG00000115009"]], 
+)
 
-coloc.bf_bf(BF[["chr2_block130"]][["GENCORD_ge_T-cell.ENSG00000115009"]], 
-            BF[["chr2_block130"]][["ASTCO_Ferreira_30929738_1-hg38.tsv.gz"]], 
-            tss2 = 227813842)
+coloc.bf_bf(
+  BF[["chr2_block130"]][["ASTCO_Ferreira_30929738_1-hg38.tsv.gz"]],
+  BF[["chr2_block130"]][["GENCORD_ge_T-cell.ENSG00000115009"]], 
+  tss2 = 227813842
+)
+
+coloc.bf_bf(
+  BF[["chr2_block130"]][["ASTCO_Ferreira_30929738_1-hg38.tsv.gz"]],
+  BF[["chr2_block130"]][["GENCORD_ge_T-cell.ENSG00000115009"]], 
+  tss2 = 227500000
+)
 ```
 
 Q: How to you make the ultimate colocalisation? Is the 'sharpness' of the peak important?
+
+```{r}
+snps1 <- colnames(BF[["chr3_block79"]][["CCL19_Zhao_37563310_1-hg38.tsv.gz"]])
+snps2 <- colnames(BF[["chr3_block79"]][["GENCORD_ge_fibroblast.ENSG00000113971"]])
+isnps <- intersect(snps1, snps2)
+plot_bfs(BF[["chr3_block79"]][["GENCORD_ge_fibroblast.ENSG00000113971"]], isnps, 
+         tss = 132721707, with_prior = TRUE)  
+
+tss <- 132721707
+snps <- isnps
+bfs <- BF[["chr3_block79"]][["GENCORD_ge_fibroblast.ENSG00000113971"]]
+
+bfs <- bfs[1, snps]
+bps <- vapply(strsplit(snps, ":"), \(x) as.numeric(x[[2]]), numeric(1))
+  
+prior_vec <- 10^-4 * length(bps) * coloc:::calculate_non_uniform_p(bps, tss)
+plot(prior_vec)
+plot(log(prior_vec))
+```
+
+```{r}
+# eqtlgen_data <- readRDS(here::here("data", "processed-data", "eqtlgen.rds"))
+# 
+# eqtlgen_data
+# 
+# x <- eqtlgen_data |> 
+#   filter(abs_tss_distance <= 300000) |>
+#   filter(tss_distance > 0) |> 
+#   pull(tss_distance)
+# x <- c(x, -x)
+# 
+# # Setting cut = 0, ensures there is not a very large drop of density at the end 
+# # of the  interval.
+# dens <- density(x, bw = "SJ", cut = 0)
+#   
+# dens_data <- tibble(x = dens$x, y = dens$y / 2)
+# 
+# dens_data |> 
+#   ggplot(aes(x, y)) + 
+#   geom_point()
+# 
+# dens_data |> 
+#   ggplot(aes(x, log(y))) + 
+#   geom_point()
+# 
+# saveRDS(dens_data, here::here("output", "data", "density.rds"))
+```
+

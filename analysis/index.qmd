@@ -7,3 +7,5 @@ editor: source
 [eQTL TSS analysis](eqtl-tss-distance-analysis.html)
 
 [Method testing](method-testing.html)
+
+[eQTL method testing](eqtl-method-testing.html)
