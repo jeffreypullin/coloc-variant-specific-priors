@@ -2,14 +2,18 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://jeffreypullin.github.io/coloc-estimated-eqtl-priors/index.html</loc>
-    <lastmod>2024-01-04T10:21:25.695Z</lastmod>
+    <lastmod>2024-01-11T11:16:10.405Z</lastmod>
+  </url>
+  <url>
+    <loc>https://jeffreypullin.github.io/coloc-estimated-eqtl-priors/eqtl-method-testing.html</loc>
+    <lastmod>2024-01-11T11:16:50.756Z</lastmod>
   </url>
   <url>
     <loc>https://jeffreypullin.github.io/coloc-estimated-eqtl-priors/method-testing.html</loc>
-    <lastmod>2024-01-04T10:21:47.928Z</lastmod>
+    <lastmod>2024-01-11T11:17:36.146Z</lastmod>
   </url>
   <url>
     <loc>https://jeffreypullin.github.io/coloc-estimated-eqtl-priors/eqtl-tss-distance-analysis.html</loc>
-    <lastmod>2024-01-04T10:22:03.313Z</lastmod>
+    <lastmod>2024-01-11T11:17:54.404Z</lastmod>
   </url>
 </urlset>
