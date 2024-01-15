@@ -82,16 +82,17 @@ plot_multiple_bfs <- function(trait1, trait2, block, tss1 = NULL, tss2 = NULL) {
       y = "ABF",
       col = "Trait"
     ) + 
+    scale_colour_manual(values = c("#F8766D", "#619CFF")) + 
     theme_bw() + 
     theme(legend.position = "top") + 
     theme(plot.title = element_text(size = 12))
   
   if (!is.null(tss1)) {
-    p <- p + geom_vline(xintercept = tss1)
+    p <- p + geom_vline(xintercept = tss1, colour = "#F8766D")
   }
   
   if (!is.null(tss2)) {
-    p <- p + geom_vline(xintercept = tss2)
+    p <- p + geom_vline(xintercept = tss2, colour = "#619CFF")
   }
  
   coloc_no_tss <- round(coloc.bf_bf(bfs1, bfs2)$summary$PP.H4.abf, 2)
@@ -135,10 +136,8 @@ plot_priors <- function(trait1, trait2, block, tss1 = NULL, tss2 = NULL) {
     geom_line() +
     labs(
       x = "Position", 
-      y = "Probability",
       col = "Prior"
     ) + 
-    coord_cartesian(ylim = c(-20, -5)) + 
     theme_bw()
 }
 ```
@@ -146,6 +145,19 @@ plot_priors <- function(trait1, trait2, block, tss1 = NULL, tss2 = NULL) {
 ```{r}
 eqtl_method_comparison_data <- readRDS(here::here("output", "data", "eqtl-method-comparison.rds"))
 BF <- readRDS(here::here("output", "data", "reduced-bf-list.rds"))
+```
+
+```{r}
+eqtl_method_comparison_data |>
+  mutate(same_gene = tss1 == tss2) |> 
+  filter(abs(h4_diff_tss1) >= 0.01) |>  
+  ggplot(aes(same_gene, h4_diff_tss1)) + 
+  geom_boxplot() + 
+  coord_cartesian(ylim = c(-1, 1)) +
+  labs(
+    y = "Difference in Pr(H4)",
+  )
+  theme_bw()
 ```
 
 ```{r}
@@ -194,6 +206,31 @@ eqtl_method_comparison_data |>
   theme_bw()
 ```
 
+```{r}
+eqtl_method_comparison_data |> 
+  filter(tss1 == tss2) |> 
+  ungroup() |> 
+  filter(h4_unif < 0.8, h4_non_unif_tss1 > 0.8) |> 
+  slice(3) |> 
+  rowwise() |> 
+  mutate(plot = list(plot_multiple_bfs(trait1, trait2, block, tss1 = tss1, 
+                                       tss2 = tss2))) |> 
+  pull(plot)
+```  
+
+```{r}
+eqtl_method_comparison_data |> 
+  ungroup() |> 
+  filter(h4_unif > 0.8, h4_non_unif_tss1 < 0.8) |> 
+  arrange(desc(h4_diff_tss1)) |> 
+  slice(2) |> 
+  rowwise() |> 
+  mutate(plot = list(plot_multiple_bfs(trait1, trait2, block, tss1 = tss1, 
+                                       tss2 = tss2))) |> 
+  pull(plot)
+```
+
+
 ## Same gene examples
 
 Decrease in Pr(H4) (Trait 1 TSS)
@@ -241,7 +278,7 @@ eqtl_method_comparison_data |>
   filter(tss1 == tss2) |> 
   ungroup() |> 
   arrange(desc(h4_diff_tss1)) |> 
-  slice(1) |> 
+  slice(2) |> 
   rowwise() |> 
   mutate(plot = list(plot_multiple_bfs(trait1, trait2, block, tss1 = tss1, 
                                        tss2 = tss2))) |> 
@@ -289,6 +326,14 @@ eqtl_method_comparison_data |>
   ungroup() |> 
   arrange(h4_diff_tss1) |> 
   slice(4) |> 
-  mutate(plot = list(plot_priors(trait1, trait2, block, tss1, ))) |> 
+  mutate(plot = list(plot_priors(trait1, trait2, block, NULL, tss2))) |> 
   pull(plot)
+```
+
+```{r}
+eqtl_method_comparison_data |> 
+  filter(tss1 != tss2) |> 
+  mutate(min_diff = min(abs(h4_diff_tss1), abs(h4_diff_tss2))) |> 
+  ggplot(aes(min_diff)) + 
+  geom_histogram()
 ```
