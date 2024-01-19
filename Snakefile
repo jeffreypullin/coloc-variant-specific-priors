@@ -2,7 +2,6 @@ configfile: "config.yaml"
 
 chromosomes = ["chr" + str(x) for x in range(1, 23)] + ["chrX"]
 
-# .cc.tsv.gz
 eqtl_data_ids_subset = ["QTD000110", "QTD000373", "QTD000356"]
 
 rule all: 
@@ -144,14 +143,24 @@ rule process_onek1k_data:
   output: processed_data_path = "data/processed-data/onek1k.rds"
   script: "code/process-data/process-onek1k-data.R"
 
+rule download_metadata:
+  output: 
+    eqtl_metadata_file = "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
+    pqtl_metadata_file = "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
+  shell:
+    """
+    wget -O {output.eqtl_metadata_file} https://zenodo.org/record/7808390/files/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz
+    wget -O {output.pqtl_metadata_file} https://zenodo.org/record/7808390/files/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz
+    """ 
+
 rule run_pqtl_eqtl_colocalisation:
   input: 
     eqtl_data_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.cc.tsv.gz",
     eqtl_index_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.cc.tsv.gz.tbi",
     pqtl_data_file = "data/QTD000584.cc.tsv.gz",
     pqtl_index_file = "data/QTD000584.cc.tsv.gz.tbi",
-    eqtl_metadata_file = "data/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
-    pqtl_metadata_file = "data/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
+    eqtl_metadata_file = "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
+    pqtl_metadata_file = "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
   output: 
     result_file = "output/data/pqtl-eqtl-coloc-{eqtl_id}-{chr}.tsv"
   script: "code/run-coloc-abf.R"

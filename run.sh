@@ -1,7 +1,7 @@
 #!/bin/bash
 
 source ~/.bashrc
-module load R/4.2.0
+module load R/4.2.2
 micromamba activate snakemake
 
 local_flag=''
@@ -20,9 +20,9 @@ done
 
 if [[ "$local_flag" = "true" ]]
 then
-  snakemake -s Snakefile.py --profile none --workflow-profile none --cores 1
+  snakemake -s Snakefile --profile none --workflow-profile none --cores 1
 else
-  snakemake -s Snakefile.py --profile none
+  snakemake -s Snakefile --profile none
 fi
 
 
