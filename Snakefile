@@ -2,6 +2,9 @@ configfile: "config.yaml"
 
 chromosomes = ["chr" + str(x) for x in range(1, 23)] + ["chrX"]
 
+# .cc.tsv.gz
+eqtl_data_ids_subset = ["QTD000110", "QTD000373", "QTD000356"]
+
 rule all: 
   input: 
     "data/processed-data/eqtl-catalogue.rds",
@@ -12,6 +15,9 @@ rule all:
     "data/fauman-hyde/eqtlgen.txt",
     "data/tss-data/hg19-tss-data.rds",
     expand("data/adipos-express/processed-ab1-eur/{chromosome}.txt", chromosome = chromosomes),
+    expand("output/data/pqtl-eqtl-coloc-{eqtl_id}-{chr}.tsv", 
+           chr = [x for x in range(1, 23)],
+           eqtl_id = eqtl_data_ids_subset)
 
 rule download_tss_data: 
   output: hg19_tss_data_path = "data/tss-data/hg19-tss-data.rds",
@@ -68,7 +74,9 @@ rule download_etl_catalogue_metadata:
 
 rule download_eqtl_catalogue_files: 
   input: metadata_file = "data/eqtl-catalogue/eqtl-catalogue-metadata.tsv"
-  output: dataset_file = "data/eqtl-catalogue/sumstats/{dataset_id}.cc.tsv.gz"
+  output: 
+    dataset_file = "data/eqtl-catalogue/sumstats/{dataset_id}.cc.tsv.gz",
+    tabix_file =  "data/eqtl-catalogue/sumstats/{dataset_id}.cc.tsv.gz.tbi"
   script: "code/download-eqtl-catalogue.R"
   
 rule filter_eqtl_catalogue_files:
@@ -135,3 +143,15 @@ rule process_onek1k_data:
     tss_data_path = "data/tss-data/hg19-tss-data.rds"
   output: processed_data_path = "data/processed-data/onek1k.rds"
   script: "code/process-data/process-onek1k-data.R"
+
+rule run_pqtl_eqtl_colocalisation:
+  input: 
+    eqtl_data_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.cc.tsv.gz",
+    eqtl_index_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.cc.tsv.gz.tbi",
+    pqtl_data_file = "data/QTD000584.cc.tsv.gz",
+    pqtl_index_file = "data/QTD000584.cc.tsv.gz.tbi",
+    eqtl_metadata_file = "data/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
+    pqtl_metadata_file = "data/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
+  output: 
+    result_file = "output/data/pqtl-eqtl-coloc-{eqtl_id}-{chr}.tsv"
+  script: "code/run-coloc-abf.R"
