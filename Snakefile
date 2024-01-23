@@ -13,6 +13,7 @@ rule all:
     "data/processed-data/onek1k.rds",
     "data/fauman-hyde/eqtlgen.txt",
     "data/tss-data/hg19-tss-data.rds",
+    "data/gnocchi-windows.bed",
     expand("data/adipos-express/processed-ab1-eur/{chromosome}.txt", chromosome = chromosomes),
     expand("output/data/pqtl-eqtl-coloc-{eqtl_id}-{chr}.tsv", 
            chr = [x for x in range(1, 23)],
@@ -164,3 +165,16 @@ rule run_pqtl_eqtl_colocalisation:
   output: 
     result_file = "output/data/pqtl-eqtl-coloc-{eqtl_id}-{chr}.tsv"
   script: "code/run-coloc-abf.R"
+
+rule download_gnochhi_data: 
+  output: "data/gnocchi-windows.bed" 
+  shell: 
+    """"
+    wget https://static-content.springer.com/esm/art%3A10.1038%2Fs41586-023-06045-0/MediaObjects/41586_2023_6045_MOESM4_ESM.zip
+    unzip 41586_2023_6045_MOESM4_ESM.zip 
+    gunzip Supplementary_Data_2.bed.gz 
+    mv Supplementary_Data_2.bed {output}
+    rm 41586_2023_6045_MOESM4_ESM.zip 
+    rm Supplementary_Data_1.tsv  Supplementary_Data_3.bed.gz Supplementary_Data_4.tsv
+    rm Supplementary_Data_5.tsv Supplementary_Data_6_ESM.txt
+    """

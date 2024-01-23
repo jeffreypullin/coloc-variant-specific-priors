@@ -22,6 +22,7 @@ library(conflicted)
 conflicts_prefer(dplyr::filter)
 conflicts_prefer(dplyr::select)
 conflicts_prefer(dplyr::setdiff)
+conflicts_prefer(dplyr::rename)
 
 devtools::load_all("~/coloc")
 ```
@@ -60,35 +61,54 @@ tambets_supp |>
   select(dataset_name, gene_name, protein, PP.H4.abf, is_true_positive)
 
 tambets_supp |>
-  filter(gene_name == "FDFT1") |>
+  filter(gene_name == "RUVBL2") |>
   select(dataset_name, gene_name, protein, PP.H4.abf, is_true_positive)
 ```
 
 ```{r}
+pqtl_metadata <- read_tsv("data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz")
+pqtl_metadata |>
+  select(gene_start, gene_end, strand, phenotype_pos)
+```
+
+```{r}
 pqtl_eqtl_colocs |>
-  ggplot(aes(PP.H4.abf_unif, PP.H4.abf_non_unif)) + 
+  ggplot(aes(PP.H4.abf_unif, PP.H4.abf_eqtl_tss)) + 
   geom_point() + 
   geom_vline(xintercept = 0.8, colour = "red")
 
 pqtl_eqtl_colocs |>
-  ggplot(aes(PP.H4.abf_unif, PP.H4.abf_non_unif)) + 
+  ggplot(aes(PP.H4.abf_unif, PP.H4.abf_pqtl_tss)) + 
   geom_point() + 
-  geom_vline(xintercept = 0.8, colour = "red") + 
-  facet_wrap(~eqtl_data_id)
+  geom_vline(xintercept = 0.8, colour = "red")
 ```
 
 ```{r}
 pqtl_eqtl_colocs |>
   mutate(
     called_coloc_unif = PP.H4.abf_unif >= 0.8,
-    called_coloc_non_unif = PP.H4.abf_non_unif >= 0.8
+    called_coloc_non_unif = PP.H4.abf_eqtl_tss >= 0.8
   ) |>
   count(called_coloc_unif, called_coloc_non_unif)
 
 pqtl_eqtl_colocs |>
   mutate(
     called_coloc_unif = PP.H4.abf_unif >= 0.8,
-    called_coloc_non_unif = PP.H4.abf_non_unif >= 0.8
+    called_coloc_non_unif = PP.H4.abf_pqtl_tss >= 0.8
+  ) |>
+  count(called_coloc_unif, called_coloc_non_unif)
+
+pqtl_eqtl_colocs |>
+  mutate(
+    called_coloc_unif = PP.H4.abf_unif >= 0.8,
+    called_coloc_non_unif = PP.H4.abf_score >= 0.8
+  ) |>
+  count(called_coloc_unif, called_coloc_non_unif)
+
+pqtl_eqtl_colocs |>
+  mutate(
+    called_coloc_unif = PP.H4.abf_unif >= 0.8,
+    called_coloc_non_unif = PP.H4.abf_tss_non_unif >= 0.8
   ) |>
   filter(called_coloc_unif != called_coloc_non_unif) |> 
   separate_wider_delim(
@@ -96,7 +116,33 @@ pqtl_eqtl_colocs |>
     names = c("protein_name", "protein_other"),
     too_many = "merge",
   ) |>
-  select(PP.H4.abf_unif, PP.H4.abf_non_unif, gene_name, protein_name)
+  select(PP.H4.abf_unif, PP.H4.abf_tss_non_unif, gene_name, protein_name)
+  mutate(match = gene_name == protein_name) |>
+  summarise(
+    unif_precision = sum(called_coloc_unif & match) / n(),
+    non_unif_precision = sum(called_coloc_non_unif & match) / n()
+  )
+```
+
+```{r}
+pqtl_eqtl_colocs |>
+  mutate(
+    called_coloc_unif = PP.H4.abf_unif >= 0.8,
+    called_coloc_non_unif = PP.H4.abf_score_non_unif >= 0.8
+  ) |>
+  count(called_coloc_unif, called_coloc_non_unif)
+
+pqtl_eqtl_colocs |>
+  mutate(
+    called_coloc_unif = PP.H4.abf_unif >= 0.8,
+    called_coloc_non_unif = PP.H4.abf_score_non_unif >= 0.8
+  ) |>
+  filter(called_coloc_unif != called_coloc_non_unif) |> 
+  separate_wider_delim(
+    phenotype_id, ".", 
+    names = c("protein_name", "protein_other"),
+    too_many = "merge",
+  ) |>
   mutate(match = gene_name == protein_name) |>
   summarise(
     unif_precision = sum(called_coloc_unif & match) / n(),
@@ -107,20 +153,22 @@ pqtl_eqtl_colocs |>
 ```{r}
 eqtl_data_file <- "data/QTD000110.cc.tsv.gz"
 pqtl_data_file <- "data/QTD000584.cc.tsv.gz"
-eqtl_metadata_file <- "data/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz"
-pqtl_metadata_file <- "data/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
+eqtl_metadata_file <- "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz"
+pqtl_metadata_file <- "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
 
-eqtl_metadata <- read_tsv(
-  "data/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz", 
-  show_col_types = FALSE
-)
+eqtl_metadata <- read_tsv(eqtl_metadata_file, show_col_types = FALSE)
 
 eqtl_metadata |>
-  dplyr::filter(gene_name == "IL18R1") |>
+  filter(gene_name == "IL18R1") |>
   mutate(tss = if_else(strand == 1, gene_start, gene_end)) |>
   rowwise() |>
   mutate(region = paste0(chromosome, ":", tss - 1e5, "-", tss + 1e5)) |>
   dplyr::select(chromosome, gene_id, region, tss)
+
+pqtl_metadata |>
+  filter(phenotype_id == "IL18R1.14079.14.3..1") |>
+  mutate(gene_body = (gene_start + gene_end) / 2) |>
+  select(gene_body)
 
 eqtl_col_names <- colnames(read_tsv("data/eqtl-catalogue/sumstats/QTD000373.cc.tsv.gz", n_max = 1, 
                            show_col_types = FALSE))
@@ -155,26 +203,6 @@ eqtl_data <- tabix.read.table("data/eqtl-catalogue/sumstats/QTD000373.cc.tsv.gz"
   )
 
 # FIXME: Why does tabix all then filter differ to tabix filter.
-#eqtl_data <- tabix.read.table("data/QTD000110.cc.tsv.gz", "19:41340717-41540717") |>
-#  as_tibble() |>
-#  setNames(eqtl_col_names) |>
-#  filter(molecular_trait_id == "ENSG00000105341") |>
-#  select(-rsid) |>
-#  distinct() |>
-#  mutate(id = paste(chromosome, position, sep = ":")) |>
-#  group_by(id) |>
-#  mutate(row_count = n()) |>
-#  ungroup() |>
-#  filter(row_count == 1) |>
-#  filter(!is.nan(se)) |>
-#  filter(!is.na(se)) |>
-#  select(molecular_trait_id, variant, maf, beta, se, an, position) |>
-#  mutate(
-#    maf = as.numeric(maf),
-#    beta = as.numeric(beta),
-#    se = as.numeric(se),
-#    an = as.numeric(an)
-#  )
 
 pqtl_data <- tabix.read.table("data/QTD000584.cc.tsv.gz", paste0(2, ":1-2147483647")) |>
   as_tibble() |>
@@ -227,13 +255,26 @@ pqtl_dataset <- list(
   position = pqtl_data$position
 )
 
+gnocchi_data <- read_tsv(
+  "/home/jp2045/coloc-estimated-eqtl-priors/data/gnocchi-windows.bed",
+  col_names = FALSE, show_col_types = FALSE
+)
+colnames(gnocchi_data) <- c("chromosome", "start_pos", "end_pos", "score")
+
 coloc::plot_dataset(eqtl_dataset)
 abline(v = 102311529)
 coloc::plot_dataset(pqtl_dataset)
 
-coloc::coloc.abf(eqtl_dataset, pqtl_dataset)$summary
-coloc::coloc.abf(eqtl_dataset, pqtl_dataset, tss1 = 102311529)$summary
+suppressWarnings(coloc.abf(eqtl_dataset, pqtl_dataset)$summary)
+suppressWarnings(coloc::coloc.abf(eqtl_dataset, pqtl_dataset, tss1 = 102311529)$summary)
+suppressWarnings(coloc::coloc.abf(eqtl_dataset, pqtl_dataset, tss2 = 102311529)$summary)
+suppressWarnings(coloc::coloc.abf(eqtl_dataset, pqtl_dataset, tss2 = 102355152)$summary)
+suppressWarnings(coloc::coloc.abf(eqtl_dataset, pqtl_dataset, score_data1 = gnocchi_data, chrom = 2)$summary)
+```
 
+
+
+```{r}
 eqtl_data_raw <- tabix.read.table("data/eqtl-catalogue/sumstats/QTD000373.cc.tsv.gz", 
                                   paste0(2, ":1-2147483647")) |>
   as_tibble() |>

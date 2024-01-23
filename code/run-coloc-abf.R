@@ -39,7 +39,7 @@ coloc_metadata <- eqtl_metadata |>
                  end_pos >= phenotype_pos)
   ) |>
   select(gene_name, gene_id, phenotype_id, region, chromosome,
-         start_pos, end_pos, tss, pqtl_gene_id)
+         start_pos, end_pos, tss, pqtl_gene_id, phenotype_pos)
 
 all_eqtl_data <- tabix.read.table(eqtl_file, paste0(chr, ":1-2147483647")) |>
   as_tibble()
@@ -178,25 +178,56 @@ for (i in 1:n) {
     snp = pqtl_data$variant
   )
 
+  gnocchi_data <- read_tsv(
+    "/home/jp2045/coloc-estimated-eqtl-priors/data/gnocchi-windows.bed",
+    col_names = FALSE, show_col_types = FALSE
+  )
+  colnames(gnocchi_data) <- c("chromosome", "start_pos", "end_pos", "score")
+
   coloc_out_unif <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
-    p1 = 1e-4, p2 = 1e-4, p12 = 1e-5
   )
-  coloc_out_non_unif <- coloc.abf(
+
+  coloc_out_eqtl_tss <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
-    p1 = 1e-4, p2 = 1e-4, p12 = 1e-5,
     tss1 = coloc_metadata$tss[[i]]
   )
-  coloc_result_unif <- as_tibble(t(as.data.frame(coloc_out_unif$summary)))
-  colnames(coloc_result_unif) <- paste0(colnames(coloc_result_unif), "_unif")
-  coloc_result_non_unif <- as_tibble(t(as.data.frame(coloc_out_non_unif$summary)))
-  colnames(coloc_result_non_unif) <- paste0(colnames(coloc_result_non_unif), "_non_unif")
+  
+  coloc_out_pqtl_tss <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = pqtl_dataset,
+    tss2 = coloc_metadata$phenotype_pos[[i]]
+  )
+
+  coloc_out_score <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = pqtl_dataset,
+    score_data1 = gnocchi_data,
+    chrom = chr
+  )
+
+  coloc_summary_to_tibble <- function(coloc_out) {
+    t(as.data.frame(coloc_out$summary))
+  }
+  coloc_res_unif <- coloc_summary_to_tibble(coloc_out_unif)
+  colnames(coloc_res_unif) <- paste0(colnames(coloc_res_unif), "_unif")
+
+  coloc_res_eqtl_tss <- coloc_summary_to_tibble(coloc_out_eqtl_tss)
+  colnames(coloc_res_eqtl_tss) <- paste0(colnames(coloc_res_eqtl_tss), "_eqtl_tss")
+
+  coloc_res_pqtl_tss <- coloc_summary_to_tibble(coloc_out_pqtl_tss)
+  colnames(coloc_res_pqtl_tss) <- paste0(colnames(coloc_res_pqtl_tss), "_pqtl_tss")
+
+  coloc_res_score <- coloc_summary_to_tibble(coloc_out_score)
+  colnames(coloc_res_score) <- paste0(colnames(coloc_res_score), "_score")
 
   coloc_results <- bind_cols(
-    coloc_result_unif,
-    coloc_result_non_unif,
+    coloc_res_unif,
+    coloc_res_eqtl_tss,
+    coloc_res_pqtl_tss,
+    coloc_res_score,
     tibble(
      phenotype_id = coloc_metadata$phenotype_id[[i]],
      chromosome = coloc_metadata$chromosome[[i]],
