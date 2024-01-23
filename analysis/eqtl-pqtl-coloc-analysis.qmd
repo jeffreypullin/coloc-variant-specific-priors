@@ -42,11 +42,7 @@ pqtl_eqtl_colocs
 ```
 
 ```{r}
-download.file(
-  "https://www.biorxiv.org/content/biorxiv/early/2023/09/30/2023.09.29.560109/DC1/embed/media-1.xlsx?download=true", 
-  "data/tambets_etal_supp.xlsx"
-)
-tambets_supp <- read_xlsx("data/tambets_etal_supp.xlsx", sheet = 3)
+tambets_supp <- read_xlsx("data/tambets-etal-supp.xlsx", sheet = 3)
 tambets_supp |> 
   filter(dataset_id == "QTD000110") |>
   arrange(desc(PP.H4.abf)) |>

@@ -14,6 +14,7 @@ rule all:
     "data/fauman-hyde/eqtlgen.txt",
     "data/tss-data/hg19-tss-data.rds",
     "data/gnocchi-windows.bed",
+    "data/tambets-etal-supp.xlsx",
     expand("data/adipos-express/processed-ab1-eur/{chromosome}.txt", chromosome = chromosomes),
     expand("output/data/pqtl-eqtl-coloc-{eqtl_id}-{chr}.tsv", 
            chr = [x for x in range(1, 23)],
@@ -165,6 +166,13 @@ rule run_pqtl_eqtl_colocalisation:
   output: 
     result_file = "output/data/pqtl-eqtl-coloc-{eqtl_id}-{chr}.tsv"
   script: "code/run-coloc-abf.R"
+
+rule download_tambets_etal_supp:
+  output: "data/tambets-etal-supp.xlsx"
+  shell:
+    """
+    wget -O {output} "https://www.biorxiv.org/content/biorxiv/early/2023/09/30/2023.09.29.560109/DC1/embed/media-1.xlsx?download=true"
+    """
 
 rule download_gnochhi_data: 
   output: "data/gnocchi-windows.bed" 
