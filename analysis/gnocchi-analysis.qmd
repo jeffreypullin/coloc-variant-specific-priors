@@ -23,32 +23,35 @@ conflicts_prefer(dplyr::select)
 ```
 
 ```{r}
-eqtl_data_file <- "data/QTD000110.cc.tsv.gz"
-pqtl_data_file <- "data/QTD000584.cc.tsv.gz"
+# HRAT92 PDGFA
 eqtl_metadata_file <- "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz"
 pqtl_metadata_file <- "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
 
-eqtl_metadata <- read_tsv(eqtl_metadata_file, show_col_types = FALSE)
-
-eqtl_metadata |>
-  dplyr::filter(gene_name == "IL18R1") |>
+eqtl_metadata_file |>
+  read_tsv(show_col_types = FALSE) |>
+  filter(gene_name == "CLN5") |>
   mutate(tss = if_else(strand == 1, gene_start, gene_end)) |>
   rowwise() |>
   mutate(region = paste0(chromosome, ":", tss - 1e5, "-", tss + 1e5)) |>
-  dplyr::select(chromosome, gene_id, region, tss)
+  select(chromosome, gene_id, region, tss)
+
+pqtl_metadata_file |>
+  read_tsv(show_col_types = FALSE) |>
+  filter(gene_name == "CLN5") |>
+  select(phenotype_id)
 
 eqtl_col_names <- colnames(read_tsv("data/eqtl-catalogue/sumstats/QTD000373.cc.tsv.gz", n_max = 1, 
                            show_col_types = FALSE))
 
 eqtl_data <- tabix.read.table("data/eqtl-catalogue/sumstats/QTD000373.cc.tsv.gz", 
-                              paste0(2, ":1-2147483647")) |>
+                              paste0(13, ":1-2147483647")) |>
   as_tibble() |>
   setNames(eqtl_col_names) |>
-  filter(molecular_trait_id == "ENSG00000115604") |>
-  filter(chromosome == 2) |>
+  filter(molecular_trait_id == "ENSG00000102805") |>
+  filter(chromosome == 13) |>
   filter(
-    position >= 102211529 &
-    position <= 102411529
+    position >= 76890660 &
+    position <= 77090660
   ) |>
   select(-rsid) |>
   distinct() |>
@@ -67,15 +70,15 @@ eqtl_data <- tabix.read.table("data/eqtl-catalogue/sumstats/QTD000373.cc.tsv.gz"
     an = as.numeric(an)
   )
 
-pqtl_data <- tabix.read.table("data/QTD000584.cc.tsv.gz", paste0(2, ":1-2147483647")) |>
+pqtl_data <- tabix.read.table("data/QTD000584.cc.tsv.gz", paste0(13, ":1-2147483647")) |>
   as_tibble() |>
   # All the column names are the same.
   setNames(eqtl_col_names) |>
-  filter(molecular_trait_id == "IL18R1.14079.14.3..1") |>
-  filter(chromosome == 2) |>
+  filter(molecular_trait_id == "CLN5.8874.53.3..1") |>
+  filter(chromosome == 13) |>
   filter(
-    position >= 102211529 &
-    position <= 102411529
+    position >= 76890660 &
+    position <= 77090660
   ) |>
   select(-rsid) |>
   distinct() |>
@@ -101,7 +104,7 @@ pqtl_data <- pqtl_data |>
 
 eqtl_dataset <- list(
   varbeta = eqtl_data$se^2,
-  N = eqtl_data$an * 2,
+  N = eqtl_data$an / 2,
   MAF = eqtl_data$maf ,
   type = "quant",
   beta = eqtl_data$beta,
@@ -111,7 +114,7 @@ eqtl_dataset <- list(
 
 pqtl_dataset <- list(
   varbeta = pqtl_data$se^2,
-  N = pqtl_data$an * 2,
+  N = pqtl_data$an / 2,
   MAF = pqtl_data$maf ,
   type = "quant",
   beta = pqtl_data$beta,
@@ -122,15 +125,24 @@ pqtl_dataset <- list(
 devtools::load_all("~/coloc")
 
 gnocchi_data <- readr::read_tsv("/home/jp2045/coloc-estimated-eqtl-priors/data/gnocchi-windows.bed", 
-                                  col_names = FALSE, show_col_types = FALSE)
+                                col_names = FALSE, show_col_types = FALSE)
 colnames(gnocchi_data) <- c("chromosome", "start_pos", "end_pos", "score")
 
 coloc::plot_dataset(eqtl_dataset)
-abline(v = 102311529)
 coloc::plot_dataset(pqtl_dataset)
 
-suppressWarnings(coloc::coloc.abf(eqtl_dataset, pqtl_dataset)$summary)
-suppressWarnings(coloc::coloc.abf(eqtl_dataset, pqtl_dataset, tss1 = 102311529)$summary)
+suppressWarnings({
+  coloc.abf(eqtl_dataset, pqtl_dataset)$summary
+  coloc.abf(eqtl_dataset, pqtl_dataset, tss1 = 520391)$summary
+  coloc.abf(eqtl_dataset, pqtl_dataset, score_data1 = gnocchi_data, chrom = 1)$summary
+})
 
-suppressWarnings(coloc.abf(eqtl_dataset, pqtl_dataset, score_data1 = gnocchi_data, chrom = 2)$summary)
+coloc_score_out <- coloc.abf(eqtl_dataset, pqtl_dataset, 
+                             score_data1 = gnocchi_data, chrom = 1)
+
+tibble(pos = eqtl_data$position, p = coloc_score_out$priors$p1_vec) |>
+  ggplot(aes(pos, p)) + 
+  geom_point()
+
+plot(coloc_score_out$priors$p1_vec)
 ```
