@@ -25,11 +25,13 @@ rule download_tss_data:
           hg38_tss_data_path = "data/tss-data/hg38-tss-data.rds"
   script: "code/download-tss-data.R"
     
-rule download_fauman_hyde_eqtlgen_data: 
-  output: "data/fauman-hyde/eqtlgen.txt"
+rule download_fauman_hyde_data: 
+  output: eqtlgen = "data/fauman-hyde/eqtlgen.txt",
+          ferkingstad = "data/fauman-hyde/ferkingstad.txt" 
   shell:
     """
-    wget -O {output} https://static-content.springer.com/esm/art%3A10.1186%2Fs12859-022-04706-x/MediaObjects/12859_2022_4706_MOESM3_ESM.txt
+    wget -O {output.eqtlgen} https://static-content.springer.com/esm/art%3A10.1186%2Fs12859-022-04706-x/MediaObjects/12859_2022_4706_MOESM3_ESM.txt
+    wget -O {output.ferkingstad} https://static-content.springer.com/esm/art%3A10.1186%2Fs12859-022-04706-x/MediaObjects/12859_2022_4706_MOESM2_ESM.txt
     """
 
 rule download_eqtlgen_data:
