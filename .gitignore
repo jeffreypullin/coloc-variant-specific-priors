@@ -10,3 +10,5 @@ archive
 .snakemake
 output
 logs
+.lintr
+*.code-workspace

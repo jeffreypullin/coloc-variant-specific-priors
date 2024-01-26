@@ -34,8 +34,8 @@ pqtl_eqtl_colocs <- expand_grid(
   chr = 1:22
 ) |>
   rowwise() |>
-  mutate(file = paste0("output/data/pqtl-eqtl-coloc-", eqtl_data_id, "-", chr, ".tsv")) |>
-  mutate(data = list(read_tsv(file, show_col_types = FALSE))) |>
+  mutate(file = paste0("output/data/pqtl-eqtl-coloc-", eqtl_data_id, "-", chr, ".rds")) |>
+  mutate(data = list(read_rds(file))) |>
   unnest(data)
 
 cs_data <- read_tsv("data/QTD000584.credible_sets.tsv.gz", show_col_types = FALSE) |>
@@ -46,76 +46,118 @@ tambets_supp <- read_xlsx("data/tambets-etal-supp.xlsx", sheet = 3)
 
 protein_metadata <- read_tsv("data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz", 
                              show_col_types = FALSE)
-
-protein_metadata |>
-  filter(phenotype_id == "ISG15.14148.2.3..1") |>
-  select(phenotype_id, gene_id)
 ```
 
 ```{r}
-tambets_supp |>
-  select(dataset_name, gene_name, protein, PP.H4.abf, is_true_positive) |>
-  print(n = 500)
-  count(is_true_positive)
+pos_data <- pqtl_eqtl_colocs |>
+  select(tss, PP.H4.abf_unif, unif_result) |>
+  rowwise() |>
+  mutate(
+    z1 = list(unif_result$z.df1), 
+    z2 = list(unif_result$z.df2),
+    rel = list(unif_result$position - tss)
+  ) |>
+  unnest(c(rel, z1, z2)) |>
+  mutate(
+    both_sig = abs(z1) > 5.6 & abs(z2) > 5.6,
+    either_sig = abs(z1) > 5.6 | abs(z2) > 5.6
+  )
 
-tats_su|> 
-  filter(dataset_id == "QTD000110") |>
-  arrange(desc(PP.H4.abf)) |>
-  select(geneme, tein, PP.H4.abf)
 
-tambets_supp |>
-  filter(gene_name == "IL18R1") |>
-  select(gene_name, protein, PP.H4.abf, is_true_positive)
-
-tambets_supp |>
-  filter(gene_name == "SIGMAR1") |>
-  select(dataset_name, gene_name, protein, PP.H4.abf, is_true_positive)
-
-tambets_supp |>
-  filter(gene_name == "RUVBL2") |>
-  select(dataset_name, gene_name, protein, PP.H4.abf, is_true_positive)
+  mutate(rel = list(positions - tss)) |>
+  mutate(sig_coloc = PP.H4.abf_unif > 0.8) |>
+  unnest(c(rel)) |>
+  ggplot(aes(rel)) + 
+  geom_histogram(binwidth = 100)
 ```
 
 ```{r}
 pqtl_eqtl_colocs |>
-  ggplot(aes(PP.H4.abf_unif, PP.H4.abf_eqtl_tss)) + 
-  geom_point() + 
-  geom_vline(xintercept = 0.8, colour = "red") + 
-  geom_hline(yintercept = 0.8, colour = "red")
+  filter(phenotype_id == "PDCD1LG2.3004.67.2..1") |>
+  select(gene_name, phenotype_id, PP.H4.abf_unif, 
+         PP.H4.abf_eqtl_tss_eqtlgen)
 
 pqtl_eqtl_colocs |>
   mutate(
-    called_coloc_unif = PP.H4.abf_unif >= 0.8,
-    called_coloc_non_unif = PP.H4.abf_eqtl_tss >= 0.8
+    unif_sig = PP.H4.abf_unif > 0.8,
+    eqtl_tss_sig = PP.H4.abf_eqtl_tss_eqtlgen > 0.8
   ) |>
-  count(called_coloc_unif, called_coloc_non_unif)
+  filter(unif_sig != eqtl_tss_sig) |>
+  select(gene_name, phenotype_id, PP.H4.abf_unif, PP.H4.abf_eqtl_tss_eqtlgen)
 
-pqtl_eqtl_colocs |>
-  mutate(
-    called_coloc_unif = PP.H4.abf_unif >= 0.8,
-    called_coloc_non_unif = PP.H4.abf_pqtl_tss >= 0.8
-  ) |>
-  count(called_coloc_unif, called_coloc_non_unif)
-
-pqtl_eqtl_colocs |>
-  mutate(
-    called_coloc_unif = PP.H4.abf_unif >= 0.8,
-    called_coloc_non_unif = PP.H4.abf_score >= 0.8
-  ) |>
-  count(called_coloc_unif, called_coloc_non_unif)
-```
-
-```{r}
-inner_join(
-  cs_data, 
+left_join(
   pqtl_eqtl_colocs |>
-    select(eqtl_data_id, 
-           PP.H4.abf_unif, 
-           PP.H4.abf_eqtl_tss, 
-           PP.H4.abf_pqtl_tss,
-           PP.H4.abf_score,
-           phenotype_id, 
+    select(eqtl_data_id, starts_with("PP.H4.abf"), phenotype_id, 
            coloc_gene_id = gene_id), 
+  protein_metadata |>
+    select(coding_gene_id = gene_id, phenotype_id),
+  by = "phenotype_id"
+) |>
+  rename(protein_id = phenotype_id) |>
+  pivot_longer(-c(protein_id, coding_gene_id, eqtl_data_id, coloc_gene_id),
+               values_to = "pp_h4", 
+               names_to = c("junk", "prior_type"),
+               names_pattern = "(.*?)_(.*)") |>
+  select(-junk) |>
+  mutate(sig_coloc = pp_h4 >= 0.8) |>
+  mutate(gene_match = coding_gene_id == coloc_gene_id) |>
+  filter(prior_type %in% c("unif", "pqtl_tss_eqtlgen")) |>
+  summarise(
+    colocalised = any(sig_coloc), 
+    is_tp = any(sig_coloc & gene_match),
+    is_fn = !any(sig_coloc & gene_match),
+    is_fp = any(sig_coloc) & !any(sig_coloc & gene_match),
+    .by = c(protein_id, prior_type)
+  ) |>
+  select(protein_id, prior_type, colocalised) |>
+  pivot_wider(names_from = prior_type, values_from = colocalised) |>
+  filter(unif != pqtl_tss_eqtlgen)
+```
+
+```{r call-level-performance}
+left_join(
+  pqtl_eqtl_colocs |>
+    select(eqtl_data_id, starts_with("PP.H4.abf"), phenotype_id, 
+           coloc_gene_id = gene_id), 
+  protein_metadata |>
+    select(coding_gene_id = gene_id, phenotype_id),
+  by = "phenotype_id"
+) |>
+  rename(protein_id = phenotype_id) |>
+  pivot_longer(-c(protein_id, coding_gene_id, eqtl_data_id, coloc_gene_id),
+               values_to = "pp_h4", 
+               names_to = c("junk", "prior_type"),
+               names_pattern = "(.*?)_(.*)") |>
+  select(-junk) |>
+  mutate(sig_coloc = pp_h4 >= 0.8) |>
+  mutate(gene_match = coding_gene_id == coloc_gene_id) |>
+  summarise(
+    colocalised = any(sig_coloc), 
+    is_tp = any(sig_coloc & gene_match),
+    is_fn = !any(sig_coloc & gene_match),
+    is_fp = any(sig_coloc) & !any(sig_coloc & gene_match),
+    .by = c(protein_id, prior_type, eqtl_data_id)
+  ) |>
+  summarise(
+    n_colocalised = sum(colocalised),
+    n_tp = sum(is_tp),
+    n_fn = sum(is_fn),
+    n_fp = sum(is_fp),
+    .by = prior_type
+  ) |>
+  mutate(
+    recall = n_tp / (n_tp + n_fn), 
+    precision = n_tp / (n_tp + n_fp)
+  )
+```
+
+```{r protein-level-performance}
+left_join(
+  pqtl_eqtl_colocs |>
+    select(eqtl_data_id, starts_with("PP.H4.abf"), phenotype_id, 
+           coloc_gene_id = gene_id), 
+  protein_metadata |>
+    select(coding_gene_id = gene_id, phenotype_id),
   by = "phenotype_id"
 ) |>
   rename(protein_id = phenotype_id) |>
@@ -148,24 +190,19 @@ inner_join(
 
 ```{r}
 pqtl_eqtl_colocs |>
-  mutate(
-    called_coloc_unif = PP.H4.abf_unif >= 0.8,
-    called_coloc_non_unif = PP.H4.abf_eqtl_tss >= 0.8
-  ) |>
-  filter(called_coloc_unif != called_coloc_non_unif) |> 
-  separate_wider_delim(
-    phenotype_id, ".", 
-    names = c("protein_name", "protein_other"),
-    too_many = "merge",
-  ) |>
-  mutate(match = gene_name == protein_name) |>
-  summarise(
-    unif_precision = sum(called_coloc_unif & match) / n(),
-    non_unif_precision = sum(called_coloc_non_unif & match) / n()
-  )
-```
+  ggplot(aes(PP.H4.abf_unif, PP.H4.abf_eqtl_tss_eqtlgen)) + 
+  geom_point() + 
+  geom_vline(xintercept = 0.8, colour = "red") + 
+  geom_hline(yintercept = 0.8, colour = "red") + 
+  theme_bw()
 
-```{r pqtl-tss}
+pqtl_eqtl_colocs |>
+  ggplot(aes(PP.H4.abf_unif, PP.H4.abf_gnocchi)) + 
+  geom_point() + 
+  geom_vline(xintercept = 0.8, colour = "red") + 
+  geom_hline(yintercept = 0.8, colour = "red") + 
+  theme_bw()
+
 pqtl_eqtl_colocs |>
   ggplot(aes(PP.H4.abf_unif, PP.H4.abf_pqtl_tss)) + 
   geom_point() + 
@@ -173,6 +210,15 @@ pqtl_eqtl_colocs |>
   geom_hline(yintercept = 0.8, colour = "red") + 
   theme_bw()
 
+pqtl_eqtl_colocs |>
+  ggplot(aes(PP.H4.abf_unif, PP.H4.abf_gnocchi)) + 
+  geom_point() + 
+  geom_vline(xintercept = 0.8, colour = "red") + 
+  geom_hline(yintercept = 0.8, colour = "red") + 
+  theme_bw()
+```
+
+```{r pqtl-tss}
 pqtl_eqtl_colocs |>
   mutate(
     called_coloc_unif = PP.H4.abf_unif >= 0.8,
@@ -211,25 +257,6 @@ pqtl_eqtl_colocs |>
     called_coloc_non_unif = PP.H4.abf_score >= 0.8
   ) |>
   count(called_coloc_unif, called_coloc_non_unif)
-
-pqtl_eqtl_colocs |>
-  mutate(
-    called_coloc_unif = PP.H4.abf_unif >= 0.8,
-    called_coloc_non_unif = PP.H4.abf_score >= 0.8
-  ) |>
-  filter(called_coloc_unif != called_coloc_non_unif) |> 
-  separate_wider_delim(
-    phenotype_id, ".", 
-    names = c("protein_name", "protein_other"),
-    too_many = "merge",
-  ) |>
-  select(eqtl_data_id, PP.H4.abf_unif, PP.H4.abf_score, gene_name, protein_name) |>
-  print(n = 40)
-  mutate(match = gene_name == protein_name) |>
-  summarise(
-    unif_precision = sum(called_coloc_unif & match) / n(),
-    non_unif_precision = sum(called_coloc_non_unif & match) / n()
-  )
 ```
 
 ```{r}
@@ -241,16 +268,11 @@ pqtl_metadata_file <- "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv
 eqtl_metadata <- read_tsv(eqtl_metadata_file, show_col_types = FALSE)
 
 eqtl_metadata |>
-  filter(gene_name == "IL18R1") |>
+  filter(gene_id == "ENSG00000124588") |>
   mutate(tss = if_else(strand == 1, gene_start, gene_end)) |>
   rowwise() |>
   mutate(region = paste0(chromosome, ":", tss - 1e5, "-", tss + 1e5)) |>
   dplyr::select(chromosome, gene_id, region, tss)
-
-pqtl_metadata |>
-  filter(phenotype_id == "IL18R1.14079.14.3..1") |>
-  mutate(gene_body = (gene_start + gene_end) / 2) |>
-  select(gene_body)
 
 eqtl_col_names <- colnames(read_tsv("data/eqtl-catalogue/sumstats/QTD000373.cc.tsv.gz", n_max = 1, 
                            show_col_types = FALSE))
@@ -258,14 +280,14 @@ pqtl_col_names <- colnames(read_tsv("data/QTD000584.cc.tsv.gz", n_max = 1,
                            show_col_types = FALSE))
 
 eqtl_data <- tabix.read.table("data/eqtl-catalogue/sumstats/QTD000373.cc.tsv.gz", 
-                              paste0(2, ":1-2147483647")) |>
+                              paste0(6, ":1-2147483647")) |>
   as_tibble() |>
   setNames(eqtl_col_names) |>
-  filter(molecular_trait_id == "ENSG00000115604") |>
-  filter(chromosome == 2) |>
+  filter(molecular_trait_id == "ENSG00000124588") |>
+  filter(chromosome == 6) |>
   filter(
-    position >= 102211529 &
-    position <= 102411529
+    position >= 2887987 &
+    position <= 3087987
   ) |>
   select(-rsid) |>
   distinct() |>
@@ -285,15 +307,14 @@ eqtl_data <- tabix.read.table("data/eqtl-catalogue/sumstats/QTD000373.cc.tsv.gz"
   )
 
 # FIXME: Why does tabix all then filter differ to tabix filter.
-
-pqtl_data <- tabix.read.table("data/QTD000584.cc.tsv.gz", paste0(2, ":1-2147483647")) |>
+pqtl_data <- tabix.read.table("data/QTD000584.cc.tsv.gz", paste0(6, ":1-2147483647")) |>
   as_tibble() |>
   setNames(pqtl_col_names) |>
-  filter(molecular_trait_id == "IL18R1.14079.14.3..1") |>
-  filter(chromosome == 2) |>
+  filter(molecular_trait_id == "NQO2.9754.33.3..1") |>
+  filter(chromosome == 6) |>
   filter(
-    position >= 102211529 &
-    position <= 102411529
+    position >= 2887987 &
+    position <= 3087987
   ) |>
   select(-rsid) |>
   distinct() |>
@@ -337,42 +358,24 @@ pqtl_dataset <- list(
   position = pqtl_data$position
 )
 
-gnocchi_data <- read_tsv(
-  "/home/jp2045/coloc-estimated-eqtl-priors/data/gnocchi-windows.bed",
-  col_names = FALSE, show_col_types = FALSE
-)
-colnames(gnocchi_data) <- c("chromosome", "start_pos", "end_pos", "score")
-
 coloc::plot_dataset(eqtl_dataset)
-abline(v = 102311529)
 coloc::plot_dataset(pqtl_dataset)
 
+eqtlgen_density_data <- read_rds("output/densities/eqtlgen.rds")
+eqtl_prior_weights_eqtlgen <- compute_eqtl_tss_dist_prior_weights(
+  eqtl_dataset$pos, 2987987, eqtlgen_density_data
+)
+
+test <- coloc.abf(eqtl_dataset, pqtl_dataset)
+p1 <- 1e-4
+p2 <- 1e-4
+p12 <- 1e-5
+l1 <- test$result$lABF.df1
+l2 <- test$result$lABF.df2
+prior_weights1 <- NULL
+prior_weights2 <- eqtl_prior_weights_eqtlgen
+
 suppressWarnings(coloc.abf(eqtl_dataset, pqtl_dataset)$summary)
-suppressWarnings(coloc::coloc.abf(eqtl_dataset, pqtl_dataset, tss1 = 102311529)$summary)
-suppressWarnings(coloc::coloc.abf(eqtl_dataset, pqtl_dataset, tss2 = 102311529)$summary)
-suppressWarnings(coloc::coloc.abf(eqtl_dataset, pqtl_dataset, tss2 = 102355152)$summary)
-suppressWarnings(coloc::coloc.abf(eqtl_dataset, pqtl_dataset, score_data1 = gnocchi_data, chrom = 2)$summary)
-```
-
-
-```{r}
-eqtl_data_raw <- tabix.read.table("data/eqtl-catalogue/sumstats/QTD000373.cc.tsv.gz", 
-                                  paste0(2, ":1-2147483647")) |>
-  as_tibble() |>
-  setNames(eqtl_col_names) |>
-  dplyr::rename(
-    chrom = chromosome,
-    pos = position,
-    p = pvalue
-  ) |>
-  as.data.frame()
-
-loc <- locus(data = eqtl_data_raw, 
-             xrange = c(102211529, 102411529),
-             seqname = 2,
-             ens_db = "EnsDb.Hsapiens.v75")
-
-loc <- locus(data = eqtl_data_raw, gene = "IL18R1",
-             ens_db = "EnsDb.Hsapiens.v75")
-locus_plot(loc)
+suppressWarnings(coloc.abf(eqtl_dataset, pqtl_dataset, 
+                 prior_weights2 = eqtl_prior_weights_eqtlgen)$summary)
 ```

@@ -16,7 +16,7 @@ rule all:
     "data/gnocchi-windows.bed",
     "data/tambets-etal-supp.xlsx",
     expand("data/adipos-express/processed-ab1-eur/{chromosome}.txt", chromosome = chromosomes),
-    expand("output/data/pqtl-eqtl-coloc-{eqtl_id}-{chr}.tsv", 
+    expand("output/data/pqtl-eqtl-coloc-{eqtl_id}-{chr}.rds", 
            chr = [x for x in range(1, 23)],
            eqtl_id = eqtl_data_ids_subset)
 
@@ -166,7 +166,7 @@ rule run_pqtl_eqtl_colocalisation:
     eqtl_metadata_file = "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
     pqtl_metadata_file = "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
   output: 
-    result_file = "output/data/pqtl-eqtl-coloc-{eqtl_id}-{chr}.tsv"
+    result_file = "output/data/pqtl-eqtl-coloc-{eqtl_id}-{chr}.rds"
   script: "code/run-coloc-abf.R"
 
 rule download_tambets_etal_supp:

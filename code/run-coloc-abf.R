@@ -3,6 +3,8 @@
 
 source(here::here("renv/activate.R"))
 
+set.seed(25012024)
+
 suppressPackageStartupMessages({
   library(readr)
   library(seqminer)
@@ -32,14 +34,16 @@ coloc_metadata <- eqtl_metadata |>
   ungroup() |>
   left_join(
     pqtl_metadata |>
-      select(phenotype_id, chromosome, phenotype_pos, pqtl_gene_id = gene_id) |>
+      select(phenotype_id, chromosome, phenotype_pos, pqtl_gene_id = gene_id,
+             phenotype_start = gene_start, phenotype_end = gene_end) |>
       mutate(chromosome = as.character(chromosome)),
     by = join_by(chromosome == chromosome,
                  start_pos <= phenotype_pos,
                  end_pos >= phenotype_pos)
   ) |>
   select(gene_name, gene_id, phenotype_id, region, chromosome,
-         start_pos, end_pos, tss, pqtl_gene_id, phenotype_pos)
+         start_pos, end_pos, tss, pqtl_gene_id, phenotype_pos, 
+         phenotype_start, phenotype_end)
 
 all_eqtl_data <- tabix.read.table(eqtl_file, paste0(chr, ":1-2147483647")) |>
   as_tibble()
@@ -178,67 +182,138 @@ for (i in 1:n) {
     snp = pqtl_data$variant
   )
 
-  gnocchi_data <- read_tsv(
-    "/home/jp2045/coloc-estimated-eqtl-priors/data/gnocchi-windows.bed",
-    col_names = FALSE, show_col_types = FALSE
-  )
+  gnocchi_data <- read_tsv("data/gnocchi-windows.bed",
+                           col_names = FALSE, show_col_types = FALSE)
   colnames(gnocchi_data) <- c("chromosome", "start_pos", "end_pos", "score")
 
-  coloc_out_unif <- coloc.abf(
+  density_data_round_1 <- read_rds("output/densities/onek1k_cd4nc_round_1.rds")
+  density_data_round_2 <- read_rds("output/densities/onek1k_cd4nc_round_1.rds")
+  density_data_round_3 <- read_rds("output/densities/onek1k_cd4nc_round_1.rds")
+  eqtlgen_density_data <- read_rds("output/densities/eqtlgen.rds")
+
+  eqtl_prior_weights_eqtlgen <- compute_eqtl_tss_dist_prior_weights(
+    eqtl_dataset$pos, coloc_metadata$tss[[i]], eqtlgen_density_data
+  )
+
+  eqtl_prior_weights <- compute_eqtl_tss_dist_prior_weights(
+    eqtl_dataset$pos, coloc_metadata$tss[[i]], density_data_round_1
+  )
+  eqtl_prior_weights_round_2 <- compute_eqtl_tss_dist_prior_weights(
+    eqtl_dataset$pos, coloc_metadata$tss[[i]], density_data_round_2
+  )
+  eqtl_prior_weights_round_3 <- compute_eqtl_tss_dist_prior_weights(
+    eqtl_dataset$pos, coloc_metadata$tss[[i]], density_data_round_3
+  )
+  pqtl_prior_weights <- compute_eqtl_tss_dist_prior_weights(
+    eqtl_dataset$pos, coloc_metadata$phenotype_pos[[i]], density_data_round_1
+  )
+  gnocchi_prior_weights <- compute_gnocchi_prior_weights(
+    eqtl_dataset$pos, chr, gnocchi_data
+  )
+
+  # Uniform priors.
+
+  coloc_unif <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
   )
 
-  coloc_out_eqtl_tss <- coloc.abf(
+  # eQTLGen estimated density priors.
+
+  coloc_eqtl_tss_eqtlgen <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
-    tss1 = coloc_metadata$tss[[i]]
-  )
-  
-  coloc_out_pqtl_tss <- coloc.abf(
-    dataset1 = eqtl_dataset,
-    dataset2 = pqtl_dataset,
-    tss2 = coloc_metadata$phenotype_pos[[i]]
+    prior_weights1 = eqtl_prior_weights_eqtlgen
   )
 
-  coloc_out_score <- coloc.abf(
+  coloc_pqtl_tss_eqtlgen <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
-    score_data1 = gnocchi_data,
-    chrom = chr
+    prior_weights2 = eqtl_prior_weights_eqtlgen
   )
 
-  coloc_summary_to_tibble <- function(coloc_out) {
-    t(as.data.frame(coloc_out$summary))
+  coloc_eqtl_tss_pqtl_tss_eqtlgen <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = pqtl_dataset,
+    prior_weights1 = eqtl_prior_weights_eqtlgen,
+    prior_weights2 = eqtl_prior_weights_eqtlgen
+  )
+
+  # OneK1K estimated density priors.
+
+  coloc_eqtl_tss_onek1k_round_1 <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = pqtl_dataset,
+    prior_weights1 = eqtl_prior_weights
+  )
+
+  coloc_eqtl_tss_onek1k_round_2 <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = pqtl_dataset,
+    prior_weights1 = eqtl_prior_weights_round_2
+  )
+
+  coloc_eqtl_tss_onek1k_round_3 <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = pqtl_dataset,
+    prior_weights1 = eqtl_prior_weights_round_3
+  )
+
+  coloc_pqtl_tss_onek1k_round_1 <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = pqtl_dataset,
+    prior_weights2 = pqtl_prior_weights
+  )
+
+  coloc_eqtl_tss_pqtl_tss_onek1k_round_1 <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = pqtl_dataset,
+    prior_weights1 = eqtl_prior_weights,
+    prior_weights2 = pqtl_prior_weights
+  )
+
+  # Gnocchi priors.
+
+  coloc_gnocchi <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = pqtl_dataset,
+    prior_weights1 = eqtl_prior_weights
+  )
+
+  coloc_to_tibble <- function(coloc_out, suffix) {
+    out <- t(as.data.frame(coloc_out$summary))
+    colnames(out) <- paste0(colnames(out), "_", suffix)
+    out
   }
-  coloc_res_unif <- coloc_summary_to_tibble(coloc_out_unif)
-  colnames(coloc_res_unif) <- paste0(colnames(coloc_res_unif), "_unif")
-
-  coloc_res_eqtl_tss <- coloc_summary_to_tibble(coloc_out_eqtl_tss)
-  colnames(coloc_res_eqtl_tss) <- paste0(colnames(coloc_res_eqtl_tss), "_eqtl_tss")
-
-  coloc_res_pqtl_tss <- coloc_summary_to_tibble(coloc_out_pqtl_tss)
-  colnames(coloc_res_pqtl_tss) <- paste0(colnames(coloc_res_pqtl_tss), "_pqtl_tss")
-
-  coloc_res_score <- coloc_summary_to_tibble(coloc_out_score)
-  colnames(coloc_res_score) <- paste0(colnames(coloc_res_score), "_score")
 
   coloc_results <- bind_cols(
-    coloc_res_unif,
-    coloc_res_eqtl_tss,
-    coloc_res_pqtl_tss,
-    coloc_res_score,
+    coloc_to_tibble(coloc_unif, "unif"),
+    # OneK1K estimated.
+    coloc_to_tibble(coloc_eqtl_tss_onek1k_round_1, "eqtl_tss_onek1k_round_1"),
+    coloc_to_tibble(coloc_eqtl_tss_onek1k_round_2, "eqtl_tss_onek1k_round_2"),
+    coloc_to_tibble(coloc_eqtl_tss_onek1k_round_3, "eqtl_tss_onek1k_round_3"),
+    coloc_to_tibble(coloc_pqtl_tss_onek1k_round_1, "pqtl_tss_onek1k_round_1"),
+    coloc_to_tibble(coloc_eqtl_tss_pqtl_tss_onek1k_round_1, "eqtl_tss_pqtl_tss_onek1k_round_1"),
+    # eQTLGen estimated.
+    coloc_to_tibble(coloc_eqtl_tss_eqtlgen, "eqtl_tss_eqtlgen"),
+    coloc_to_tibble(coloc_pqtl_tss_eqtlgen, "pqtl_tss_eqtlgen"),
+    coloc_to_tibble(coloc_eqtl_tss_pqtl_tss_eqtlgen, "eqtl_tss_pqtl_tss_eqtlgen"),
+    # Gnocchi.
+    coloc_to_tibble(coloc_gnocchi, "gnocchi"),
     tibble(
-     phenotype_id = coloc_metadata$phenotype_id[[i]],
-     chromosome = coloc_metadata$chromosome[[i]],
-     gene_id = coloc_metadata$gene_id[[i]],
-     region = coloc_metadata$region[[i]],
-     gene_name = coloc_metadata$gene_name[[i]]
+      phenotype_id = coloc_metadata$phenotype_id[[i]],
+      chromosome = coloc_metadata$chromosome[[i]],
+      gene_id = coloc_metadata$gene_id[[i]],
+      region = coloc_metadata$region[[i]],
+      gene_name = coloc_metadata$gene_name[[i]],
+      unif_result = list(coloc_unif$results),
+      tss = coloc_metadata$tss[[i]]
   ))
+
   results[[i]] <- coloc_results
 }
 
-write_tsv(
+write_rds(
   bind_rows(!!!results),
   snakemake@output[["result_file"]]
 )

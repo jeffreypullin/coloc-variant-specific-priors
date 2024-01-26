@@ -14,7 +14,7 @@ jobs: 100
 rerun-incomplete: true
 max-jobs-per-second: 2
 printshellcmds: true
-default-resources: [cpus=1, mem_mb=8000, time_min=10]
+default-resources: [cpus=1, mem_mb=8000, time_min=20]
 nolock: true
 cluster-status: './profiles/default/cluster-status.py'
 cluster-cancel: 'scancel'
