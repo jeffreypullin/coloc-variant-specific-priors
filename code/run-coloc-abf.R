@@ -12,6 +12,8 @@ suppressPackageStartupMessages({
   devtools::load_all("~/coloc")
 })
 
+source("code/coloc-utils.R")
+
 eqtl_file <- snakemake@input[["eqtl_data_file"]]
 pqtl_file <- snakemake@input[["pqtl_data_file"]]
 eqtl_metadata_file <- snakemake@input[["eqtl_metadata_file"]]
@@ -42,7 +44,7 @@ coloc_metadata <- eqtl_metadata |>
                  end_pos >= phenotype_pos)
   ) |>
   select(gene_name, gene_id, phenotype_id, region, chromosome,
-         start_pos, end_pos, tss, pqtl_gene_id, phenotype_pos, 
+         start_pos, end_pos, tss, pqtl_gene_id, phenotype_pos,
          phenotype_start, phenotype_end)
 
 all_eqtl_data <- tabix.read.table(eqtl_file, paste0(chr, ":1-2147483647")) |>
@@ -61,70 +63,36 @@ results <- list()
 for (i in 1:n) {
 
   eqtl_data <- all_eqtl_data |>
-    filter(V1 == coloc_metadata$gene_id[[i]]) |>
-    filter(V2 == coloc_metadata$chromosome[[i]]) |>
-    filter(
-      V3 >= coloc_metadata$start_pos[[i]] &
-      V3 <= coloc_metadata$end_pos[[i]]
+    setNames(eqtl_catalouge_colnames) |>
+    filter_qtl_dataset(
+      trait_id = coloc_metadata$gene_id[[i]],
+      chrom = coloc_metadata$chromosome[[i]],
+      start_pos = coloc_metadata$start_pos[[i]],
+      end_pos = coloc_metadata$end_pos[[i]]
     ) |>
-    as_tibble() |>
-    setNames(c("molecular_trait_id", "chromosome", "position", "ref",
-               "alt", "variant", "ma_samples", "maf", "pvalue", "beta", "se",
-               "type", "ac", "an", "r2", "molecular_trait_object_id", "gene_id",
-               "median_tpm", "rsid"))
+    as_tibble()
+
+  print(eqtl_data)
 
   pqtl_data <- all_pqtl_data |>
-    filter(V1 == coloc_metadata$phenotype_id[[i]]) |>
-    filter(V2 == coloc_metadata$chromosome[[i]]) |>
-    filter(
-      V3 >= coloc_metadata$start_pos[[i]] &
-      V3 <= coloc_metadata$end_pos[[i]]
+    setNames(eqtl_catalouge_colnames) |>
+    filter_qtl_dataset(
+      trait_id = coloc_metadata$phenotype_id[[i]],
+      chrom = coloc_metadata$chromosome[[i]],
+      start_pos = coloc_metadata$start_pos[[i]],
+      end_pos = coloc_metadata$end_pos[[i]]
     ) |>
-    as_tibble() |>
-    setNames(c("molecular_trait_id", "chromosome", "position", "ref",
-               "alt", "variant", "ma_samples", "maf", "pvalue", "beta", "se",
-               "type", "ac", "an", "r2", "molecular_trait_object_id", "gene_id",
-               "median_tpm", "rsid"))
+    as_tibble()
+
 
   if (nrow(eqtl_data) == 0 || nrow(pqtl_data) == 0) {
     next
   }
 
-  pqtl_data <- pqtl_data |>
-    select(-rsid) |>
-    distinct() |>
-    mutate(id = paste(chromosome, position, sep = ":")) |>
-    group_by(id) |>
-    mutate(row_count = n()) |>
-    ungroup() |>
-    filter(row_count == 1) |>
-    filter(!is.nan(se)) |>
-    filter(!is.na(se)) |>
-    select(molecular_trait_id, variant, maf, beta, se, an) |>
-    mutate(
-      maf = as.numeric(maf),
-      beta = as.numeric(beta),
-      se = as.numeric(se),
-      an = as.numeric(an)
-    )
+  pqtl_data <- prepare_coloc_dataset(pqtl_data)
+  eqtl_data <- prepare_coloc_dataset(eqtl_data)
 
-  eqtl_data <- eqtl_data |>
-    select(-rsid) |>
-    distinct() |>
-    mutate(id = paste(chromosome, position, sep = ":")) |>
-    group_by(id) |>
-    mutate(row_count = n()) |>
-    ungroup() |>
-    filter(row_count == 1) |>
-    filter(!is.nan(se)) |>
-    filter(!is.na(se)) |>
-    select(molecular_trait_id, variant, maf, beta, se, an, position) |>
-    mutate(
-      maf = as.numeric(maf),
-      beta = as.numeric(beta),
-      se = as.numeric(se),
-      an = as.numeric(an)
-    )
+  print(eqtl_data)
 
   n_before <- max(nrow(eqtl_data), nrow(pqtl_data))
   if (n_before <= 300) {
@@ -141,42 +109,34 @@ for (i in 1:n) {
     next
   }
 
-  varbeta <- eqtl_data$se^2
-  n <- eqtl_data$an / 2
-  maf <- eqtl_data$maf
-
-  is_oneover_na <- all(is.na(1 / varbeta))
-  is_nvx_na <- all(is.na(2 * n * maf * (1 - maf)))
+  is_oneover_na <- all(is.na(1 / eqtl_data$se^2))
+  is_nvx_na <- all(is.na(2 * eqtl_data$an / 2 * eqtl_data$maf * (1 - eqtl_data$maf)))
 
   if (is_oneover_na || is_nvx_na) {
     next
   }
 
   eqtl_dataset <- list(
-    varbeta = varbeta,
-    N = n,
-    MAF = maf,
+    varbeta = eqtl_data$se^2,
+    N = eqtl_data$an / 2,
+    MAF = eqtl_data$maf,
     type = "quant",
     beta = eqtl_data$beta,
     snp = eqtl_data$variant,
     position = eqtl_data$position
   )
 
-  varbeta <- pqtl_data$se^2
-  n <- pqtl_data$an / 2
-  maf <- pqtl_data$maf
-
-  is_oneover_na <- all(is.na(1 / varbeta))
-  is_nvx_na <- all(is.na(2 * n * maf * (1 - maf)))
+  is_oneover_na <- all(is.na(1 / pqtl_data$se^2))
+  is_nvx_na <- all(is.na(2 * pqtl_data$an / 2 * pqtl_data$maf * (1 - pqtl_data$maf)))
 
   if (is_oneover_na || is_nvx_na) {
     next
   }
 
   pqtl_dataset <- list(
-    varbeta = varbeta,
-    N = n,
-    MAF = maf,
+    varbeta = pqtl_data$se^2,
+    N = pqtl_data$an / 2,
+    MAF = pqtl_data$maf,
     type = "quant",
     beta = pqtl_data$beta,
     snp = pqtl_data$variant
@@ -192,23 +152,22 @@ for (i in 1:n) {
   eqtlgen_density_data <- read_rds("output/densities/eqtlgen.rds")
 
   eqtl_prior_weights_eqtlgen <- compute_eqtl_tss_dist_prior_weights(
-    eqtl_dataset$pos, coloc_metadata$tss[[i]], eqtlgen_density_data
+    eqtl_dataset$position, coloc_metadata$tss[[i]], eqtlgen_density_data
   )
-
   eqtl_prior_weights <- compute_eqtl_tss_dist_prior_weights(
-    eqtl_dataset$pos, coloc_metadata$tss[[i]], density_data_round_1
+    eqtl_dataset$position, coloc_metadata$tss[[i]], density_data_round_1
   )
   eqtl_prior_weights_round_2 <- compute_eqtl_tss_dist_prior_weights(
-    eqtl_dataset$pos, coloc_metadata$tss[[i]], density_data_round_2
+    eqtl_dataset$position, coloc_metadata$tss[[i]], density_data_round_2
   )
   eqtl_prior_weights_round_3 <- compute_eqtl_tss_dist_prior_weights(
-    eqtl_dataset$pos, coloc_metadata$tss[[i]], density_data_round_3
+    eqtl_dataset$position, coloc_metadata$tss[[i]], density_data_round_3
   )
   pqtl_prior_weights <- compute_eqtl_tss_dist_prior_weights(
-    eqtl_dataset$pos, coloc_metadata$phenotype_pos[[i]], density_data_round_1
+    eqtl_dataset$position, coloc_metadata$phenotype_pos[[i]], density_data_round_1
   )
   gnocchi_prior_weights <- compute_gnocchi_prior_weights(
-    eqtl_dataset$pos, chr, gnocchi_data
+    eqtl_dataset$position, chr, gnocchi_data
   )
 
   # Uniform priors.
@@ -279,12 +238,6 @@ for (i in 1:n) {
     dataset2 = pqtl_dataset,
     prior_weights1 = eqtl_prior_weights
   )
-
-  coloc_to_tibble <- function(coloc_out, suffix) {
-    out <- t(as.data.frame(coloc_out$summary))
-    colnames(out) <- paste0(colnames(out), "_", suffix)
-    out
-  }
 
   coloc_results <- bind_cols(
     coloc_to_tibble(coloc_unif, "unif"),
