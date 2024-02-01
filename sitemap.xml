@@ -1,19 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
+    <loc>https://jeffreypullin.github.io/coloc-estimated-eqtl-priors/gwas-eqtl-coloc-analysis.html</loc>
+    <lastmod>2024-02-01T15:29:46.828Z</lastmod>
+  </url>
+  <url>
     <loc>https://jeffreypullin.github.io/coloc-estimated-eqtl-priors/index.html</loc>
-    <lastmod>2024-01-11T11:16:10.405Z</lastmod>
+    <lastmod>2024-02-01T15:29:47.183Z</lastmod>
   </url>
   <url>
-    <loc>https://jeffreypullin.github.io/coloc-estimated-eqtl-priors/eqtl-method-testing.html</loc>
-    <lastmod>2024-01-11T11:16:50.756Z</lastmod>
-  </url>
-  <url>
-    <loc>https://jeffreypullin.github.io/coloc-estimated-eqtl-priors/method-testing.html</loc>
-    <lastmod>2024-01-11T11:17:36.146Z</lastmod>
-  </url>
-  <url>
-    <loc>https://jeffreypullin.github.io/coloc-estimated-eqtl-priors/eqtl-tss-distance-analysis.html</loc>
-    <lastmod>2024-01-11T11:17:54.404Z</lastmod>
+    <loc>https://jeffreypullin.github.io/coloc-estimated-eqtl-priors/density-estimation.html</loc>
+    <lastmod>2024-02-01T15:32:10.887Z</lastmod>
   </url>
 </urlset>
