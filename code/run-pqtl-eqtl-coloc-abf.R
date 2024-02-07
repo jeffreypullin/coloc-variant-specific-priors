@@ -9,6 +9,8 @@ suppressPackageStartupMessages({
   library(readr)
   library(seqminer)
   library(dplyr)
+  library(janitor)
+  library(arrow)
   devtools::load_all("~/coloc")
 })
 
@@ -59,8 +61,30 @@ coloc_metadata <- coloc_metadata |>
 
 n <- nrow(coloc_metadata)
 
+gnocchi_data <- read_tsv("data/gnocchi-windows.bed",
+                         col_names = FALSE, show_col_types = FALSE)
+colnames(gnocchi_data) <- c("chromosome", "start_pos", "end_pos", "score")
+
+abc_score_data <- read_tsv("data/abc-score-data.txt.gz", show_col_types = FALSE)
+
+density_data_round_1 <- read_rds("output/densities/onek1k_cd4nc_round_1.rds")
+density_data_round_2 <- read_rds("output/densities/onek1k_cd4nc_round_2.rds")
+density_data_round_3 <- read_rds("output/densities/onek1k_cd4nc_round_3.rds")
+eqtlgen_density_data <- read_rds("output/densities/eqtlgen.rds")
+
+snp_var_data_1_7 <- read_parquet("data/snpvar_meta.chr1_7.parquet")
+snp_var_data_8_22 <- read_parquet("data/snpvar_meta.chr8_22.parquet")
+
 results <- list()
 for (i in 1:n) {
+
+  region <- paste0(coloc_metadata$chromosome[[i]], ":",
+                   coloc_metadata$start_pos[[i]], "-",
+                   coloc_metadata$end_pos[[i]])
+
+  print(paste0("Region: ", region))
+  print(paste0("Gene ID: ", coloc_metadata$gene_id[[i]]))
+  print(paste0("Gene name: ", coloc_metadata$gene_name[[i]]))
 
   eqtl_data <- all_eqtl_data |>
     setNames(eqtl_catalouge_colnames) |>
@@ -72,8 +96,6 @@ for (i in 1:n) {
     ) |>
     as_tibble()
 
-  print(eqtl_data)
-
   pqtl_data <- all_pqtl_data |>
     setNames(eqtl_catalouge_colnames) |>
     filter_qtl_dataset(
@@ -84,15 +106,12 @@ for (i in 1:n) {
     ) |>
     as_tibble()
 
-
   if (nrow(eqtl_data) == 0 || nrow(pqtl_data) == 0) {
     next
   }
 
   pqtl_data <- prepare_coloc_dataset(pqtl_data)
   eqtl_data <- prepare_coloc_dataset(eqtl_data)
-
-  print(eqtl_data)
 
   n_before <- max(nrow(eqtl_data), nrow(pqtl_data))
   if (n_before <= 300) {
@@ -142,15 +161,6 @@ for (i in 1:n) {
     snp = pqtl_data$variant
   )
 
-  gnocchi_data <- read_tsv("data/gnocchi-windows.bed",
-                           col_names = FALSE, show_col_types = FALSE)
-  colnames(gnocchi_data) <- c("chromosome", "start_pos", "end_pos", "score")
-
-  density_data_round_1 <- read_rds("output/densities/onek1k_cd4nc_round_1.rds")
-  density_data_round_2 <- read_rds("output/densities/onek1k_cd4nc_round_1.rds")
-  density_data_round_3 <- read_rds("output/densities/onek1k_cd4nc_round_1.rds")
-  eqtlgen_density_data <- read_rds("output/densities/eqtlgen.rds")
-
   eqtl_prior_weights_eqtlgen <- compute_eqtl_tss_dist_prior_weights(
     eqtl_dataset$position, coloc_metadata$tss[[i]], eqtlgen_density_data
   )
@@ -163,11 +173,25 @@ for (i in 1:n) {
   eqtl_prior_weights_round_3 <- compute_eqtl_tss_dist_prior_weights(
     eqtl_dataset$position, coloc_metadata$tss[[i]], density_data_round_3
   )
-  pqtl_prior_weights <- compute_eqtl_tss_dist_prior_weights(
-    eqtl_dataset$position, coloc_metadata$phenotype_pos[[i]], density_data_round_1
-  )
   gnocchi_prior_weights <- compute_gnocchi_prior_weights(
     eqtl_dataset$position, chr, gnocchi_data
+  )
+  abc_score_prior_weights <- compute_abc_prior_weights(
+    eqtl_dataset$position, chr, coloc_metadata$gene_name[[i]], abc_score_data
+  )
+  abc_score_primary_blood_prior_weights <- compute_abc_prior_weights(
+    eqtl_dataset$position, chr, coloc_metadata$gene_name[[i]], abc_score_data,
+    biosamples = "primary_blood"
+  )
+
+  if (chr %in% 1:7) {
+    polyfun_data <- snp_var_data_1_7
+  } else {
+    polyfun_data <- snp_var_data_8_22
+  }
+
+  polyfun_prior_weights <- compute_polyfun_prior_weights(
+    eqtl_dataset$position, chr, polyfun_data
   )
 
   # Uniform priors.
@@ -221,22 +245,62 @@ for (i in 1:n) {
   coloc_pqtl_tss_onek1k_round_1 <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
-    prior_weights2 = pqtl_prior_weights
+    prior_weights2 = eqtl_prior_weights
   )
 
   coloc_eqtl_tss_pqtl_tss_onek1k_round_1 <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
     prior_weights1 = eqtl_prior_weights,
-    prior_weights2 = pqtl_prior_weights
+    prior_weights2 = eqtl_prior_weights
+  )
+
+  # Polyfun priors.
+
+  coloc_polyfun_eqtl <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = pqtl_dataset,
+    prior_weights1 = polyfun_prior_weights
+  )
+
+  coloc_polyfun_pqtl <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = pqtl_dataset,
+    prior_weights2 = polyfun_prior_weights
   )
 
   # Gnocchi priors.
 
-  coloc_gnocchi <- coloc.abf(
+  coloc_gnocchi_eqtl <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
-    prior_weights1 = eqtl_prior_weights
+    prior_weights1 = gnocchi_prior_weights
+  )
+
+  coloc_gnocchi_pqtl <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = pqtl_dataset,
+    prior_weights2 = gnocchi_prior_weights
+  )
+
+  # ABC score priors.
+
+  coloc_abc_score_eqtl <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = pqtl_dataset,
+    prior_weights1 = abc_score_prior_weights
+  )
+
+  coloc_abc_score_pqtl <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = pqtl_dataset,
+    prior_weights2 = abc_score_prior_weights
+  )
+
+  coloc_abc_score_pqtl_primary_blood <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = pqtl_dataset,
+    prior_weights2 = abc_score_primary_blood_prior_weights
   )
 
   coloc_results <- bind_cols(
@@ -252,7 +316,15 @@ for (i in 1:n) {
     coloc_to_tibble(coloc_pqtl_tss_eqtlgen, "pqtl_tss_eqtlgen"),
     coloc_to_tibble(coloc_eqtl_tss_pqtl_tss_eqtlgen, "eqtl_tss_pqtl_tss_eqtlgen"),
     # Gnocchi.
-    coloc_to_tibble(coloc_gnocchi, "gnocchi"),
+    coloc_to_tibble(coloc_gnocchi_eqtl, "gnocchi_eqtl"),
+    coloc_to_tibble(coloc_gnocchi_pqtl, "gnocchi_pqtl"),
+    # ABC score.
+    coloc_to_tibble(coloc_abc_score_eqtl, "abc_score_eqtl"),
+    coloc_to_tibble(coloc_abc_score_pqtl, "abc_score_pqtl"),
+    coloc_to_tibble(coloc_abc_score_pqtl_primary_blood, "abc_score_pqtl_primary_blood"),
+    # polyfun.
+    coloc_to_tibble(coloc_polyfun_eqtl, "polyfun_eqtl"),
+    coloc_to_tibble(coloc_polyfun_pqtl, "polyfun_pqtl"),
     tibble(
       phenotype_id = coloc_metadata$phenotype_id[[i]],
       chromosome = coloc_metadata$chromosome[[i]],

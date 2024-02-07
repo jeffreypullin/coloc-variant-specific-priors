@@ -1,0 +1,214 @@
+---
+title: "pQTL-eQTL colocalisation analysis"
+format: html
+editor: source
+---
+
+```{r warning = FALSE, message = FALSE}
+renv::load(here::here())
+
+library(readr)
+library(janitor)
+library(dplyr)
+library(patchwork)
+library(tidyr)
+library(purrr)
+library(stringr)
+library(ggplot2)
+library(readxl)
+library(seqminer)
+library(conflicted)
+
+conflicts_prefer(dplyr::filter)
+conflicts_prefer(dplyr::select)
+conflicts_prefer(dplyr::setdiff)
+conflicts_prefer(dplyr::rename)
+conflicts_prefer(dplyr::intersect)
+
+devtools::load_all("~/coloc")
+```
+
+```{r load-data}
+# Load eQTL-pQTL colocalisation results.
+eqtl_data_ids <- c("QTD000266", "QTD000373", "QTD000356")
+pqtl_eqtl_colocs <- expand_grid(
+  eqtl_data_id = eqtl_data_ids, 
+  chr = 1:22
+) |>
+  rowwise() |>
+  mutate(file = paste0(
+    here::here("output/data/pqtl-eqtl-coloc"), "-", eqtl_data_id, "-", chr, ".rds")
+  ) |>
+  mutate(data = list(read_rds(file))) |>
+  unnest(data)
+
+cs_data <- read_tsv(here::here("data/QTD000584.credible_sets.tsv.gz"), 
+                    show_col_types = FALSE) |>
+  select(phenotype_id = molecular_trait_id, coding_gene_id = gene_id) |>
+  distinct(phenotype_id, coding_gene_id)
+
+tambets_supp <- read_xlsx(here::here("data/tambets-etal-supp.xlsx"), sheet = 3)
+
+protein_metadata <- read_tsv(
+  here::here("data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"), 
+  show_col_types = FALSE
+)
+```
+
+```{r call-level-performance}
+left_join(
+  pqtl_eqtl_colocs |>
+    select(eqtl_data_id, starts_with("PP.H4.abf"), phenotype_id, 
+           coloc_gene_id = gene_id), 
+  protein_metadata |>
+    select(coding_gene_id = gene_id, phenotype_id),
+  by = "phenotype_id"
+) |>
+  rename(protein_id = phenotype_id) |>
+  pivot_longer(-c(protein_id, coding_gene_id, eqtl_data_id, coloc_gene_id),
+               values_to = "pp_h4", 
+               names_to = c("junk", "prior_type"),
+               names_pattern = "(.*?)_(.*)") |>
+  select(-junk) |>
+  mutate(sig_coloc = pp_h4 >= 0.8) |>
+  mutate(gene_match = coding_gene_id == coloc_gene_id) |>
+  summarise(
+    colocalised = any(sig_coloc), 
+    is_tp = any(sig_coloc & gene_match),
+    is_fn = !any(sig_coloc & gene_match),
+    is_fp = any(sig_coloc) & !any(sig_coloc & gene_match),
+    .by = c(protein_id, prior_type, eqtl_data_id)
+  ) |>
+  summarise(
+    n_colocalised = sum(colocalised),
+    n_tp = sum(is_tp),
+    n_fn = sum(is_fn),
+    n_fp = sum(is_fp),
+    .by = c(eqtl_data_id, prior_type)
+  ) |>
+  mutate(
+    recall = n_tp / (n_tp + n_fn), 
+    precision = n_tp / (n_tp + n_fp)
+  ) |>
+  print(n = 60)
+```
+
+```{r}
+call_data <- left_join(
+  pqtl_eqtl_colocs |>
+    select(eqtl_data_id, starts_with("PP.H4.abf"), phenotype_id, 
+           coloc_gene_id = gene_id), 
+  protein_metadata |>
+    select(coding_gene_id = gene_id, phenotype_id),
+  by = "phenotype_id"
+) |>
+  rename(protein_id = phenotype_id) |>
+  pivot_longer(-c(protein_id, coding_gene_id, eqtl_data_id, coloc_gene_id),
+               values_to = "pp_h4", 
+               names_to = c("junk", "prior_type"),
+               names_pattern = "(.*?)_(.*)") |>
+  select(-junk) |>
+  mutate(sig_coloc = pp_h4 >= 0.8) |>
+  mutate(gene_match = coding_gene_id == coloc_gene_id) |>
+  summarise(
+    colocalised = any(sig_coloc), 
+    is_tp = any(sig_coloc & gene_match),
+    is_fn = !any(sig_coloc & gene_match),
+    is_fp = any(sig_coloc) & !any(sig_coloc & gene_match),
+    .by = c(protein_id, prior_type, eqtl_data_id)
+  ) |>
+  summarise(
+    n_colocalised = sum(colocalised),
+    n_tp = sum(is_tp),
+    n_fn = sum(is_fn),
+    n_fp = sum(is_fp),
+    .by = c(eqtl_data_id, prior_type)
+  ) |>
+  mutate(
+    recall = n_tp / (n_tp + n_fn), 
+    precision = n_tp / (n_tp + n_fp)
+  )
+```
+
+```{r}
+call_data |>
+  filter(eqtl_data_id == "QTD000356") |>
+  mutate(is_unif = prior_type == "unif") |>
+  ggplot(aes(recall, precision, col = is_unif, label = prior_type)) + 
+  geom_point() + 
+  geom_text() + 
+  labs(
+    x = "Recall", 
+    y = "Precision",
+    title = "GTEx blood"
+  ) + 
+  theme_bw()
+```
+
+```{r}
+call_data |>
+  filter(eqtl_data_id == "QTD000373") |>
+  mutate(is_unif = prior_type == "unif") |>
+  ggplot(aes(recall, precision, col = is_unif, label = prior_type)) + 
+  geom_point() + 
+  geom_text() + 
+  labs(
+    x = "Recall", 
+    y = "Precision",
+    title = "Lepik 2017 (blood)"
+  ) + 
+  theme_bw()
+```
+
+```{r protein-level-performance}
+left_join(
+  pqtl_eqtl_colocs |>
+    select(eqtl_data_id, starts_with("PP.H4.abf"), phenotype_id, 
+           coloc_gene_id = gene_id), 
+  protein_metadata |>
+    select(coding_gene_id = gene_id, phenotype_id),
+  by = "phenotype_id"
+) |>
+  rename(protein_id = phenotype_id) |>
+  pivot_longer(-c(protein_id, coding_gene_id, eqtl_data_id, coloc_gene_id),
+               values_to = "pp_h4", 
+               names_to = c("junk", "prior_type"),
+               names_pattern = "(.*?)_(.*)") |>
+  select(-junk) |>
+  mutate(sig_coloc = pp_h4 >= 0.8) |>
+  mutate(gene_match = coding_gene_id == coloc_gene_id) |>
+  summarise(
+    colocalised = any(sig_coloc), 
+    is_tp = any(sig_coloc & gene_match),
+    is_fn = !any(sig_coloc & gene_match),
+    is_fp = any(sig_coloc) & !any(sig_coloc & gene_match),
+    .by = c(protein_id, prior_type)
+  ) |>
+  summarise(
+    n_colocalised = sum(colocalised),
+    n_tp = sum(is_tp),
+    n_fn = sum(is_fn),
+    n_fp = sum(is_fp),
+    .by = prior_type
+  ) |>
+  mutate(
+    recall = n_tp / (n_tp + n_fn), 
+    precision = n_tp / (n_tp + n_fp)
+  )
+```
+
+```{r}
+pqtl_eqtl_colocs |>
+  ggplot(aes(PP.H4.abf_unif, PP.H4.abf_eqtl_tss_eqtlgen)) + 
+  geom_point() + 
+  geom_vline(xintercept = 0.8, colour = "red") + 
+  geom_hline(yintercept = 0.8, colour = "red") + 
+  theme_bw()
+
+pqtl_eqtl_colocs |>
+  ggplot(aes(PP.H4.abf_unif, PP.H4.abf_gnocchi_eqtl)) + 
+  geom_point() + 
+  geom_vline(xintercept = 0.8, colour = "red") + 
+  geom_hline(yintercept = 0.8, colour = "red") + 
+  theme_bw()
+```

@@ -1,6 +1,10 @@
-library(readr)
-library(dplyr, warn.conflicts = FALSE)
-library(glue)
+source(here::here("renv/activate.R"))
+
+suppressPackageStartupMessages({
+  library(readr)
+  library(dplyr)
+  library(glue)
+})
 
 eqtl_catalogue_metadata <- read_tsv(snakemake@input[["metadata_file"]],
                                     show_col_types = FALSE)

@@ -4,8 +4,11 @@ format: html
 editor: source
 ---
 
-[eQTL TSS analysis](eqtl-tss-distance-analysis.html)
 
-[Method testing](method-testing.html)
+[eQTL TSS distance analysis](eqtl-tss-distance-analysis.html)
 
-[eQTL method testing](eqtl-method-testing.html)
+[Prior visualisation](prior-visualisation.html)
+
+[GWAS-eQTL colocalisation analysis](gwas-eqtl-coloc-analysis.html)
+
+[pQTL-eQTL colocalisation analysis](pqtl-eqtl-coloc-analysis.html)

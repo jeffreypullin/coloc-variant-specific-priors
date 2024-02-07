@@ -24,6 +24,7 @@ prepare_coloc_dataset <- function(data) {
     filter(!is.nan(se)) |>
     filter(!is.na(se)) |>
     select(molecular_trait_id, variant, maf, beta, se, an, position) |>
+    filter(maf > 0 & maf < 1) |>
     mutate(
       maf = as.numeric(maf),
       beta = as.numeric(beta),

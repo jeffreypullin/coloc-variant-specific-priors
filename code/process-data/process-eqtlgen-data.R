@@ -1,11 +1,13 @@
 source(here::here("renv/activate.R"))
 
-library(dplyr, warn.conflicts = FALSE)
-library(readr)
-library(janitor)
+suppressPackageStartupMessages({
+  library(dplyr)
+  library(readr)
+  library(janitor)
+})
 
 data_path <- snakemake@input[["eqtlgen_path"]]
-processed_data_path <- snakemake@output[["plot_data_path"]]
+processed_data_path <- snakemake@output[["processed_data_path"]]
 
 raw_eqtlgen_data <- read_tsv(data_path,
                              col_select = c(gene_symbol, snp_pos, gene_pos, pvalue),

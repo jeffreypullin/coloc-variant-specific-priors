@@ -2,23 +2,45 @@ configfile: "config.yaml"
 
 chromosomes = ["chr" + str(x) for x in range(1, 23)] + ["chrX"]
 
-eqtl_data_ids_subset = ["QTD000110", "QTD000373", "QTD000356"]
-
 rule all: 
   input: 
+    "data/T1D_Chiou_34012112_1-hg38.tsv.gz",
+    "data/T1D_Chiou_34012112_1-hg38.tsv.gz.tbi",
     "data/processed-data/eqtl-catalogue.rds",
     "data/processed-data/gtex.rds",
     "data/processed-data/adipos-express-marginal.rds",
     "data/processed-data/eqtlgen.rds",
     "data/processed-data/onek1k.rds",
+    "data/eqtlgen-sig.txt.gz",
+    #"data/eqtlgen-all.txt.gz.tbi",
+    "data/abc-data.txt.gz",
     "data/fauman-hyde/eqtlgen.txt",
     "data/tss-data/hg19-tss-data.rds",
     "data/gnocchi-windows.bed",
     "data/tambets-etal-supp.xlsx",
+    "data/snpvar_meta.chr1_7.parquet",
+    "data/snpvar_meta.chr8_22.parquet",
+    "data/abc-data.txt.gz",
     expand("data/adipos-express/processed-ab1-eur/{chromosome}.txt", chromosome = chromosomes),
+    expand("output/data/gwas-eqtl-coloc-{chr}.rds", chr = [x for x in range(1, 23)]),
     expand("output/data/pqtl-eqtl-coloc-{eqtl_id}-{chr}.rds", 
            chr = [x for x in range(1, 23)],
-           eqtl_id = eqtl_data_ids_subset)
+           eqtl_id = config["eqtl_catalogue_dataset_ids"])
+
+rule fetch_t1d_gwas_data:
+  output: 
+    data_file = "data/T1D_Chiou_34012112_1-hg38.tsv.gz",
+    tabix_file = "data/T1D_Chiou_34012112_1-hg38.tsv.gz.tbi"
+  shell:
+    """ 
+    cp /home/jp2045/rds/rds-basis-YRWZsjDGyaU/02-Processed/T1D_Chiou_34012112_1-hg38.tsv.gz /home/jp2045/coloc-estimated-eqtl-priors/data/
+    mv data/T1D_Chiou_34012112_1-hg38.tsv.gz data/tmp-T1D_Chiou_34012112_1-hg38.tsv.gz  
+    gunzip --force data/tmp-T1D_Chiou_34012112_1-hg38.tsv.gz
+    bgzip data/tmp-T1D_Chiou_34012112_1-hg38.tsv
+    tabix -s 3 -b 4 -e 4 -c S data/tmp-T1D_Chiou_34012112_1-hg38.tsv.gz
+    mv data/tmp-T1D_Chiou_34012112_1-hg38.tsv.gz.tbi {output.tabix_file}
+    mv data/tmp-T1D_Chiou_34012112_1-hg38.tsv.gz {output.data_file}
+    """
 
 rule download_tss_data: 
   output: hg19_tss_data_path = "data/tss-data/hg19-tss-data.rds",
@@ -35,16 +57,30 @@ rule download_fauman_hyde_data:
     """
 
 rule download_eqtlgen_data:
-  output: "data/eqtlgen.txt"
+  output: 
+    eqtlgen_sig = "data/eqtlgen-sig.txt.gz",
+    eqtlgen_all = "data/eqtlgen-all.txt.gz"
   shell:
     """
-    wget https://molgenis26.gcc.rug.nl/downloads/eqtlgen/cis-eqtl/2019-12-11-cis-eQTLsFDR0.05-ProbeLevel-CohortInfoRemoved-BonferroniAdded.txt.gz
-    gunzip -d 2019-12-11-cis-eQTLsFDR0.05-ProbeLevel-CohortInfoRemoved-BonferroniAdded.txt.gz
-    mv 2019-12-11-cis-eQTLsFDR0.05-ProbeLevel-CohortInfoRemoved-BonferroniAdded.txt {output}
+    wget -O {output.eqtlgen_sig} https://molgenis26.gcc.rug.nl/downloads/eqtlgen/cis-eqtl/2019-12-11-cis-eQTLsFDR0.05-ProbeLevel-CohortInfoRemoved-BonferroniAdded.txt.gz
+    wget -O {output.eqtlgen_all} https://molgenis26.gcc.rug.nl/downloads/eqtlgen/cis-eqtl/2019-12-11-cis-eQTLsFDR-ProbeLevel-CohortInfoRemoved-BonferroniAdded.txt.gz
+    """
+
+rule tabix_eqtlgen:
+  input: "data/eqtlgen-all.txt.gz"
+  output: "data/eqtlgen-all.txt.gz.tbi"
+  conda: "envs/tabix.yaml"
+  shell:
+    """
+    cp data/eqtlgen-all.txt.gz data/tmp-eqtlgen-all.txt.gz
+    gunzip data/tmp-eqtlgen-all.txt.gz
+    bgzip data/tmp-eqtlgen-all.txt
+    tabix -s 4 -b 3 -e 3 -c P data/tmp-eqtlgen-all.txt.gz
+    mv data/tmp-eqtlgen-all.txt.gx.tbi {output}
     """
     
 rule process_eqtlgen_data:
-  input: eqtlgen_path =  "data/eqtlgen.txt"
+  input: eqtlgen_path =  "data/eqtlgen-sig.txt.gz"
   output: processed_data_path = "data/processed-data/eqtlgen.rds"
   script: "code/process-data/process-eqtlgen-data.R"
     
@@ -157,18 +193,6 @@ rule download_metadata:
     wget -O {output.pqtl_metadata_file} https://zenodo.org/record/7808390/files/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz
     """ 
 
-rule run_pqtl_eqtl_colocalisation:
-  input: 
-    eqtl_data_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.cc.tsv.gz",
-    eqtl_index_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.cc.tsv.gz.tbi",
-    pqtl_data_file = "data/QTD000584.cc.tsv.gz",
-    pqtl_index_file = "data/QTD000584.cc.tsv.gz.tbi",
-    eqtl_metadata_file = "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
-    pqtl_metadata_file = "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
-  output: 
-    result_file = "output/data/pqtl-eqtl-coloc-{eqtl_id}-{chr}.rds"
-  script: "code/run-coloc-abf.R"
-
 rule download_tambets_etal_supp:
   output: "data/tambets-etal-supp.xlsx"
   shell:
@@ -188,3 +212,52 @@ rule download_gnochhi_data:
     rm Supplementary_Data_1.tsv  Supplementary_Data_3.bed.gz Supplementary_Data_4.tsv
     rm Supplementary_Data_5.tsv Supplementary_Data_6_ESM.txt
     """
+
+rule download_abc_score_data:
+  output: "data/raw-abc-data.txt.gz"
+  shell:
+    """
+    wget -O {output} https://mitra.stanford.edu/engreitz/oak/public/Nasser2021/AllPredictions.AvgHiC.ABC0.015.minus150.ForABCPaperV3.txt.gz
+    """
+
+rule process_abc_score_data:
+  input: "data/raw-abc-data.txt.gz",
+  output: "data/abc-data.txt.gz"
+  script: "code/process-abc-data.R"
+
+rule download_polyfun_data:
+  output: 
+    chr1_7 = "data/snpvar_meta.chr1_7.parquet",
+    chr8_22 = "data/snpvar_meta.chr8_22.parquet"
+  shell:
+   """
+   wget -O {output.chr1_7} https://github.com/omerwe/polyfun/raw/master/snpvar_meta.chr1_7.parquet
+   wget -O {output.chr8_22} https://github.com/omerwe/polyfun/raw/master/snpvar_meta.chr8_22.parquet
+   """
+
+rule run_pqtl_eqtl_colocalisation:
+  input: 
+    eqtl_data_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.cc.tsv.gz",
+    eqtl_index_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.cc.tsv.gz.tbi",
+    pqtl_data_file = "data/QTD000584.cc.tsv.gz",
+    pqtl_index_file = "data/QTD000584.cc.tsv.gz.tbi",
+    eqtl_metadata_file = "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
+    pqtl_metadata_file = "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
+  output: 
+    result_file = "output/data/pqtl-eqtl-coloc-{eqtl_id}-{chr}.rds"
+  script: "code/run-pqtl-eqtl-coloc-abf.R"
+
+rule run_gwas_eqtl_colocalisation:
+  input: 
+    eqtl_data_file = "data/eqtl-catalogue/sumstats/QTD000373.cc.tsv.gz",
+    eqtl_index_file = "data/eqtl-catalogue/sumstats/QTD000373.cc.tsv.gz.tbi",
+    gwas_data_file = "data/T1D_Chiou_34012112_1-hg38.tsv.gz",
+    gwas_index_file = "data/T1D_Chiou_34012112_1-hg38.tsv.gz.tbi",
+    eqtl_metadata_file = "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
+  output: 
+    result_file = "output/data/gwas-eqtl-coloc-{chr}.rds"
+  retries: 1
+  resources: 
+    mem_mb = lambda wildcards, attempt: 7000 * attempt,
+    time_min = lambda wildcards, attempt: 60 * attempt 
+  script: "code/run-gwas-eqtl-coloc-abf.R"

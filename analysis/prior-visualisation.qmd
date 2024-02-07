@@ -1,0 +1,123 @@
+---
+title: "Prior estimation"
+format: html
+editor: source
+---
+
+```{r message = FALSE, warning = FALSE}
+renv::load("..")
+
+library(ggplot2)
+library(arrow)
+library(readr)
+library(dplyr)
+library(patchwork)
+library(tidyr)
+library(seqminer)
+
+source(here::here("code/coloc-utils.R"))
+devtools::load_all("~/coloc")
+```
+
+```{r load-data}
+gnocchi_data <- read_tsv(here::here("data/gnocchi-windows.bed"),
+                         col_names = FALSE, show_col_types = FALSE)
+colnames(gnocchi_data) <- c("chromosome", "start_pos", "end_pos", "score")
+
+abc_score_data <- read_tsv(here::here("data/abc-score-data.txt.gz"), show_col_types = FALSE)
+
+density_data_round_1 <- read_rds(here::here("output/densities/onek1k_cd4nc_round_1.rds"))
+density_data_round_2 <- read_rds(here::here("output/densities/onek1k_cd4nc_round_2.rds"))
+density_data_round_3 <- read_rds(here::here("output/densities/onek1k_cd4nc_round_3.rds"))
+eqtlgen_density_data <- read_rds(here::here("output/densities/eqtlgen.rds"))
+
+snp_var_data_1_7 <- read_parquet(here::here("data/snpvar_meta.chr1_7.parquet"))
+
+chr <- 1
+tss <- 113871759
+gene_name <- "PTPN22"
+
+position <- tabix.read.table(here::here("data/T1D_Chiou_34012112_1-hg38.tsv.gz"), "1:1-2147483647") |> 
+  as_tibble() |>
+  rename(
+    rsid = SNPID,
+    chromosome = CHR38,
+    position = BP38,
+    beta = BETA,
+    se = SE,
+    maf = ALT_FREQ
+  ) |>
+  mutate(
+    an = 2 * sample_size,
+    molecular_trait_id = "t1d",
+    variant = paste0("chr", chromosome, "_", position, "_", REF, "_", ALT)
+  ) |>
+  select(-c(sample_size, REF, ALT)) |>
+    filter(chromosome == chr) |>
+    filter(
+      position <= tss + 100000 &
+      position >= tss - 100000
+  ) |>
+  prepare_coloc_dataset() |>
+  pull(position)
+```
+
+```{r compute-priors}
+eqtl_prior_weights_eqtlgen <- compute_eqtl_tss_dist_prior_weights(
+  position, tss, eqtlgen_density_data
+)
+eqtl_prior_weights <- compute_eqtl_tss_dist_prior_weights(
+  position, tss, density_data_round_1
+)
+eqtl_prior_weights_round_2 <- compute_eqtl_tss_dist_prior_weights(
+  position, tss, density_data_round_2
+)
+eqtl_prior_weights_round_3 <- compute_eqtl_tss_dist_prior_weights(
+  position, tss, density_data_round_3
+)
+gnocchi_prior_weights <- compute_gnocchi_prior_weights(
+  position, chr, gnocchi_data
+)
+abc_score_prior_weights <- compute_abc_prior_weights(
+  position, chr, gene_name, abc_score_data
+)
+abc_score_primary_blood_prior_weights <- compute_abc_prior_weights(
+  position, chr, gene_name, abc_score_data,
+  biosamples = "primary_blood"
+)
+polyfun_prior_weights <- compute_polyfun_prior_weights(
+  position, chr, snp_var_data_1_7
+)
+```
+
+```{r eqtl-plots}
+tibble(
+  position = position, 
+  eqtlgen = eqtl_prior_weights_eqtlgen,
+  onek1k_round_1 = eqtl_prior_weights,
+  onek1k_round_2 = eqtl_prior_weights_round_2,
+  onek1k_round_3 = eqtl_prior_weights_round_3 
+) |>
+  pivot_longer(cols = -position, names_to = "type",
+               values_to = "weight") |>
+  ggplot(aes(position, weight)) + 
+  geom_point() + 
+  facet_wrap(~type) + 
+  theme_bw()
+```
+
+```{r score-plots}
+tibble(
+  position = position, 
+  abc_score_all = abc_score_prior_weights,
+  abc_score_primary_blood = abc_score_primary_blood_prior_weights,
+  gnocchi = gnocchi_prior_weights,
+  polyfun = polyfun_prior_weights
+) |>
+  pivot_longer(cols = -position, names_to = "type",
+               values_to = "weight") |>
+  ggplot(aes(position, weight)) + 
+  geom_point() + 
+  facet_wrap(~type, scales = "free") + 
+  theme_bw()
+```

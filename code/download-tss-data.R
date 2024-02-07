@@ -1,6 +1,10 @@
 
-library(biomaRt)
-library(dplyr)
+source(here::here("renv/activate.R"))
+
+suppressPackageStartupMessages({
+  library(biomaRt)
+  library(dplyr)
+})
 
 hg19_tss_data_path <- snakemake@output[["hg19_tss_data_path"]]
 hg38_tss_data_path <- snakemake@output[["hg38_tss_data_path"]]

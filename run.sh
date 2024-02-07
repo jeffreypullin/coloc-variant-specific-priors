@@ -1,8 +1,12 @@
 #!/bin/bash
 
 source ~/.bashrc
-module load R/4.2.2
-micromamba activate snakemake
+module load gcc/9
+module load R/4.3.1-icelake
+
+micromamba activate pipeline
+
+rm logs/*
 
 local_flag=''
 
@@ -20,7 +24,7 @@ done
 
 if [[ "$local_flag" = "true" ]]
 then
-  snakemake -s Snakefile --profile none --workflow-profile none --cores 1
+  snakemake -s Snakefile --profile none --workflow-profile none --cores 1 --rerun-incomplete
 else
   snakemake -s Snakefile --profile none
 fi

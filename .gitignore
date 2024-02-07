@@ -3,7 +3,8 @@
 .Rdata
 .httr-oauth
 .DS_Store
-.quarto
+/.quarto/
+/_site/
 data
 notes
 archive

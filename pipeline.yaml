@@ -1,0 +1,7 @@
+name: pipeline
+channels:
+  - conda-forge
+  - bioconda 
+dependencies:
+  - snakemake==7.32.0
+  - samtools
