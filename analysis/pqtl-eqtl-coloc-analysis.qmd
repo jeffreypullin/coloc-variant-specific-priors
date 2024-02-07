@@ -8,22 +8,11 @@ editor: source
 renv::load(here::here())
 
 library(readr)
-library(janitor)
 library(dplyr)
-library(patchwork)
 library(tidyr)
 library(purrr)
-library(stringr)
 library(ggplot2)
-library(readxl)
-library(seqminer)
-library(conflicted)
-
-conflicts_prefer(dplyr::filter)
-conflicts_prefer(dplyr::select)
-conflicts_prefer(dplyr::setdiff)
-conflicts_prefer(dplyr::rename)
-conflicts_prefer(dplyr::intersect)
+library(ggrepel)
 
 devtools::load_all("~/coloc")
 ```
@@ -41,13 +30,6 @@ pqtl_eqtl_colocs <- expand_grid(
   ) |>
   mutate(data = list(read_rds(file))) |>
   unnest(data)
-
-cs_data <- read_tsv(here::here("data/QTD000584.credible_sets.tsv.gz"), 
-                    show_col_types = FALSE) |>
-  select(phenotype_id = molecular_trait_id, coding_gene_id = gene_id) |>
-  distinct(phenotype_id, coding_gene_id)
-
-tambets_supp <- read_xlsx(here::here("data/tambets-etal-supp.xlsx"), sheet = 3)
 
 protein_metadata <- read_tsv(
   here::here("data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"), 
@@ -160,8 +142,23 @@ call_data |>
   theme_bw()
 ```
 
+```{r}
+call_data |>
+  filter(eqtl_data_id == "QTD000266") |>
+  mutate(is_unif = prior_type == "unif") |>
+  ggplot(aes(recall, precision, col = is_unif, label = prior_type)) + 
+  geom_point() + 
+  geom_text() + 
+  labs(
+    x = "Recall", 
+    y = "Precision",
+    title = "GTEx liver"
+  ) + 
+  theme_bw()
+```
+
 ```{r protein-level-performance}
-left_join(
+protein_level_data <- left_join(
   pqtl_eqtl_colocs |>
     select(eqtl_data_id, starts_with("PP.H4.abf"), phenotype_id, 
            coloc_gene_id = gene_id), 
@@ -195,6 +192,22 @@ left_join(
     recall = n_tp / (n_tp + n_fn), 
     precision = n_tp / (n_tp + n_fp)
   )
+
+protein_level_data
+```
+
+```{r}
+protein_level_data |>
+  mutate(is_unif = prior_type == "unif") |>
+  ggplot(aes(recall, precision, col = is_unif, label = prior_type)) + 
+  geom_point() + 
+  geom_label_repel() + 
+  labs(
+    x = "Recall", 
+    y = "Precision",
+  ) + 
+  guides(col = "none") + 
+  theme_bw()
 ```
 
 ```{r}
