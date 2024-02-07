@@ -60,7 +60,7 @@
     "href": "index.html",
     "title": "Home",
     "section": "",
-    "text": "eQTL TSS analysis\nMethod testing\neQTL method testing"
+    "text": "eQTL TSS distance analysis\nPrior visualisation\nGWAS-eQTL colocalisation analysis\npQTL-eQTL colocalisation analysis"
   },
   {
     "objectID": "pqtl-eqtl-coloc-analysis.html",
