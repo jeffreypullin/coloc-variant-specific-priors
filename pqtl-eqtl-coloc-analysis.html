@@ -179,7 +179,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Load eQTL-pQTL colocalisation results.</span></span>
-<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>eqtl_data_ids <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"QTD000110"</span>, <span class="st">"QTD000373"</span>, <span class="st">"QTD000356"</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>eqtl_data_ids <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"QTD000266"</span>, <span class="st">"QTD000373"</span>, <span class="st">"QTD000356"</span>)</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>pqtl_eqtl_colocs <span class="ot">&lt;-</span> <span class="fu">expand_grid</span>(</span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">eqtl_data_id =</span> eqtl_data_ids, </span>
 <span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">chr =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">22</span></span>
@@ -241,56 +241,56 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb5-35"><a href="#cb5-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="at">n =</span> <span class="dv">60</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code># A tibble: 48 × 8
-   eqtl_data_id prior_type     n_colocalised  n_tp  n_fn  n_fp  recall precision
-   &lt;chr&gt;        &lt;chr&gt;                  &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;int&gt;   &lt;dbl&gt;     &lt;dbl&gt;
- 1 QTD000110    unif                      57    38   355    19  0.0967     0.667
- 2 QTD000110    eqtl_tss_onek…            61    42   351    19  0.107      0.689
- 3 QTD000110    eqtl_tss_onek…            59    40   353    19  0.102      0.678
- 4 QTD000110    eqtl_tss_onek…            60    40   353    20  0.102      0.667
- 5 QTD000110    pqtl_tss_onek…            59    39   354    20  0.0992     0.661
- 6 QTD000110    eqtl_tss_pqtl…            62    43   350    19  0.109      0.694
- 7 QTD000110    eqtl_tss_eqtl…            61    42   351    19  0.107      0.689
- 8 QTD000110    pqtl_tss_eqtl…            58    39   354    19  0.0992     0.672
- 9 QTD000110    eqtl_tss_pqtl…            62    44   349    18  0.112      0.710
-10 QTD000110    gnocchi_eqtl              56    39   354    17  0.0992     0.696
-11 QTD000110    gnocchi_pqtl              57    41   352    16  0.104      0.719
-12 QTD000110    abc_score_eqtl            NA    NA    NA    NA NA         NA    
-13 QTD000110    abc_score_pqtl            NA    NA    NA    NA NA         NA    
-14 QTD000110    abc_score_pqt…            NA    NA    NA    NA NA         NA    
-15 QTD000110    polyfun_eqtl              NA    NA    NA    NA NA         NA    
-16 QTD000110    polyfun_pqtl              NA    NA    NA    NA NA         NA    
-17 QTD000373    unif                     128    90   444    38  0.169      0.703
-18 QTD000373    eqtl_tss_onek…           128    88   446    40  0.165      0.688
-19 QTD000373    eqtl_tss_onek…           127    87   447    40  0.163      0.685
-20 QTD000373    eqtl_tss_onek…           127    87   447    40  0.163      0.685
-21 QTD000373    pqtl_tss_onek…           133    92   442    41  0.172      0.692
-22 QTD000373    eqtl_tss_pqtl…           133    91   443    42  0.170      0.684
-23 QTD000373    eqtl_tss_eqtl…           127    87   447    40  0.163      0.685
-24 QTD000373    pqtl_tss_eqtl…           132    93   441    39  0.174      0.705
-25 QTD000373    eqtl_tss_pqtl…           132    90   444    42  0.169      0.682
-26 QTD000373    gnocchi_eqtl             127    88   446    39  0.165      0.693
-27 QTD000373    gnocchi_pqtl             126    89   445    37  0.167      0.706
-28 QTD000373    abc_score_eqtl           125    88   446    37  0.165      0.704
-29 QTD000373    abc_score_pqtl           133    94   440    39  0.176      0.707
-30 QTD000373    abc_score_pqt…           131    92   442    39  0.172      0.702
-31 QTD000373    polyfun_eqtl             114    80   454    34  0.150      0.702
-32 QTD000373    polyfun_pqtl             133    89   445    44  0.167      0.669
-33 QTD000356    unif                      72    54   349    18  0.134      0.75 
-34 QTD000356    eqtl_tss_onek…            75    57   346    18  0.141      0.76 
-35 QTD000356    eqtl_tss_onek…            73    54   349    19  0.134      0.740
-36 QTD000356    eqtl_tss_onek…            73    54   349    19  0.134      0.740
-37 QTD000356    pqtl_tss_onek…            75    56   347    19  0.139      0.747
-38 QTD000356    eqtl_tss_pqtl…            76    58   345    18  0.144      0.763
-39 QTD000356    eqtl_tss_eqtl…            73    55   348    18  0.136      0.753
-40 QTD000356    pqtl_tss_eqtl…            74    55   348    19  0.136      0.743
-41 QTD000356    eqtl_tss_pqtl…            75    56   347    19  0.139      0.747
-42 QTD000356    gnocchi_eqtl              73    54   349    19  0.134      0.740
-43 QTD000356    gnocchi_pqtl              69    52   351    17  0.129      0.754
-44 QTD000356    abc_score_eqtl            74    56   347    18  0.139      0.757
-45 QTD000356    abc_score_pqtl            75    55   348    20  0.136      0.733
-46 QTD000356    abc_score_pqt…            77    57   346    20  0.141      0.740
-47 QTD000356    polyfun_eqtl              60    45   358    15  0.112      0.75 
-48 QTD000356    polyfun_pqtl              72    51   352    21  0.127      0.708</code></pre>
+   eqtl_data_id prior_type      n_colocalised  n_tp  n_fn  n_fp recall precision
+   &lt;chr&gt;        &lt;chr&gt;                   &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;int&gt;  &lt;dbl&gt;     &lt;dbl&gt;
+ 1 QTD000266    unif                       37    20   209    17 0.0873     0.541
+ 2 QTD000266    eqtl_tss_onek1…            36    20   209    16 0.0873     0.556
+ 3 QTD000266    eqtl_tss_onek1…            37    20   209    17 0.0873     0.541
+ 4 QTD000266    eqtl_tss_onek1…            37    20   209    17 0.0873     0.541
+ 5 QTD000266    pqtl_tss_onek1…            37    20   209    17 0.0873     0.541
+ 6 QTD000266    eqtl_tss_pqtl_…            36    20   209    16 0.0873     0.556
+ 7 QTD000266    eqtl_tss_eqtlg…            37    20   209    17 0.0873     0.541
+ 8 QTD000266    pqtl_tss_eqtlg…            37    20   209    17 0.0873     0.541
+ 9 QTD000266    eqtl_tss_pqtl_…            37    20   209    17 0.0873     0.541
+10 QTD000266    gnocchi_eqtl               34    20   209    14 0.0873     0.588
+11 QTD000266    gnocchi_pqtl               36    20   209    16 0.0873     0.556
+12 QTD000266    abc_score_eqtl             38    21   208    17 0.0917     0.553
+13 QTD000266    abc_score_pqtl             37    20   209    17 0.0873     0.541
+14 QTD000266    abc_score_pqtl…            37    20   209    17 0.0873     0.541
+15 QTD000266    polyfun_eqtl               26    15   214    11 0.0655     0.577
+16 QTD000266    polyfun_pqtl               37    19   210    18 0.0830     0.514
+17 QTD000373    unif                      128    90   444    38 0.169      0.703
+18 QTD000373    eqtl_tss_onek1…           128    88   446    40 0.165      0.688
+19 QTD000373    eqtl_tss_onek1…           127    87   447    40 0.163      0.685
+20 QTD000373    eqtl_tss_onek1…           127    87   447    40 0.163      0.685
+21 QTD000373    pqtl_tss_onek1…           133    92   442    41 0.172      0.692
+22 QTD000373    eqtl_tss_pqtl_…           133    91   443    42 0.170      0.684
+23 QTD000373    eqtl_tss_eqtlg…           127    87   447    40 0.163      0.685
+24 QTD000373    pqtl_tss_eqtlg…           132    93   441    39 0.174      0.705
+25 QTD000373    eqtl_tss_pqtl_…           132    90   444    42 0.169      0.682
+26 QTD000373    gnocchi_eqtl              127    88   446    39 0.165      0.693
+27 QTD000373    gnocchi_pqtl              126    89   445    37 0.167      0.706
+28 QTD000373    abc_score_eqtl            125    88   446    37 0.165      0.704
+29 QTD000373    abc_score_pqtl            133    94   440    39 0.176      0.707
+30 QTD000373    abc_score_pqtl…           131    92   442    39 0.172      0.702
+31 QTD000373    polyfun_eqtl              114    80   454    34 0.150      0.702
+32 QTD000373    polyfun_pqtl              133    89   445    44 0.167      0.669
+33 QTD000356    unif                       72    54   349    18 0.134      0.75 
+34 QTD000356    eqtl_tss_onek1…            75    57   346    18 0.141      0.76 
+35 QTD000356    eqtl_tss_onek1…            73    54   349    19 0.134      0.740
+36 QTD000356    eqtl_tss_onek1…            73    54   349    19 0.134      0.740
+37 QTD000356    pqtl_tss_onek1…            75    56   347    19 0.139      0.747
+38 QTD000356    eqtl_tss_pqtl_…            76    58   345    18 0.144      0.763
+39 QTD000356    eqtl_tss_eqtlg…            73    55   348    18 0.136      0.753
+40 QTD000356    pqtl_tss_eqtlg…            74    55   348    19 0.136      0.743
+41 QTD000356    eqtl_tss_pqtl_…            75    56   347    19 0.139      0.747
+42 QTD000356    gnocchi_eqtl               73    54   349    19 0.134      0.740
+43 QTD000356    gnocchi_pqtl               69    52   351    17 0.129      0.754
+44 QTD000356    abc_score_eqtl             74    56   347    18 0.139      0.757
+45 QTD000356    abc_score_pqtl             75    55   348    20 0.136      0.733
+46 QTD000356    abc_score_pqtl…            77    57   346    20 0.141      0.740
+47 QTD000356    polyfun_eqtl               60    45   358    15 0.112      0.75 
+48 QTD000356    polyfun_pqtl               72    51   352    21 0.127      0.708</code></pre>
 </div>
 </div>
 <div class="cell">
@@ -402,22 +402,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <pre><code># A tibble: 16 × 7
    prior_type                   n_colocalised  n_tp  n_fn  n_fp recall precision
    &lt;chr&gt;                                &lt;int&gt; &lt;int&gt; &lt;int&gt; &lt;int&gt;  &lt;dbl&gt;     &lt;dbl&gt;
- 1 unif                                   171   123   465    48  0.209     0.719
- 2 eqtl_tss_onek1k_round_1                171   122   466    49  0.207     0.713
- 3 eqtl_tss_onek1k_round_2                169   120   468    49  0.204     0.710
- 4 eqtl_tss_onek1k_round_3                170   120   468    50  0.204     0.706
- 5 pqtl_tss_onek1k_round_1                175   124   464    51  0.211     0.709
- 6 eqtl_tss_pqtl_tss_onek1k_ro…           175   125   463    50  0.213     0.714
- 7 eqtl_tss_eqtlgen                       170   121   467    49  0.206     0.712
- 8 pqtl_tss_eqtlgen                       176   127   461    49  0.216     0.722
- 9 eqtl_tss_pqtl_tss_eqtlgen              175   124   464    51  0.211     0.709
-10 gnocchi_eqtl                           168   120   468    48  0.204     0.714
-11 gnocchi_pqtl                           166   120   468    46  0.204     0.723
-12 abc_score_eqtl                          NA    NA    NA    NA NA        NA    
-13 abc_score_pqtl                          NA    NA    NA    NA NA        NA    
-14 abc_score_pqtl_primary_blood            NA    NA    NA    NA NA        NA    
-15 polyfun_eqtl                            NA    NA    NA    NA NA        NA    
-16 polyfun_pqtl                            NA    NA    NA    NA NA        NA    </code></pre>
+ 1 unif                                   165   111   460    54  0.194     0.673
+ 2 eqtl_tss_onek1k_round_1                165   110   461    55  0.193     0.667
+ 3 eqtl_tss_onek1k_round_2                164   108   463    56  0.189     0.659
+ 4 eqtl_tss_onek1k_round_3                164   108   463    56  0.189     0.659
+ 5 pqtl_tss_onek1k_round_1                169   112   459    57  0.196     0.663
+ 6 eqtl_tss_pqtl_tss_onek1k_ro…           168   112   459    56  0.196     0.667
+ 7 eqtl_tss_eqtlgen                       164   108   463    56  0.189     0.659
+ 8 pqtl_tss_eqtlgen                       169   114   457    55  0.200     0.675
+ 9 eqtl_tss_pqtl_tss_eqtlgen              169   111   460    58  0.194     0.657
+10 gnocchi_eqtl                           161   107   464    54  0.187     0.665
+11 gnocchi_pqtl                           162   108   463    54  0.189     0.667
+12 abc_score_eqtl                         164   110   461    54  0.193     0.671
+13 abc_score_pqtl                         170   115   456    55  0.201     0.676
+14 abc_score_pqtl_primary_blood           170   115   456    55  0.201     0.676
+15 polyfun_eqtl                           140    95   476    45  0.166     0.679
+16 polyfun_pqtl                           170   111   460    59  0.194     0.653</code></pre>
 </div>
 </div>
 <div class="cell">
