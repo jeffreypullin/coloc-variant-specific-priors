@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
 
 <meta charset="utf-8">
-<meta name="generator" content="quarto-1.3.353">
+<meta name="generator" content="quarto-1.3.433">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
@@ -89,7 +89,8 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-more-matches-text": "more matches in this document",
     "search-clear-button-title": "Clear",
     "search-detached-cancel-button-title": "Cancel",
-    "search-submit-button-title": "Submit"
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
   }
 }</script>
 
@@ -152,454 +153,129 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </header>
 
 <div class="cell">
-<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(readr)</span>
-<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(janitor)</span>
-<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
-<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(patchwork)</span>
-<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)</span>
-<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(purrr)</span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(stringr)</span>
-<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
-<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(readxl)</span>
-<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(seqminer)</span>
-<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(conflicted)</span>
-<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="fu">conflicts_prefer</span>(dplyr<span class="sc">::</span>filter)</span>
-<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="fu">conflicts_prefer</span>(dplyr<span class="sc">::</span>select)</span>
-<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="fu">conflicts_prefer</span>(dplyr<span class="sc">::</span>setdiff)</span>
-<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="fu">conflicts_prefer</span>(dplyr<span class="sc">::</span>rename)</span>
-<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="fu">conflicts_prefer</span>(dplyr<span class="sc">::</span>intersect)</span>
-<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">"code/coloc-utils.R"</span>))</span>
-<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">load_all</span>(<span class="st">"~/coloc"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>gwas_eqtl_colocs <span class="ot">&lt;-</span> <span class="fu">expand_grid</span>(</span>
-<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">eqtl_data_id =</span> <span class="st">"QTD000356"</span>,</span>
-<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">chr =</span> <span class="dv">3</span><span class="sc">:</span><span class="dv">22</span></span>
-<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
-<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rowwise</span>() <span class="sc">|&gt;</span></span>
-<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">file =</span> <span class="fu">paste0</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">"output/data/gwas-eqtl-coloc-"</span>), chr, <span class="st">".rds"</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">data =</span> <span class="fu">list</span>(<span class="fu">read_rds</span>(file))) <span class="sc">|&gt;</span></span>
-<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unnest</span>(data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>gwas_eqtl_colocs <span class="sc">|&gt;</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(eqtl_data_id, <span class="fu">starts_with</span>(<span class="st">"PP.H4.abf"</span>), gene_id) <span class="sc">|&gt;</span></span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="sc">-</span><span class="fu">c</span>(eqtl_data_id, gene_id),</span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>               <span class="at">values_to =</span> <span class="st">"pp_h4"</span>, </span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>               <span class="at">names_to =</span> <span class="fu">c</span>(<span class="st">"junk"</span>, <span class="st">"prior_type"</span>),</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>               <span class="at">names_pattern =</span> <span class="st">"(.*?)_(.*)"</span>) <span class="sc">|&gt;</span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span>junk) <span class="sc">|&gt;</span></span>
-<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>  <span class="co"># </span><span class="al">FIXME</span></span>
-<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(pp_h4)) <span class="sc">|&gt;</span></span>
-<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig_coloc =</span> pp_h4 <span class="sc">&gt;</span> <span class="fl">0.8</span>) <span class="sc">|&gt;</span></span>
-<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(sig_coloc, prior_type) <span class="sc">|&gt;</span></span>
-<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">prop =</span> n <span class="sc">/</span> <span class="fu">sum</span>(n), <span class="at">.by =</span> prior_type) <span class="sc">|&gt;</span></span>
-<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(sig_coloc)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>renv<span class="sc">::</span><span class="fu">load</span>(here<span class="sc">::</span><span class="fu">here</span>())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 15 × 4
-   sig_coloc prior_type                           n    prop
-   &lt;lgl&gt;     &lt;chr&gt;                            &lt;int&gt;   &lt;dbl&gt;
- 1 TRUE      abc_score_eqtl                      13 0.00521
- 2 TRUE      abc_score_gwas                      18 0.00721
- 3 TRUE      eqtl_tss_eqtlgen                    14 0.00531
- 4 TRUE      eqtl_tss_gwas_tss_eqtlgen           18 0.00682
- 5 TRUE      eqtl_tss_gwas_tss_onek1k_round_1    20 0.00758
- 6 TRUE      eqtl_tss_onek1k_round_1             14 0.00531
- 7 TRUE      eqtl_tss_onek1k_round_2             14 0.00531
- 8 TRUE      eqtl_tss_onek1k_round_3             13 0.00493
- 9 TRUE      gnocchi_eqtl                        12 0.00455
-10 TRUE      gnocchi_gwas                        13 0.00493
-11 TRUE      gwas_tss_eqtlgen                    17 0.00644
-12 TRUE      gwas_tss_onek1k_round_1             18 0.00682
-13 TRUE      polyfun_eqtl                        15 0.00601
-14 TRUE      polyfun_gwas                        21 0.00841
-15 TRUE      unif                                13 0.00493</code></pre>
+<pre><code>- The project is out-of-sync -- use `renv::status()` for details.</code></pre>
 </div>
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(readr)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(forcats)</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">load_all</span>(<span class="st">"~/coloc"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>gwas_eqtl_colocs <span class="ot">&lt;-</span> <span class="fu">expand_grid</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">chr =</span> <span class="dv">1</span><span class="sc">:</span><span class="dv">22</span></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>) <span class="sc">|&gt;</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rowwise</span>() <span class="sc">|&gt;</span></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">file =</span> <span class="fu">paste0</span>(</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>    here<span class="sc">::</span><span class="fu">here</span>(<span class="st">"output/data/gwas-eqtl-coloc"</span>), <span class="st">"-"</span>, chr, <span class="st">".rds"</span>)</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">data =</span> <span class="fu">list</span>(<span class="fu">read_rds</span>(file))) <span class="sc">|&gt;</span></span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">unnest</span>(data)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>gwas_eqtl_colocs <span class="sc">|&gt;</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(eqtl_data_id, <span class="fu">starts_with</span>(<span class="st">"PP.H4.abf"</span>), gene_id) <span class="sc">|&gt;</span></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(PP.H4.abf_unif, PP.H4.abf_eqtl_tss_eqtlgen)) <span class="sc">+</span> </span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">0.8</span>, <span class="at">colour =</span> <span class="st">"red"</span>) <span class="sc">+</span> </span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">0.8</span>, <span class="at">colour =</span> <span class="st">"red"</span>) <span class="sc">+</span> </span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">colour =</span> <span class="st">"black"</span>, <span class="at">linetype =</span> <span class="st">"dotted"</span>) <span class="sc">+</span> </span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<p><img src="gwas-eqtl-coloc-analysis_files/figure-html/eqtl-plots-1.png" class="img-fluid" width="672"></p>
-</div>
-<div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>gwas_eqtl_colocs <span class="sc">|&gt;</span></span>
-<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(eqtl_data_id, <span class="fu">starts_with</span>(<span class="st">"PP.H4.abf"</span>), gene_id) <span class="sc">|&gt;</span></span>
-<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(PP.H4.abf_unif, PP.H4.abf_gwas_tss_eqtlgen)) <span class="sc">+</span> </span>
-<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
-<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">0.8</span>, <span class="at">colour =</span> <span class="st">"red"</span>) <span class="sc">+</span> </span>
-<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">0.8</span>, <span class="at">colour =</span> <span class="st">"red"</span>) <span class="sc">+</span> </span>
-<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">colour =</span> <span class="st">"black"</span>, <span class="at">linetype =</span> <span class="st">"dotted"</span>) <span class="sc">+</span> </span>
-<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<p><img src="gwas-eqtl-coloc-analysis_files/figure-html/eqtl-plots-2.png" class="img-fluid" width="672"></p>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(PP.H4.abf_unif <span class="sc">&gt;=</span> <span class="fl">0.8</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(gene_name) <span class="sc">|&gt;</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="at">n =</span> <span class="dv">30</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 24 × 1
+   gene_name
+   &lt;chr&gt;    
+ 1 ZNF683   
+ 2 UTP11    
+ 3 PIK3R3   
+ 4 ST7L     
+ 5 ELK4     
+ 6 RAB29    
+ 7 BATF3    
+ 8 ANKRD55  
+ 9 CAMK4    
+10 SLC22A4  
+11 IER3     
+12 ITGB7    
+13 GPN3     
+14 FAM216A  
+15 CTSH     
+16 ACAP1    
+17 KCTD11   
+18 GSDMB    
+19 ORMDL3   
+20 CD226    
+21 ELL      
+22 PRKD2    
+23 NTN5     
+24 SYNGR1   </code></pre>
 </div>
 </div>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>gwas_eqtl_colocs <span class="sc">|&gt;</span></span>
-<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(eqtl_data_id, <span class="fu">starts_with</span>(<span class="st">"PP.H4.abf"</span>), gene_id) <span class="sc">|&gt;</span></span>
-<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(PP.H4.abf_unif, PP.H4.abf_eqtl_tss_onek1k_round_1)) <span class="sc">+</span> </span>
-<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
-<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">0.8</span>, <span class="at">colour =</span> <span class="st">"red"</span>) <span class="sc">+</span> </span>
-<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">0.8</span>, <span class="at">colour =</span> <span class="st">"red"</span>) <span class="sc">+</span> </span>
-<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">colour =</span> <span class="st">"black"</span>, <span class="at">linetype =</span> <span class="st">"dotted"</span>) <span class="sc">+</span> </span>
-<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(gene_name, <span class="fu">starts_with</span>(<span class="st">"PP.H4.abf"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="sc">-</span>gene_name, <span class="at">values_to =</span> <span class="st">"pp_h4"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sig_coloc =</span> pp_h4 <span class="sc">&gt;</span> <span class="fl">0.8</span>) <span class="sc">|&gt;</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">n_sig =</span> <span class="fu">sum</span>(sig_coloc), <span class="at">.by =</span> name) <span class="sc">|&gt;</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">is_unif =</span> name <span class="sc">==</span> <span class="st">"PP.H4.abf_unif"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">name =</span> <span class="fu">fct_reorder</span>(<span class="fu">factor</span>(name), n_sig)) <span class="sc">|&gt;</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(name, n_sig, <span class="at">fill =</span> is_unif)) <span class="sc">+</span> </span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>() <span class="sc">+</span> </span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_flip</span>() <span class="sc">+</span> </span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
-<p><img src="gwas-eqtl-coloc-analysis_files/figure-html/eqtl-onek1k-plots-1.png" class="img-fluid" width="672"></p>
+<p><img src="gwas-eqtl-coloc-analysis_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid" width="672"></p>
 </div>
+</div>
+<div class="cell">
 <div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>gwas_eqtl_colocs <span class="sc">|&gt;</span></span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(eqtl_data_id, <span class="fu">starts_with</span>(<span class="st">"PP.H4.abf"</span>), gene_id) <span class="sc">|&gt;</span></span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(PP.H4.abf_unif, PP.H4.abf_gwas_tss_onek1k_round_1)) <span class="sc">+</span> </span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">0.8</span>, <span class="at">colour =</span> <span class="st">"red"</span>) <span class="sc">+</span> </span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">0.8</span>, <span class="at">colour =</span> <span class="st">"red"</span>) <span class="sc">+</span> </span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">colour =</span> <span class="st">"black"</span>, <span class="at">linetype =</span> <span class="st">"dotted"</span>) <span class="sc">+</span> </span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<p><img src="gwas-eqtl-coloc-analysis_files/figure-html/eqtl-onek1k-plots-2.png" class="img-fluid" width="672"></p>
-</div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>gwas_eqtl_colocs <span class="sc">|&gt;</span></span>
-<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(eqtl_data_id, <span class="fu">starts_with</span>(<span class="st">"PP.H4.abf"</span>), gene_id) <span class="sc">|&gt;</span></span>
-<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(PP.H4.abf_unif, PP.H4.abf_abc_score_eqtl)) <span class="sc">+</span> </span>
-<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
-<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">0.8</span>, <span class="at">colour =</span> <span class="st">"red"</span>) <span class="sc">+</span> </span>
-<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">0.8</span>, <span class="at">colour =</span> <span class="st">"red"</span>) <span class="sc">+</span> </span>
-<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">colour =</span> <span class="st">"black"</span>, <span class="at">linetype =</span> <span class="st">"dotted"</span>) <span class="sc">+</span> </span>
-<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: Removed 143 rows containing missing values (`geom_point()`).</code></pre>
-</div>
-<div class="cell-output-display">
-<p><img src="gwas-eqtl-coloc-analysis_files/figure-html/abc-score-plots-1.png" class="img-fluid" width="672"></p>
-</div>
-<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>gwas_eqtl_colocs <span class="sc">|&gt;</span></span>
-<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(eqtl_data_id, <span class="fu">starts_with</span>(<span class="st">"PP.H4.abf"</span>), gene_id) <span class="sc">|&gt;</span></span>
-<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(PP.H4.abf_unif, PP.H4.abf_abc_score_gwas)) <span class="sc">+</span> </span>
-<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
-<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">0.8</span>, <span class="at">colour =</span> <span class="st">"red"</span>) <span class="sc">+</span> </span>
-<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">0.8</span>, <span class="at">colour =</span> <span class="st">"red"</span>) <span class="sc">+</span> </span>
-<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">colour =</span> <span class="st">"black"</span>, <span class="at">linetype =</span> <span class="st">"dotted"</span>) <span class="sc">+</span> </span>
-<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: Removed 143 rows containing missing values (`geom_point()`).</code></pre>
-</div>
-<div class="cell-output-display">
-<p><img src="gwas-eqtl-coloc-analysis_files/figure-html/abc-score-plots-2.png" class="img-fluid" width="672"></p>
-</div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>gwas_eqtl_colocs <span class="sc">|&gt;</span></span>
-<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(eqtl_data_id, <span class="fu">starts_with</span>(<span class="st">"PP.H4.abf"</span>), gene_id) <span class="sc">|&gt;</span></span>
-<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(PP.H4.abf_unif, PP.H4.abf_gnocchi_eqtl)) <span class="sc">+</span> </span>
-<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
-<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">0.8</span>, <span class="at">colour =</span> <span class="st">"red"</span>) <span class="sc">+</span> </span>
-<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">0.8</span>, <span class="at">colour =</span> <span class="st">"red"</span>) <span class="sc">+</span> </span>
-<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">colour =</span> <span class="st">"black"</span>, <span class="at">linetype =</span> <span class="st">"dotted"</span>) <span class="sc">+</span> </span>
-<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<p><img src="gwas-eqtl-coloc-analysis_files/figure-html/gnocchi-plots-1.png" class="img-fluid" width="672"></p>
-</div>
-<div class="sourceCode cell-code" id="cb14"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>gwas_eqtl_colocs <span class="sc">|&gt;</span></span>
-<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(eqtl_data_id, <span class="fu">starts_with</span>(<span class="st">"PP.H4.abf"</span>), gene_id) <span class="sc">|&gt;</span></span>
-<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(PP.H4.abf_unif, PP.H4.abf_gnocchi_gwas)) <span class="sc">+</span> </span>
-<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
-<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">0.8</span>, <span class="at">colour =</span> <span class="st">"red"</span>) <span class="sc">+</span> </span>
-<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">0.8</span>, <span class="at">colour =</span> <span class="st">"red"</span>) <span class="sc">+</span> </span>
-<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">colour =</span> <span class="st">"black"</span>, <span class="at">linetype =</span> <span class="st">"dotted"</span>) <span class="sc">+</span> </span>
-<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<p><img src="gwas-eqtl-coloc-analysis_files/figure-html/gnocchi-plots-2.png" class="img-fluid" width="672"></p>
-</div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>gwas_eqtl_colocs <span class="sc">|&gt;</span></span>
-<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(eqtl_data_id, <span class="fu">starts_with</span>(<span class="st">"PP.H4.abf"</span>), gene_id) <span class="sc">|&gt;</span></span>
-<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(PP.H4.abf_unif, PP.H4.abf_polyfun_eqtl)) <span class="sc">+</span> </span>
-<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
-<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">0.8</span>, <span class="at">colour =</span> <span class="st">"red"</span>) <span class="sc">+</span> </span>
-<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">0.8</span>, <span class="at">colour =</span> <span class="st">"red"</span>) <span class="sc">+</span> </span>
-<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">colour =</span> <span class="st">"black"</span>, <span class="at">linetype =</span> <span class="st">"dotted"</span>) <span class="sc">+</span> </span>
-<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: Removed 143 rows containing missing values (`geom_point()`).</code></pre>
-</div>
-<div class="cell-output-display">
-<p><img src="gwas-eqtl-coloc-analysis_files/figure-html/polyfun-plots-1.png" class="img-fluid" width="672"></p>
-</div>
-<div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>gwas_eqtl_colocs <span class="sc">|&gt;</span></span>
-<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(eqtl_data_id, <span class="fu">starts_with</span>(<span class="st">"PP.H4.abf"</span>), gene_id) <span class="sc">|&gt;</span></span>
-<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(PP.H4.abf_unif, PP.H4.abf_polyfun_gwas)) <span class="sc">+</span> </span>
-<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
-<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">0.8</span>, <span class="at">colour =</span> <span class="st">"red"</span>) <span class="sc">+</span> </span>
-<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">0.8</span>, <span class="at">colour =</span> <span class="st">"red"</span>) <span class="sc">+</span> </span>
-<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">colour =</span> <span class="st">"black"</span>, <span class="at">linetype =</span> <span class="st">"dotted"</span>) <span class="sc">+</span> </span>
-<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning: Removed 143 rows containing missing values (`geom_point()`).</code></pre>
-</div>
-<div class="cell-output-display">
-<p><img src="gwas-eqtl-coloc-analysis_files/figure-html/polyfun-plots-2.png" class="img-fluid" width="672"></p>
-</div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>gwas_eqtl_colocs <span class="sc">|&gt;</span></span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">sig_gwas_tss_eqtlgen =</span> PP.H4.abf_abc_score_gwas <span class="sc">&gt;</span> <span class="fl">0.8</span>,</span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">sig_unif =</span> PP.H4.abf_unif <span class="sc">&gt;</span> <span class="fl">0.8</span></span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(sig_gwas_tss_eqtlgen <span class="sc">!=</span> sig_unif) <span class="sc">|&gt;</span></span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(region, gene_id, gene_name, PP.H4.abf_unif)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">sig_abc_score_gwas =</span> PP.H4.abf_abc_score_gwas <span class="sc">&gt;</span> <span class="fl">0.8</span>,</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">sig_unif =</span> PP.H4.abf_unif <span class="sc">&gt;</span> <span class="fl">0.8</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(sig_abc_score_gwas <span class="sc">!=</span> sig_unif) <span class="sc">|&gt;</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(gene_name, PP.H4.abf_unif , PP.H4.abf_abc_score_gwas)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 6 × 4
-  region               gene_id         gene_name PP.H4.abf_unif
-  &lt;chr&gt;                &lt;chr&gt;           &lt;chr&gt;              &lt;dbl&gt;
-1 9:34972668-35172668  ENSG00000165280 VCP                0.323
-2 16:28395575-28595575 ENSG00000188603 CLN3               0.762
-3 17:29494054-29694054 ENSG00000108262 GIT1               0.695
-4 18:3119968-3319968   ENSG00000101605 MYOM1              0.289
-5 19:18422116-18622116 ENSG00000105656 ELL                0.604
-6 22:41267333-41467333 ENSG00000167074 TEF                0.687</code></pre>
+<pre><code># A tibble: 4 × 3
+  gene_name PP.H4.abf_unif PP.H4.abf_abc_score_gwas
+  &lt;chr&gt;              &lt;dbl&gt;                    &lt;dbl&gt;
+1 ST7L               0.824                    0.791
+2 NSL1               0.728                    0.816
+3 SLC22A5            0.618                    0.925
+4 RGS14              0.657                    0.805</code></pre>
 </div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>gwas_eqtl_colocs <span class="sc">|&gt;</span></span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">sig_gwas_tss_eqtlgen =</span> PP.H4.abf_gwas_tss_eqtlgen <span class="sc">&gt;</span> <span class="fl">0.8</span>,</span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">sig_unif =</span> PP.H4.abf_unif <span class="sc">&gt;</span> <span class="fl">0.8</span></span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(sig_gwas_tss_eqtlgen <span class="sc">!=</span> sig_unif) <span class="sc">|&gt;</span></span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(region, gene_id, gene_name, PP.H4.abf_unif, PP.H4.abf_gwas_tss_eqtlgen)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>gwas_eqtl_colocs <span class="sc">|&gt;</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="at">sig_gwas_tss_eqtlgen =</span> PP.H4.abf_gwas_tss_eqtlgen <span class="sc">&gt;</span> <span class="fl">0.8</span>,</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    <span class="at">sig_unif =</span> PP.H4.abf_unif <span class="sc">&gt;</span> <span class="fl">0.8</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(sig_gwas_tss_eqtlgen <span class="sc">!=</span> sig_unif) <span class="sc">|&gt;</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(gene_name, PP.H4.abf_unif , PP.H4.abf_gwas_tss_eqtlgen)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 4 × 5
-  region                gene_id  gene_name PP.H4.abf_unif PP.H4.abf_gwas_tss_e…¹
-  &lt;chr&gt;                 &lt;chr&gt;    &lt;chr&gt;              &lt;dbl&gt;                  &lt;dbl&gt;
-1 5:132269710-132469710 ENSG000… SLC22A5            0.492                  0.813
-2 16:28395575-28595575  ENSG000… CLN3               0.762                  0.872
-3 17:29494054-29694054  ENSG000… GIT1               0.695                  0.834
-4 22:41267333-41467333  ENSG000… TEF                0.687                  0.828
-# ℹ abbreviated name: ¹​PP.H4.abf_gwas_tss_eqtlgen</code></pre>
+<pre><code># A tibble: 6 × 3
+  gene_name PP.H4.abf_unif PP.H4.abf_gwas_tss_eqtlgen
+  &lt;chr&gt;              &lt;dbl&gt;                      &lt;dbl&gt;
+1 ST7L               0.824                      0.683
+2 NSL1               0.728                      0.859
+3 SLC22A5            0.618                      0.881
+4 RGS14              0.657                      0.825
+5 CLN3               0.787                      0.853
+6 LRRC25             0.522                      0.804</code></pre>
 </div>
 </div>
-<p>eQTL distance on GWAS</p>
-<p>5:132269710-132469710, ENSG00000197375 Small signal at TSS in eQTL data, no real signal in the GWAS data. 16:28395575-28595575, ENSG00000188603 Weird ‘shelf’ effect in both GWAS and eQTL summary stats 17:29494054-29694054, ENSG00000108262 Weak evidence of colcalistion at the TSS! 22:41267333-41467333 Very weak evidence of colocalisation at the TSS..</p>
-<p>ABC score on GWAS 18:3119968-3319968, MYOM1 (very large change) Two signals in GWAS, one in eQTL - ABC score prior favours one (!!!)</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>chr <span class="ot">&lt;-</span> <span class="dv">9</span></span>
-<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>all_eqtl_data <span class="ot">&lt;-</span> <span class="fu">tabix.read.table</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">"data/eqtl-catalogue/sumstats/QTD000356.cc.tsv.gz"</span>), <span class="fu">paste0</span>(chr, <span class="st">":1-2147483647"</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>()</span>
-<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>all_gwas_data <span class="ot">&lt;-</span> <span class="fu">tabix.read.table</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">"data/T1D_Chiou_34012112_1-hg38.tsv.gz"</span>), <span class="fu">paste0</span>(chr, <span class="st">":1-2147483647"</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>()</span>
-<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>eqtl_data <span class="ot">&lt;-</span> all_eqtl_data <span class="sc">|&gt;</span></span>
-<span id="cb23-8"><a href="#cb23-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">setNames</span>(eqtl_catalouge_colnames) <span class="sc">|&gt;</span></span>
-<span id="cb23-9"><a href="#cb23-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter_qtl_dataset</span>(</span>
-<span id="cb23-10"><a href="#cb23-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">trait_id =</span> <span class="st">"ENSG00000165280"</span>,</span>
-<span id="cb23-11"><a href="#cb23-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">chrom =</span> <span class="dv">9</span>,</span>
-<span id="cb23-12"><a href="#cb23-12" aria-hidden="true" tabindex="-1"></a>    <span class="at">start_pos =</span> <span class="dv">34972668</span>,</span>
-<span id="cb23-13"><a href="#cb23-13" aria-hidden="true" tabindex="-1"></a>    <span class="at">end_pos =</span> <span class="dv">35172668</span> </span>
-<span id="cb23-14"><a href="#cb23-14" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb23-15"><a href="#cb23-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span></span>
-<span id="cb23-16"><a href="#cb23-16" aria-hidden="true" tabindex="-1"></a>  <span class="fu">prepare_coloc_dataset</span>()</span>
-<span id="cb23-17"><a href="#cb23-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-18"><a href="#cb23-18" aria-hidden="true" tabindex="-1"></a>gwas_data <span class="ot">&lt;-</span> all_gwas_data <span class="sc">|&gt;</span></span>
-<span id="cb23-19"><a href="#cb23-19" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename</span>(</span>
-<span id="cb23-20"><a href="#cb23-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">rsid =</span> SNPID,</span>
-<span id="cb23-21"><a href="#cb23-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">chromosome =</span> CHR38,</span>
-<span id="cb23-22"><a href="#cb23-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">position =</span> BP38,</span>
-<span id="cb23-23"><a href="#cb23-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">beta =</span> BETA,</span>
-<span id="cb23-24"><a href="#cb23-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">se =</span> SE,</span>
-<span id="cb23-25"><a href="#cb23-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">maf =</span> ALT_FREQ</span>
-<span id="cb23-26"><a href="#cb23-26" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb23-27"><a href="#cb23-27" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
-<span id="cb23-28"><a href="#cb23-28" aria-hidden="true" tabindex="-1"></a>    <span class="at">an =</span> <span class="dv">2</span> <span class="sc">*</span> sample_size,</span>
-<span id="cb23-29"><a href="#cb23-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">molecular_trait_id =</span> <span class="st">"t1d"</span>,</span>
-<span id="cb23-30"><a href="#cb23-30" aria-hidden="true" tabindex="-1"></a>    <span class="at">variant =</span> <span class="fu">paste0</span>(<span class="st">"chr"</span>, chromosome, <span class="st">"_"</span>, position, <span class="st">"_"</span>, REF, <span class="st">"_"</span>, ALT)</span>
-<span id="cb23-31"><a href="#cb23-31" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb23-32"><a href="#cb23-32" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(sample_size, REF, ALT)) <span class="sc">|&gt;</span></span>
-<span id="cb23-33"><a href="#cb23-33" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(chromosome <span class="sc">==</span> <span class="dv">9</span>) <span class="sc">|&gt;</span></span>
-<span id="cb23-34"><a href="#cb23-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(</span>
-<span id="cb23-35"><a href="#cb23-35" aria-hidden="true" tabindex="-1"></a>    position <span class="sc">&gt;=</span> <span class="dv">34972668</span> <span class="sc">&amp;</span></span>
-<span id="cb23-36"><a href="#cb23-36" aria-hidden="true" tabindex="-1"></a>    position <span class="sc">&lt;=</span> <span class="dv">35172668</span></span>
-<span id="cb23-37"><a href="#cb23-37" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
-<span id="cb23-38"><a href="#cb23-38" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span></span>
-<span id="cb23-39"><a href="#cb23-39" aria-hidden="true" tabindex="-1"></a>  <span class="fu">prepare_coloc_dataset</span>()</span>
-<span id="cb23-40"><a href="#cb23-40" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-41"><a href="#cb23-41" aria-hidden="true" tabindex="-1"></a>eqtl_data <span class="ot">&lt;-</span> eqtl_data <span class="sc">|&gt;</span></span>
-<span id="cb23-42"><a href="#cb23-42" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(variant <span class="sc">%in%</span> gwas_data<span class="sc">$</span>variant)</span>
-<span id="cb23-43"><a href="#cb23-43" aria-hidden="true" tabindex="-1"></a>gwas_data <span class="ot">&lt;-</span> gwas_data <span class="sc">|&gt;</span></span>
-<span id="cb23-44"><a href="#cb23-44" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(variant <span class="sc">%in%</span> eqtl_data<span class="sc">$</span>variant)</span>
-<span id="cb23-45"><a href="#cb23-45" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-46"><a href="#cb23-46" aria-hidden="true" tabindex="-1"></a>eqtl_dataset <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb23-47"><a href="#cb23-47" aria-hidden="true" tabindex="-1"></a>  <span class="at">varbeta =</span> eqtl_data<span class="sc">$</span>se<span class="sc">^</span><span class="dv">2</span>,</span>
-<span id="cb23-48"><a href="#cb23-48" aria-hidden="true" tabindex="-1"></a>  <span class="at">N =</span> eqtl_data<span class="sc">$</span>an <span class="sc">/</span> <span class="dv">2</span>,</span>
-<span id="cb23-49"><a href="#cb23-49" aria-hidden="true" tabindex="-1"></a>  <span class="at">MAF =</span> eqtl_data<span class="sc">$</span>maf,</span>
-<span id="cb23-50"><a href="#cb23-50" aria-hidden="true" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">"quant"</span>,</span>
-<span id="cb23-51"><a href="#cb23-51" aria-hidden="true" tabindex="-1"></a>  <span class="at">beta =</span> eqtl_data<span class="sc">$</span>beta,</span>
-<span id="cb23-52"><a href="#cb23-52" aria-hidden="true" tabindex="-1"></a>  <span class="at">snp =</span> eqtl_data<span class="sc">$</span>variant,</span>
-<span id="cb23-53"><a href="#cb23-53" aria-hidden="true" tabindex="-1"></a>  <span class="at">position =</span> eqtl_data<span class="sc">$</span>position</span>
-<span id="cb23-54"><a href="#cb23-54" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb23-55"><a href="#cb23-55" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-56"><a href="#cb23-56" aria-hidden="true" tabindex="-1"></a>gwas_dataset <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
-<span id="cb23-57"><a href="#cb23-57" aria-hidden="true" tabindex="-1"></a>  <span class="at">varbeta =</span> gwas_data<span class="sc">$</span>se<span class="sc">^</span><span class="dv">2</span>,</span>
-<span id="cb23-58"><a href="#cb23-58" aria-hidden="true" tabindex="-1"></a>  <span class="at">N =</span> gwas_data<span class="sc">$</span>an <span class="sc">/</span> <span class="dv">2</span>,</span>
-<span id="cb23-59"><a href="#cb23-59" aria-hidden="true" tabindex="-1"></a>  <span class="at">MAF =</span> gwas_data<span class="sc">$</span>maf,</span>
-<span id="cb23-60"><a href="#cb23-60" aria-hidden="true" tabindex="-1"></a>  <span class="at">type =</span> <span class="st">"quant"</span>,</span>
-<span id="cb23-61"><a href="#cb23-61" aria-hidden="true" tabindex="-1"></a>  <span class="at">beta =</span> gwas_data<span class="sc">$</span>beta,</span>
-<span id="cb23-62"><a href="#cb23-62" aria-hidden="true" tabindex="-1"></a>  <span class="at">snp =</span> gwas_data<span class="sc">$</span>variant,</span>
-<span id="cb23-63"><a href="#cb23-63" aria-hidden="true" tabindex="-1"></a>  <span class="at">position =</span> eqtl_data<span class="sc">$</span>position</span>
-<span id="cb23-64"><a href="#cb23-64" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb23-65"><a href="#cb23-65" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb23-66"><a href="#cb23-66" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">load_all</span>(<span class="st">"~/coloc"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>ℹ Loading coloc
-This is coloc version 6.0.0</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb25"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>tss <span class="ot">&lt;-</span> <span class="fu">mean</span>(<span class="fu">c</span>(<span class="dv">34972668</span>, <span class="dv">35172668</span>))</span>
-<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_dataset</span>(eqtl_dataset)</span>
-<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">v =</span> tss)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>gwas_eqtl_colocs <span class="sc">|&gt;</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">ggplot</span>(<span class="fu">aes</span>(PP.H4.abf_unif, PP.H4.abf_abc_score_gwas)) <span class="sc">+</span> </span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span> </span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="at">linetype =</span> <span class="st">"dotted"</span>) <span class="sc">+</span> </span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fl">0.8</span>, <span class="at">col =</span> <span class="st">"red"</span>) <span class="sc">+</span> </span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_vline</span>(<span class="at">xintercept =</span> <span class="fl">0.8</span>, <span class="at">col =</span> <span class="st">"red"</span>) <span class="sc">+</span> </span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>()</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="gwas-eqtl-coloc-analysis_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
 </div>
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a><span class="fu">plot_dataset</span>(gwas_dataset)</span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a><span class="fu">abline</span>(<span class="at">v =</span> tss)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<p><img src="gwas-eqtl-coloc-analysis_files/figure-html/unnamed-chunk-5-2.png" class="img-fluid" width="672"></p>
-</div>
-<div class="sourceCode cell-code" id="cb27"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a>abc_score_data <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">"data/abc-data.txt.gz"</span>),</span>
-<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a>                           <span class="at">name_repair =</span> make_clean_names,</span>
-<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a>                           <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a>abc_score_prior_weights <span class="ot">&lt;-</span> <span class="fu">compute_abc_prior_weights</span>(</span>
-<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a>  eqtl_dataset<span class="sc">$</span>position, <span class="dv">9</span>, <span class="st">"VCP"</span>, abc_score_data</span>
-<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a><span class="fu">plot</span>(eqtl_dataset<span class="sc">$</span>position, abc_score_prior_weights)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output-display">
-<p><img src="gwas-eqtl-coloc-analysis_files/figure-html/unnamed-chunk-5-3.png" class="img-fluid" width="672"></p>
-</div>
-<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>eqtlgen_density_data <span class="ot">&lt;-</span> <span class="fu">read_rds</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">"output/densities/eqtlgen.rds"</span>))</span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>eqtl_prior_weights_eqtlgen <span class="ot">&lt;-</span> <span class="fu">compute_eqtl_tss_dist_prior_weights</span>(</span>
-<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>    eqtl_dataset<span class="sc">$</span>position, <span class="fu">mean</span>(<span class="fu">c</span>(<span class="dv">28595575</span>, <span class="dv">28595575</span>)), eqtlgen_density_data</span>
-<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>)</span>
-<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressWarnings</span>(<span class="fu">coloc.abf</span>(</span>
-<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a>  <span class="at">dataset1 =</span> eqtl_dataset,</span>
-<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a>  <span class="at">dataset2 =</span> gwas_dataset,</span>
-<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a>)<span class="sc">$</span>summary)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>PP.H0.abf PP.H1.abf PP.H2.abf PP.H3.abf PP.H4.abf 
- 1.14e-11  6.58e-01  3.41e-13  1.93e-02  3.23e-01 
-[1] "PP abf for shared variant: 32.3%"</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>       nsnps    PP.H0.abf    PP.H1.abf    PP.H2.abf    PP.H3.abf    PP.H4.abf 
-5.290000e+02 1.144648e-11 6.579775e-01 3.405914e-13 1.925543e-02 3.227671e-01 </code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb31"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="fu">suppressWarnings</span>(<span class="fu">coloc.abf</span>(</span>
-<span id="cb31-2"><a href="#cb31-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">dataset1 =</span> eqtl_dataset,</span>
-<span id="cb31-3"><a href="#cb31-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">dataset2 =</span> gwas_dataset,</span>
-<span id="cb31-4"><a href="#cb31-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">prior_weights2 =</span> abc_score_prior_weights</span>
-<span id="cb31-5"><a href="#cb31-5" aria-hidden="true" tabindex="-1"></a>)<span class="sc">$</span>summary)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] TRUE
-PP.H0.abf PP.H1.abf PP.H2.abf PP.H3.abf PP.H4.abf 
- 3.12e-12  1.80e-01  1.25e-13  6.39e-03  8.14e-01 
-[1] "PP abf for shared variant: 81.4%"</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>       nsnps    PP.H0.abf    PP.H1.abf    PP.H2.abf    PP.H3.abf    PP.H4.abf 
-5.290000e+02 3.123201e-12 1.795308e-01 1.253144e-13 6.389360e-03 8.140799e-01 </code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb34"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb34-1"><a href="#cb34-1" aria-hidden="true" tabindex="-1"></a><span class="fu">coloc.abf</span>(</span>
-<span id="cb34-2"><a href="#cb34-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">dataset1 =</span> eqtl_dataset,</span>
-<span id="cb34-3"><a href="#cb34-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">dataset2 =</span> gwas_dataset,</span>
-<span id="cb34-4"><a href="#cb34-4" aria-hidden="true" tabindex="-1"></a>  <span class="at">prior_weights1 =</span> <span class="fu">rep</span>(<span class="fl">1e-4</span>, <span class="fu">length</span>(eqtl_dataset<span class="sc">$</span>beta)),</span>
-<span id="cb34-5"><a href="#cb34-5" aria-hidden="true" tabindex="-1"></a>  <span class="at">prior_weights2 =</span> <span class="fu">rep</span>(<span class="fl">1e-4</span>, <span class="fu">length</span>(gwas_dataset<span class="sc">$</span>beta)) </span>
-<span id="cb34-6"><a href="#cb34-6" aria-hidden="true" tabindex="-1"></a>)<span class="sc">$</span>summary</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning in check_dataset(d = dataset2, 2): minimum p value is: 0.00031105
-If this is what you expected, this is not a problem.
-If this is not as small as you expected, please check you supplied var(beta) and not sd(beta) for the varbeta argument. If that's not the explanation, please check the 02_data vignette.</code></pre>
-</div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Warning in sdY.est(d$varbeta, d$MAF, d$N): estimating sdY from maf and varbeta,
-please directly supply sdY if known
-
-Warning in sdY.est(d$varbeta, d$MAF, d$N): estimating sdY from maf and varbeta,
-please directly supply sdY if known</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>[1] FALSE
-PP.H0.abf PP.H1.abf PP.H2.abf PP.H3.abf PP.H4.abf 
- 1.14e-11  6.58e-01  3.41e-13  1.93e-02  3.23e-01 
-[1] "PP abf for shared variant: 32.3%"</code></pre>
-</div>
-<div class="cell-output cell-output-stdout">
-<pre><code>       nsnps    PP.H0.abf    PP.H1.abf    PP.H2.abf    PP.H3.abf    PP.H4.abf 
-5.290000e+02 1.144648e-11 6.579775e-01 3.405914e-13 1.925543e-02 3.227671e-01 </code></pre>
-</div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb39"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="co">#[1] "Region: 21:46505208-46705208"</span></span>
-<span id="cb39-2"><a href="#cb39-2" aria-hidden="true" tabindex="-1"></a><span class="co">#[1] "Gene: ENSG00000160307"</span></span>
-<span id="cb39-3"><a href="#cb39-3" aria-hidden="true" tabindex="-1"></a><span class="co"># BiocManager::install("liftOver")</span></span>
-<span id="cb39-4"><a href="#cb39-4" aria-hidden="true" tabindex="-1"></a><span class="co"># devtools::load_all("~/coloc")</span></span>
-<span id="cb39-5"><a href="#cb39-5" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
-<span id="cb39-6"><a href="#cb39-6" aria-hidden="true" tabindex="-1"></a><span class="co"># gnocchi_data &lt;- read_tsv("data/gnocchi-windows.bed",</span></span>
-<span id="cb39-7"><a href="#cb39-7" aria-hidden="true" tabindex="-1"></a><span class="co">#                          col_names = FALSE, show_col_types = FALSE)</span></span>
-<span id="cb39-8"><a href="#cb39-8" aria-hidden="true" tabindex="-1"></a><span class="co"># colnames(gnocchi_data) &lt;- c("chromosome", "start_pos", "end_pos", "score")</span></span>
-<span id="cb39-9"><a href="#cb39-9" aria-hidden="true" tabindex="-1"></a><span class="co"># 2 + 2</span></span>
-<span id="cb39-10"><a href="#cb39-10" aria-hidden="true" tabindex="-1"></a><span class="co"># gnocchi_data |&gt;</span></span>
-<span id="cb39-11"><a href="#cb39-11" aria-hidden="true" tabindex="-1"></a><span class="co">#   filter(chromosome == "chr21") |&gt;</span></span>
-<span id="cb39-12"><a href="#cb39-12" aria-hidden="true" tabindex="-1"></a><span class="co">#   filter(</span></span>
-<span id="cb39-13"><a href="#cb39-13" aria-hidden="true" tabindex="-1"></a><span class="co">#     start_pos &gt;= 46505208, </span></span>
-<span id="cb39-14"><a href="#cb39-14" aria-hidden="true" tabindex="-1"></a><span class="co">#     end_pos &lt;= 46705208</span></span>
-<span id="cb39-15"><a href="#cb39-15" aria-hidden="true" tabindex="-1"></a><span class="co">#   )</span></span>
-<span id="cb39-16"><a href="#cb39-16" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
-<span id="cb39-17"><a href="#cb39-17" aria-hidden="true" tabindex="-1"></a><span class="co"># pos &lt;- seq(46505208, 46705208, by = 500)</span></span>
-<span id="cb39-18"><a href="#cb39-18" aria-hidden="true" tabindex="-1"></a><span class="co"># chrom &lt;- 21</span></span>
-<span id="cb39-19"><a href="#cb39-19" aria-hidden="true" tabindex="-1"></a><span class="co"># compute_gnocchi_prior_weights(pos, chrom, gnocchi_data)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb40"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb40-1"><a href="#cb40-1" aria-hidden="true" tabindex="-1"></a><span class="co"># devtools::load_all("~/coloc")</span></span>
-<span id="cb40-2"><a href="#cb40-2" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
-<span id="cb40-3"><a href="#cb40-3" aria-hidden="true" tabindex="-1"></a><span class="co"># library(rtracklayer)</span></span>
-<span id="cb40-4"><a href="#cb40-4" aria-hidden="true" tabindex="-1"></a><span class="co"># library(GenomicRanges)</span></span>
-<span id="cb40-5"><a href="#cb40-5" aria-hidden="true" tabindex="-1"></a><span class="co"># path &lt;- system.file(package = "liftOver", "extdata", "hg38ToHg19.over.chain")</span></span>
-<span id="cb40-6"><a href="#cb40-6" aria-hidden="true" tabindex="-1"></a><span class="co"># chain &lt;- import.chain(path)</span></span>
-<span id="cb40-7"><a href="#cb40-7" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
-<span id="cb40-8"><a href="#cb40-8" aria-hidden="true" tabindex="-1"></a><span class="co"># current &lt;- tibble(chr = paste0("chr", chrom), start = pos, end = pos) |&gt;</span></span>
-<span id="cb40-9"><a href="#cb40-9" aria-hidden="true" tabindex="-1"></a><span class="co">#   makeGRangesFromDataFrame()</span></span>
-<span id="cb40-10"><a href="#cb40-10" aria-hidden="true" tabindex="-1"></a><span class="co"># seqlevelsStyle(current) &lt;- "UCSC"</span></span>
-<span id="cb40-11"><a href="#cb40-11" aria-hidden="true" tabindex="-1"></a><span class="co"># current_19 &lt;- liftOver(current, chain)</span></span>
-<span id="cb40-12"><a href="#cb40-12" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
-<span id="cb40-13"><a href="#cb40-13" aria-hidden="true" tabindex="-1"></a><span class="co"># pos_19 &lt;- unlist(start(current_19))</span></span>
-<span id="cb40-14"><a href="#cb40-14" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
-<span id="cb40-15"><a href="#cb40-15" aria-hidden="true" tabindex="-1"></a><span class="co"># pos &lt;- seq(113,871,759 - 100000,  113,871,759 + 100000, by = 1000)</span></span>
-<span id="cb40-16"><a href="#cb40-16" aria-hidden="true" tabindex="-1"></a><span class="co"># chrom &lt;- 1</span></span>
-<span id="cb40-17"><a href="#cb40-17" aria-hidden="true" tabindex="-1"></a><span class="co"># gene_name &lt;- "PTPN22"</span></span>
-<span id="cb40-18"><a href="#cb40-18" aria-hidden="true" tabindex="-1"></a><span class="co"># abc_data &lt;- read_tsv("data/abc-data.txt.gz",</span></span>
-<span id="cb40-19"><a href="#cb40-19" aria-hidden="true" tabindex="-1"></a><span class="co">#                      name_repair = make_clean_names,</span></span>
-<span id="cb40-20"><a href="#cb40-20" aria-hidden="true" tabindex="-1"></a><span class="co">#                      show_col_types = FALSE)</span></span>
-<span id="cb40-21"><a href="#cb40-21" aria-hidden="true" tabindex="-1"></a><span class="co"># plot(compute_abc_prior_weights(pos, chrom, gene_name, abc_data))</span></span>
-<span id="cb40-22"><a href="#cb40-22" aria-hidden="true" tabindex="-1"></a><span class="co"># plot(compute_abc_prior_weights(seq(114414381 - 100000, 114414381 + 100000, by = 1000), chrom, gene_name, abc_data, build = "hg19"))</span></span>
-<span id="cb40-23"><a href="#cb40-23" aria-hidden="true" tabindex="-1"></a><span class="co"># plot(weights)</span></span>
-<span id="cb40-24"><a href="#cb40-24" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
-<span id="cb40-25"><a href="#cb40-25" aria-hidden="true" tabindex="-1"></a><span class="co"># abc_data |&gt;</span></span>
-<span id="cb40-26"><a href="#cb40-26" aria-hidden="true" tabindex="-1"></a><span class="co">#   filter(target_gene == "PTPN22")</span></span>
-<span id="cb40-27"><a href="#cb40-27" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
-<span id="cb40-28"><a href="#cb40-28" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
-<span id="cb40-29"><a href="#cb40-29" aria-hidden="true" tabindex="-1"></a><span class="co"># </span></span>
-<span id="cb40-30"><a href="#cb40-30" aria-hidden="true" tabindex="-1"></a><span class="co"># weights</span></span>
-<span id="cb40-31"><a href="#cb40-31" aria-hidden="true" tabindex="-1"></a><span class="co"># plot(weights)</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 
 
