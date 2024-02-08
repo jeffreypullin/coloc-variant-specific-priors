@@ -22,6 +22,8 @@ eqtl_file <- snakemake@input[["eqtl_data_file"]]
 gwas_file <- snakemake@input[["gwas_data_file"]]
 eqtl_metadata_file <- snakemake@input[["eqtl_metadata_file"]]
 chr <- as.numeric(snakemake@wildcards[["chr"]])
+coloc_results_file <- snakemake@output[["coloc_results_file"]]
+finemapping_results_file <- snakemake@output[["finemapping_results_file"]]
 
 width <- 1e5
 coloc_metadata <- eqtl_metadata_file |>
@@ -79,7 +81,8 @@ eqtlgen_density_data <- read_rds("output/densities/eqtlgen.rds")
 snp_var_data_1_7 <- read_parquet("data/snpvar_meta.chr1_7.parquet")
 snp_var_data_8_22 <- read_parquet("data/snpvar_meta.chr8_22.parquet")
 
-results <- list()
+coloc_results <- list()
+finemapping_results <- list()
 for (i in 1:n) {
 
   region <- paste0(coloc_metadata$chromosome[[i]], ":",
@@ -200,6 +203,8 @@ for (i in 1:n) {
     eqtl_dataset$position, chr, polyfun_data
   )
 
+  # Colocalisation analysis.
+
   # Uniform priors.
 
   coloc_unif <- coloc.abf(
@@ -309,7 +314,7 @@ for (i in 1:n) {
     prior_weights2 = abc_score_primary_blood_prior_weights
   )
 
-  coloc_results <- bind_cols(
+  colocs <- bind_cols(
     coloc_to_tibble(coloc_unif, "unif"),
     # OneK1K estimated.
     coloc_to_tibble(coloc_eqtl_tss_onek1k_round_1, "eqtl_tss_onek1k_round_1"),
@@ -341,10 +346,46 @@ for (i in 1:n) {
       tss = coloc_metadata$tss[[i]]
   ))
 
-  results[[i]] <- coloc_results
+  coloc_results[[i]] <- colocs
+
+  # Finemapping analysis.
+
+  finemapping_results[[i]] <- tibble(
+    # Uniform.
+    unif_eqtl = finemap.abf(eqtl_dataset)$SNP.PP,
+    unif_gwas = finemap.abf(gwas_dataset)$SNP.PP,
+    # eQTLGen.
+    eqtlgen_dist_eqtl = finemap.abf(eqtl_dataset, prior_weights = eqtl_prior_weights_eqtlgen)$SNP.PP,
+    eqtlgen_dist_gwas = finemap.abf(gwas_dataset, prior_weights = eqtl_prior_weights_eqtlgen)$SNP.PP,
+    # OneK1K.
+    onek1k_r1_dist_eqtl = finemap.abf(eqtl_dataset, prior_weights = eqtl_prior_weights)$SNP.PP,
+    onek1k_r1_dist_gwas = finemap.abf(gwas_dataset, prior_weights = eqtl_prior_weights)$SNP.PP,
+    # ABC score.
+    abc_score_eqtl = finemap.abf(eqtl_dataset, prior_weights = abc_score_prior_weights)$SNP.PP,
+    abc_score_gwas = finemap.abf(gwas_dataset, prior_weights = abc_score_prior_weights)$SNP.PP,
+    # Gnocchi.
+    gnocchi_eqtl = finemap.abf(eqtl_dataset, prior_weights = gnocchi_prior_weights)$SNP.PP,
+    gnocchi_gwas = finemap.abf(gwas_dataset, prior_weights = gnocchi_prior_weights)$SNP.PP,
+    # Polyfun.
+    polyfun_eqtl = finemap.abf(eqtl_dataset, prior_weights = polyfun_prior_weights)$SNP.PP,
+    polyfun_gwas = finemap.abf(gwas_dataset, prior_weights = polyfun_prior_weights)$SNP.PP,
+    # Metadata.
+    phenotype_id = coloc_metadata$phenotype_id[[i]],
+    chromosome = coloc_metadata$chromosome[[i]],
+    gene_id = coloc_metadata$gene_id[[i]],
+    region = coloc_metadata$region[[i]],
+    gene_name = coloc_metadata$gene_name[[i]],
+    tss = coloc_metadata$tss[[i]]
+  )
+
 }
 
 write_rds(
-  bind_rows(!!!results),
-  snakemake@output[["result_file"]]
+  bind_rows(!!!coloc_results),
+  coloc_results_file
+)
+
+write_rds(
+  bind_rows(!!!finemapping_results),
+  finemapping_results_file
 )

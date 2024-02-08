@@ -12,3 +12,5 @@ editor: source
 [GWAS-eQTL colocalisation analysis](gwas-eqtl-coloc-analysis.html)
 
 [pQTL-eQTL colocalisation analysis](pqtl-eqtl-coloc-analysis.html)
+
+[Fine-mapping analysis](finemapping-analysis.html)

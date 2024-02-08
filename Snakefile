@@ -255,9 +255,10 @@ rule run_gwas_eqtl_colocalisation:
     gwas_index_file = "data/T1D_Chiou_34012112_1-hg38.tsv.gz.tbi",
     eqtl_metadata_file = "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
   output: 
-    result_file = "output/data/gwas-eqtl-coloc-{chr}.rds"
+    coloc_results_file = "output/data/gwas-eqtl-coloc-{chr}.rds",
+    finemapping_results_file = "output/data/gwas-eqtl-finemapping-{chr}.rds"
   retries: 1
   resources: 
-    mem_mb = lambda wildcards, attempt: 7000 * attempt,
+    mem_mb = lambda wildcards, attempt: 14000 * attempt,
     time_min = lambda wildcards, attempt: 60 * attempt 
   script: "code/run-gwas-eqtl-coloc-abf.R"
