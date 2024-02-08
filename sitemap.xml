@@ -2,22 +2,26 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://jeffreypullin.github.io/coloc-estimated-eqtl-priors/eqtl-tss-distance-analysis.html</loc>
-    <lastmod>2024-02-07T17:32:40.872Z</lastmod>
+    <lastmod>2024-02-08T12:26:02.976Z</lastmod>
   </url>
   <url>
     <loc>https://jeffreypullin.github.io/coloc-estimated-eqtl-priors/prior-visualisation.html</loc>
-    <lastmod>2024-02-07T17:32:12.039Z</lastmod>
+    <lastmod>2024-02-08T12:25:35.604Z</lastmod>
   </url>
   <url>
     <loc>https://jeffreypullin.github.io/coloc-estimated-eqtl-priors/gwas-eqtl-coloc-analysis.html</loc>
-    <lastmod>2024-02-07T17:30:15.839Z</lastmod>
+    <lastmod>2024-02-08T12:23:46.109Z</lastmod>
+  </url>
+  <url>
+    <loc>https://jeffreypullin.github.io/coloc-estimated-eqtl-priors/finemapping-analysis.html</loc>
+    <lastmod>2024-02-08T12:23:36.582Z</lastmod>
   </url>
   <url>
     <loc>https://jeffreypullin.github.io/coloc-estimated-eqtl-priors/index.html</loc>
-    <lastmod>2024-02-07T17:30:16.188Z</lastmod>
+    <lastmod>2024-02-08T12:23:46.450Z</lastmod>
   </url>
   <url>
     <loc>https://jeffreypullin.github.io/coloc-estimated-eqtl-priors/pqtl-eqtl-coloc-analysis.html</loc>
-    <lastmod>2024-02-07T17:32:27.623Z</lastmod>
+    <lastmod>2024-02-08T12:25:50.101Z</lastmod>
   </url>
 </urlset>
