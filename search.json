@@ -60,14 +60,14 @@
     "href": "finemapping-analysis.html",
     "title": "Finemapping analysis",
     "section": "",
-    "text": "renv::load(here::here())\n\n- The project is out-of-sync -- use `renv::status()` for details.\n\nlibrary(readr)\nlibrary(dplyr)\nlibrary(tidyr)\nlibrary(ggplot2)\n\ndevtools::load_all(\"~/coloc\")\n\n\ncompute_credible_set &lt;- function(pips, alpha = 0.95) {\n  pips_order &lt;- order(pips, decreasing = TRUE)\n  cum_pips &lt;- cumsum(pips[pips_order])\n  cs_size &lt;- which.max(cum_pips &gt;= alpha) \n  pips_order[1:cs_size]\n}\n\n\ngwas_eqtl_finemapping &lt;- expand_grid(\n  chr = 1:22\n) |&gt;\n  rowwise() |&gt;\n  mutate(file = paste0(\n    here::here(\"output/data/gwas-eqtl-finemapping\"), \"-\", chr, \".rds\")\n  ) |&gt;\n  mutate(data = list(read_rds(file))) |&gt;\n  unnest(data)\n\n\ncs_n_data &lt;- gwas_eqtl_finemapping |&gt;\n  select(gene_name, starts_with(\"fm_\")) |&gt;\n  pivot_longer(-gene_name, values_to = \"pip\") |&gt;\n  summarise(cs = list(compute_credible_set(pip)), \n            .by = c(gene_name, name)) |&gt;\n  rowwise() |&gt;\n  mutate(cs_n = length(cs)) |&gt;\n  ungroup()\n\ncs_n_data |&gt;\n  filter(cs_n &lt;= 20) |&gt;\n  count(cs_n, name) |&gt;\n  ggplot(aes(cs_n, n)) + \n  geom_col() + \n  labs(\n    y = \"Count\",\n    x = \"Size of single-causal variant CS\"\n  ) + \n  facet_wrap(~name) + \n  theme_bw()"
+    "text": "renv::load(here::here())\n\n- The project is out-of-sync -- use `renv::status()` for details.\n\nlibrary(readr)\nlibrary(dplyr)\nlibrary(tidyr)\nlibrary(ggplot2)\nlibrary(forcats)\n\ndevtools::load_all(\"~/coloc\")\n\n\ncompute_credible_set &lt;- function(pips, alpha = 0.95) {\n  pips_order &lt;- order(pips, decreasing = TRUE)\n  cum_pips &lt;- cumsum(pips[pips_order])\n  cs_size &lt;- which.max(cum_pips &gt;= alpha) \n  pips_order[1:cs_size]\n}\n\n\ngwas_eqtl_finemapping &lt;- expand_grid(\n  chr = 1:22\n) |&gt;\n  rowwise() |&gt;\n  mutate(file = paste0(\n    here::here(\"output/data/gwas-eqtl-finemapping\"), \"-\", chr, \".rds\")\n  ) |&gt;\n  mutate(data = list(read_rds(file))) |&gt;\n  unnest(data)\n\n\ncs_n_data &lt;- gwas_eqtl_finemapping |&gt;\n  select(gene_name, ends_with(\"eqtl\"), ends_with(\"gwas\")) |&gt;\n  pivot_longer(-gene_name, values_to = \"pip\") |&gt;\n  summarise(cs = list(compute_credible_set(pip)), \n            .by = c(gene_name, name)) |&gt;\n  rowwise() |&gt;\n  mutate(cs_n = length(cs)) |&gt;\n  ungroup()\n\n\ncs_n_data |&gt;\n  mutate(name = fct_reorder(factor(name), cs_n)) |&gt;\n  ggplot(aes(name, log(cs_n))) + \n  geom_boxplot() + \n  coord_flip() +\n  theme_bw()\n\n\n\n\n\ncs_n_data |&gt;\n  filter(cs_n &lt;= 20) |&gt;\n  count(cs_n, name) |&gt;\n  ggplot(aes(cs_n, n)) + \n  geom_col() + \n  labs(\n    y = \"Count\",\n    x = \"Size of single-causal variant CS\"\n  ) + \n  facet_wrap(~name) + \n  theme_bw()"
   },
   {
     "objectID": "index.html",
     "href": "index.html",
     "title": "Home",
     "section": "",
-    "text": "eQTL TSS distance analysis\nPrior visualisation\nGWAS-eQTL colocalisation analysis\npQTL-eQTL colocalisation analysis\nFinemapping analysis"
+    "text": "eQTL TSS distance analysis\nPrior visualisation\nGWAS-eQTL colocalisation analysis\npQTL-eQTL colocalisation analysis\nFine-mapping analysis"
   },
   {
     "objectID": "pqtl-eqtl-coloc-analysis.html",
