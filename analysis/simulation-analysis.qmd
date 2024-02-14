@@ -1,0 +1,49 @@
+---
+title: "Simulation analysis"
+format: html
+editor: source
+---
+
+```{r warning = FALSE, message = FALSE}
+renv::load(here::here())
+
+library(dplyr)
+library(readr)
+library(ggplot2)
+```
+
+```{r load-data}
+simulation_data <- read_rds(here::here("output/data/simulation-data.rds"))
+```
+
+```{r}
+simulation_data |>
+  mutate(
+    fp = hyp == "h3" & pp_h4 >= 0.8,
+    tp = hyp == "h4" & pp_h4 >= 0.8,
+    fn = hyp == "h4" & pp_h4 < 0.8
+  ) |>
+  summarise(
+    n_tp = sum(tp),
+    n_fn = sum(fn), 
+    n_fp = sum(fp),
+    .by = prior
+  ) |>
+  mutate(
+    recall = n_tp / (n_tp + n_fn),
+    precision = n_tp / (n_tp + n_fp)
+  )
+```
+
+```{r}
+simulation_data |>
+  ggplot(aes(hyp, pp_h4, fill = prior)) + 
+  geom_boxplot(position = "dodge") + 
+  geom_hline(yintercept = 0.8, linetype = "dashed") +
+  theme_bw() + 
+  labs(
+    x = "True hypothesis", 
+    y = "Mean Pr(H4)",
+    fill = "Prior type"
+  )
+```
