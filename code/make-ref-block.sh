@@ -1,8 +1,5 @@
 #!/bin/bash
 
-source ~/.bashrc
-micromamba activate vcftools
-
 data_dir="/home/jp2045/rds/rds-wallace-share-rU5KyGZrBOo/Data/reference"
 vcf_file="$data_dir/1000GP_Phase3_GRCh38/ALL.chr1.shapeit2_integrated_v1a.GRCh38.20181129.phased.vcf.gz"
 sample_file="$data_dir/1000GP_Phase3/sparse_basis/EUR.sample"
