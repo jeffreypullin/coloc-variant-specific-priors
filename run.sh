@@ -6,7 +6,7 @@ module load R/4.3.1-icelake
 
 micromamba activate pipeline
 
-rm logs/*
+rm -f logs/*
 
 local_flag=''
 

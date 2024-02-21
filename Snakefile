@@ -21,7 +21,7 @@ rule all:
     "data/snpvar_meta.chr1_7.parquet",
     "data/snpvar_meta.chr8_22.parquet",
     "data/abc-data.txt.gz",
-    "output/data/simulation-data.rds",
+    expand("output/data/sim-result-{locus}.rds", locus = ["PTPN22", "IL21", "IRF5"]),
     expand("data/adipos-express/processed-ab1-eur/{chromosome}.txt", chromosome = chromosomes),
     expand("output/data/gwas-eqtl-coloc-{chr}.rds", chr = [x for x in range(1, 23)]),
     expand("output/data/pqtl-eqtl-coloc-{eqtl_id}-{chr}.rds", 
@@ -266,13 +266,13 @@ rule run_gwas_eqtl_colocalisation:
 
 rule make_ref_block:
   output: 
-    leg_file = "data/haps.vcf.gz.impute.legend",
-    haps_file = "data/haps.vcf.gz.impute.hap",
+    leg_file = "data/{locus}.vcf.gz.impute.legend",
+    haps_file = "data/{locus}.vcf.gz.impute.hap",
   script: "code/make-ref-block.sh"
 
 rule run_simulations:
   input:
-    leg_file = "data/haps.vcf.gz.impute.legend",
-    haps_file = "data/haps.vcf.gz.impute.hap",
-  output: sim_file = "output/data/simulation-data.rds"
+    leg_file = "data/{locus}.vcf.gz.impute.legend",
+    haps_file = "data/{locus}.vcf.gz.impute.hap",
+  output: sim_file = "output/data/sim-result-{locus}.rds"
   script: "code/run-simulation.R"

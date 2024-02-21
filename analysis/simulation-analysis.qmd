@@ -10,10 +10,17 @@ renv::load(here::here())
 library(dplyr)
 library(readr)
 library(ggplot2)
+library(glue)
 ```
 
 ```{r load-data}
-simulation_data <- read_rds(here::here("output/data/simulation-data.rds"))
+locus <- c("PTPN22", "IL21", "IRF5")
+simulation_data <- lapply(locus, function(x) {
+  here::here(glue("output/data/sim-result-{x}.rds")) |>
+  read_rds() |>
+  mutate(locus = x)
+}) |>
+  bind_rows()
 ```
 
 ```{r}
@@ -46,4 +53,18 @@ simulation_data |>
     y = "Mean Pr(H4)",
     fill = "Prior type"
   )
+```
+
+```{r}
+simulation_data |>
+  ggplot(aes(hyp, pp_h4, fill = prior)) +
+  geom_boxplot(position = "dodge") +
+  geom_hline(yintercept = 0.8, linetype = "dashed") +
+  theme_bw() +
+  labs(
+    x = "True hypothesis",
+    y = "Mean Pr(H4)",
+    fill = "Prior type"
+  ) +
+  facet_wrap(~locus)
 ```

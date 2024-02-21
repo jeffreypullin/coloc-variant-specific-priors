@@ -85,13 +85,19 @@ simulate_dataset_pair <- function(hyp, snps, cv1) {
 
 set.seed(13022024)
 
-leg_file <- snakemake@input[["leg_file"]]
+legend_file <- snakemake@input[["leg_file"]]
 haps_file <- snakemake@input[["haps_file"]]
 sim_data_file <- snakemake@output[["sim_file"]]
 
-leg <- read_delim("data/haps.vcf.gz.impute.legend", show_col_types = FALSE)
-haps <- matrix(scan("data/haps.vcf.gz.impute.hap", what = 0), ncol = nrow(leg))
-colnames(haps) <- leg$ID
+legend <- read_delim(legend_file, show_col_types = FALSE)
+haps <- matrix(scan(haps_file, what = 0), ncol = nrow(legend))
+colnames(haps) <- legend$ID
+
+if (nrow(legend) > 500) {
+  sample_ind <- sort(sample(seq_len(nrow(legend)), 500))
+  haps <- haps[, sample_ind]
+  legend <- legend[sample_ind, ]
+}
 
 freq <- as.data.frame((haps + 1))
 freq$Probability <- 1 / nrow(freq)
@@ -99,14 +105,16 @@ freq$Probability <- 1 / nrow(freq)
 snps <- colnames(haps)
 ld <- cor(haps)
 maf <- pmin(colMeans(haps), 1 - colMeans(haps))
-pos <- vapply(strsplit(snps, "-"), \(x) x[[2]], character(1))
+pos <- vapply(strsplit(snps, "-"), \(x) as.numeric(x[[2]]), numeric(1))
 
 n_sims <- 100
-prior_weights <- dnorm(seq_along(snps), median(seq_along(snps)), 45)
-prior_weights <- prior_weights / sum(prior_weights)
+prior_weights <- compute_eqtl_tss_dist_prior_weights(
+  pos,
+  round(median(pos), 0),
+  read_rds("output/densities/eqtlgen.rds")
+)
 hyps <- sample(c("h3", "h4"), size = n_sims, replace = TRUE, prob = c(0.5, 0.5))
 
-n_sims <- length(hyps)
 pp_h4 <- numeric(n_sims)
 sim_out <- list()
 for (i in seq_len(n_sims)) {
