@@ -48,8 +48,66 @@ gtex_tissues:
  - Uterus
  - Vagina
 # FIXME: Can these be dynamically calculated at runtime?
-#  awk '{ if ($9 == "ge") { print $2 } }' eqtl-catalogue-metadata.tsv
+# awk '{ if ($9 == "ge") { print $2 } }' data/eqtl-catalogue/eqtl-catalogue-metadata.tsv 
 eqtl_catalogue_dataset_ids:
- - QTD000373 # Lepik 2017, blood
- - QTD000266 # GTEx liver 
- - QTD000356 # GTEx blood
+ - QTD000001
+ - QTD000006
+ - QTD000011
+ - QTD000016
+ - QTD000021
+ - QTD000026
+ - QTD000056
+ - QTD000061
+ - QTD000085
+ - QTD000090
+ - QTD000095
+ - QTD000100
+ - QTD000110
+ - QTD000116
+ - QTD000211
+ - QTD000216
+ - QTD000221
+ - QTD000266
+ - QTD000271
+ - QTD000281
+ - QTD000291
+ - QTD000296
+ - QTD000301
+ - QTD000306
+ - QTD000316
+ - QTD000326
+ - QTD000331
+ - QTD000336
+ - QTD000341
+ - QTD000346
+ - QTD000351
+ - QTD000356
+ - QTD000361
+ - QTD000366
+ - QTD000373
+ - QTD000379
+ - QTD000384
+ - QTD000389
+ - QTD000394
+ - QTD000399
+ - QTD000404
+ - QTD000409
+ - QTD000414
+ - QTD000419
+ - QTD000424
+ - QTD000429
+ - QTD000504
+ - QTD000519
+ - QTD000524
+ - QTD000529
+ - QTD000534
+ - QTD000539
+ - QTD000544
+ - QTD000549
+ - QTD000559
+pqtl_eqtl_coloc_dataset_ids:
+ - QTD000373 # Lepik 2017 (blood)
+ - QTD000341 # GTEx thyroid 
+ - QTD000116 # GTEx adipose (subcutaneous)
+ - QTD000021 # BLUEPRINT Monocyte
+ - QTD000539 # TwinsUK LCL

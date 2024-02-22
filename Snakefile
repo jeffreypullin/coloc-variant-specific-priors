@@ -21,12 +21,14 @@ rule all:
     "data/snpvar_meta.chr1_7.parquet",
     "data/snpvar_meta.chr8_22.parquet",
     "data/abc-data.txt.gz",
+    expand("data/eqtl-catalogue/processed-sumstats/{dataset_id}.cc.tsv",
+            dataset_id = config["eqtl_catalogue_dataset_ids"]),
     expand("output/data/sim-result-{locus}.rds", locus = ["PTPN22", "IL21", "IRF5"]),
     expand("data/adipos-express/processed-ab1-eur/{chromosome}.txt", chromosome = chromosomes),
     expand("output/data/gwas-eqtl-coloc-{chr}.rds", chr = [x for x in range(1, 23)]),
     expand("output/data/pqtl-eqtl-coloc-{eqtl_id}-{chr}.rds", 
            chr = [x for x in range(1, 23)],
-           eqtl_id = config["eqtl_catalogue_dataset_ids"])
+           eqtl_id = config["pqtl_eqtl_coloc_dataset_ids"])
 
 rule fetch_t1d_gwas_data:
   output: 
@@ -117,6 +119,7 @@ rule download_eqtl_catalogue_files:
   output: 
     dataset_file = "data/eqtl-catalogue/sumstats/{dataset_id}.cc.tsv.gz",
     tabix_file =  "data/eqtl-catalogue/sumstats/{dataset_id}.cc.tsv.gz.tbi"
+  localrule: True
   script: "code/download-eqtl-catalogue.R"
   
 rule filter_eqtl_catalogue_files:
@@ -246,6 +249,10 @@ rule run_pqtl_eqtl_colocalisation:
     pqtl_metadata_file = "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
   output: 
     result_file = "output/data/pqtl-eqtl-coloc-{eqtl_id}-{chr}.rds"
+  retries: 1
+  resources: 
+    mem_mb = lambda wildcards, attempt: 14000 * attempt,
+    time_min = lambda wildcards, attempt: 60 * attempt  
   script: "code/run-pqtl-eqtl-coloc-abf.R"
 
 rule run_gwas_eqtl_colocalisation:

@@ -13,13 +13,26 @@ library(tidyr)
 library(purrr)
 library(ggplot2)
 library(ggrepel)
+library(patchwork)
+library(yaml)
+library(forcats)
 
 devtools::load_all("~/coloc")
 ```
 
 ```{r load-data}
+# Load eQTL dataset IDs.
+config <- read_yaml(here::here("config.yaml"))
+eqtl_data_ids <- config$pqtl_eqtl_coloc_dataset_ids
+eqtl_data_ids_lookup <- c(
+  "QTD000373" = "Lepik et. al. 2017",
+  "QTD000341" = "GTEx thyroid",
+  "QTD000116" = "GTEx adipose (subcutaneous)",
+  "QTD000021" = "BLUEPRINT Monocytes",
+  "QTD000539" = "TwinsUK LCL"
+)
+
 # Load eQTL-pQTL colocalisation results.
-eqtl_data_ids <- c("QTD000266", "QTD000373", "QTD000356")
 pqtl_eqtl_colocs <- expand_grid(
   eqtl_data_id = eqtl_data_ids, 
   chr = 1:22
@@ -31,14 +44,15 @@ pqtl_eqtl_colocs <- expand_grid(
   mutate(data = list(read_rds(file))) |>
   unnest(data)
 
+# Load protein metadata.
 protein_metadata <- read_tsv(
   here::here("data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"), 
   show_col_types = FALSE
 )
 ```
 
-```{r call-level-performance}
-left_join(
+```{r coloc-level-performance}
+coloc_level_data <- left_join(
   pqtl_eqtl_colocs |>
     select(eqtl_data_id, starts_with("PP.H4.abf"), phenotype_id, 
            coloc_gene_id = gene_id), 
@@ -61,103 +75,19 @@ left_join(
     is_fp = any(sig_coloc) & !any(sig_coloc & gene_match),
     .by = c(protein_id, prior_type, eqtl_data_id)
   ) |>
+  # FIXME: Monocyte issues with ABC score.
   summarise(
-    n_colocalised = sum(colocalised),
-    n_tp = sum(is_tp),
-    n_fn = sum(is_fn),
-    n_fp = sum(is_fp),
-    .by = c(eqtl_data_id, prior_type)
-  ) |>
-  mutate(
-    recall = n_tp / (n_tp + n_fn), 
-    precision = n_tp / (n_tp + n_fp)
-  ) |>
-  print(n = 60)
-```
-
-```{r}
-call_data <- left_join(
-  pqtl_eqtl_colocs |>
-    select(eqtl_data_id, starts_with("PP.H4.abf"), phenotype_id, 
-           coloc_gene_id = gene_id), 
-  protein_metadata |>
-    select(coding_gene_id = gene_id, phenotype_id),
-  by = "phenotype_id"
-) |>
-  rename(protein_id = phenotype_id) |>
-  pivot_longer(-c(protein_id, coding_gene_id, eqtl_data_id, coloc_gene_id),
-               values_to = "pp_h4", 
-               names_to = c("junk", "prior_type"),
-               names_pattern = "(.*?)_(.*)") |>
-  select(-junk) |>
-  mutate(sig_coloc = pp_h4 >= 0.8) |>
-  mutate(gene_match = coding_gene_id == coloc_gene_id) |>
-  summarise(
-    colocalised = any(sig_coloc), 
-    is_tp = any(sig_coloc & gene_match),
-    is_fn = !any(sig_coloc & gene_match),
-    is_fp = any(sig_coloc) & !any(sig_coloc & gene_match),
-    .by = c(protein_id, prior_type, eqtl_data_id)
-  ) |>
-  summarise(
-    n_colocalised = sum(colocalised),
-    n_tp = sum(is_tp),
-    n_fn = sum(is_fn),
-    n_fp = sum(is_fp),
+    n_colocalised = sum(colocalised, na.rm = TRUE),
+    n_tp = sum(is_tp, na.rm = TRUE),
+    n_fn = sum(is_fn, na.rm = TRUE),
+    n_fp = sum(is_fp, na.rm = TRUE),
     .by = c(eqtl_data_id, prior_type)
   ) |>
   mutate(
     recall = n_tp / (n_tp + n_fn), 
     precision = n_tp / (n_tp + n_fp)
   )
-```
 
-```{r}
-call_data |>
-  filter(eqtl_data_id == "QTD000356") |>
-  mutate(is_unif = prior_type == "unif") |>
-  ggplot(aes(recall, precision, col = is_unif, label = prior_type)) + 
-  geom_point() + 
-  geom_text() + 
-  labs(
-    x = "Recall", 
-    y = "Precision",
-    title = "GTEx blood"
-  ) + 
-  theme_bw()
-```
-
-```{r}
-call_data |>
-  filter(eqtl_data_id == "QTD000373") |>
-  mutate(is_unif = prior_type == "unif") |>
-  ggplot(aes(recall, precision, col = is_unif, label = prior_type)) + 
-  geom_point() + 
-  geom_text() + 
-  labs(
-    x = "Recall", 
-    y = "Precision",
-    title = "Lepik 2017 (blood)"
-  ) + 
-  theme_bw()
-```
-
-```{r}
-call_data |>
-  filter(eqtl_data_id == "QTD000266") |>
-  mutate(is_unif = prior_type == "unif") |>
-  ggplot(aes(recall, precision, col = is_unif, label = prior_type)) + 
-  geom_point() + 
-  geom_text() + 
-  labs(
-    x = "Recall", 
-    y = "Precision",
-    title = "GTEx liver"
-  ) + 
-  theme_bw()
-```
-
-```{r protein-level-performance}
 protein_level_data <- left_join(
   pqtl_eqtl_colocs |>
     select(eqtl_data_id, starts_with("PP.H4.abf"), phenotype_id, 
@@ -179,21 +109,100 @@ protein_level_data <- left_join(
     is_tp = any(sig_coloc & gene_match),
     is_fn = !any(sig_coloc & gene_match),
     is_fp = any(sig_coloc) & !any(sig_coloc & gene_match),
-    .by = c(protein_id, prior_type)
+    .by = c(protein_id, prior_type, eqtl_data_id)
   ) |>
+  # FIXME: Monocyte issues with ABC score.
   summarise(
-    n_colocalised = sum(colocalised),
-    n_tp = sum(is_tp),
-    n_fn = sum(is_fn),
-    n_fp = sum(is_fp),
-    .by = prior_type
-  ) |>
+    n_colocalised = sum(colocalised, na.rm = TRUE),
+    n_tp = sum(is_tp, na.rm = TRUE),
+    n_fn = sum(is_fn, na.rm = TRUE),
+    n_fp = sum(is_fp, na.rm = TRUE),
+    .by = c(eqtl_data_id, prior_type)
+  ) |> 
   mutate(
     recall = n_tp / (n_tp + n_fn), 
     precision = n_tp / (n_tp + n_fp)
   )
+```
 
+```{r}
+coloc_level_data
+```
+
+```{r}
 protein_level_data
+```
+
+```{r}
+coloc_level_data |>
+  mutate(is_unif = prior_type == "unif") |>
+  mutate(eqtl_data_name = eqtl_data_ids_lookup[eqtl_data_id]) |>
+  ggplot(aes(recall, precision, col = is_unif, label = prior_type)) + 
+  geom_point() + 
+  geom_label_repel() + 
+  labs(
+    x = "Recall", 
+    y = "Precision",
+  ) + 
+  facet_wrap(~eqtl_data_name, scales = "free") + 
+  theme_bw() + 
+  theme(legend.position = "none")
+```
+
+```{r}
+coloc_level_data |>
+  filter(eqtl_data_id == "QTD000021") |>
+  mutate(is_unif = prior_type == "unif") |>
+  ggplot(aes(recall, precision, col = is_unif, label = prior_type)) + 
+  geom_point() + 
+  geom_label_repel() + 
+  labs(
+    x = "Recall", 
+    y = "Precision",
+  ) + 
+  theme_bw() + 
+  theme(legend.position = "none")
+```
+
+```{r}
+coloc_level_data |>
+  summarise(
+    recall = median(recall), 
+    precision = median(precision), 
+    .by = prior_type
+  ) |>
+  mutate(is_unif = prior_type == "unif") |>
+  ggplot(aes(recall, precision, col = is_unif, label = prior_type)) + 
+  geom_point() + 
+  geom_label_repel() + 
+  labs(
+    x = "Recall", 
+    y = "Precision",
+    title = "Median over eQTL datasets"
+  ) + 
+  theme_bw() + 
+  theme(legend.position= "none")
+```
+
+```{r}
+coloc_level_data |>
+  mutate(eqtl_data_name = eqtl_data_ids_lookup[eqtl_data_id]) |>
+  mutate(prior_type = fct_reorder(
+    factor(prior_type), 
+    n_colocalised)
+  ) |>
+  mutate(eqtl_data_name = fct_reorder(
+    factor(eqtl_data_name), 
+    n_colocalised
+  )) |>
+  ggplot(aes(prior_type, n_colocalised, fill = eqtl_data_name)) + 
+  geom_col(position = "dodge") + 
+  coord_flip() + 
+  labs(
+    y = "Number of signigicantly colocalised pQTL-eQTL pairs",
+    x = "Prior"
+  ) + 
+  theme_bw()
 ```
 
 ```{r}
@@ -216,12 +225,55 @@ pqtl_eqtl_colocs |>
   geom_point() + 
   geom_vline(xintercept = 0.8, colour = "red") + 
   geom_hline(yintercept = 0.8, colour = "red") + 
-  theme_bw()
-
+  theme_bw() + 
 pqtl_eqtl_colocs |>
-  ggplot(aes(PP.H4.abf_unif, PP.H4.abf_gnocchi_eqtl)) + 
+  ggplot(aes(PP.H4.abf_unif, PP.H4.abf_pqtl_tss_eqtlgen)) + 
   geom_point() + 
   geom_vline(xintercept = 0.8, colour = "red") + 
   geom_hline(yintercept = 0.8, colour = "red") + 
+  theme_bw()
+```
+
+```{r}
+pqtl_eqtl_colocs |>
+  ggplot(aes(PP.H4.abf_unif, PP.H4.abf_abc_score_eqtl)) + 
+  geom_point() + 
+  geom_vline(xintercept = 0.8, colour = "red") + 
+  geom_hline(yintercept = 0.8, colour = "red") + 
+  theme_bw() + 
+pqtl_eqtl_colocs |>
+  ggplot(aes(PP.H4.abf_unif, PP.H4.abf_abc_score_pqtl)) + 
+  geom_point() + 
+  geom_vline(xintercept = 0.8, colour = "red") + 
+  geom_hline(yintercept = 0.8, colour = "red") + 
+  theme_bw()
+```
+
+No trend in which Pr(H4) are affected
+
+```{r}
+pqtl_eqtl_colocs |>
+  mutate(diff = PP.H4.abf_unif - PP.H4.abf_abc_score_pqtl) |>
+  ggplot(aes(PP.H4.abf_unif , diff)) + 
+  geom_point() + 
+  coord_cartesian(ylim = c(-0.75, 0.75)) + 
+  theme_bw()
+```
+
+In most cases adding the prior has little effect
+
+```{r}
+pqtl_eqtl_colocs |>
+  mutate(diff = abs(PP.H4.abf_unif - PP.H4.abf_abc_score_pqtl)) |>
+  mutate(cut_diff = cut(diff, breaks = seq(0, 1, by = 0.05), 
+                        include.lowest = TRUE)) |>
+  count(cut_diff) |>
+  mutate(prop = n / sum(n)) |>
+  ggplot(aes(cut_diff, prop)) + 
+  geom_col() + 
+  labs(
+    x = "Range of difference", 
+    y = "Proportion"
+  ) + 
   theme_bw()
 ```
