@@ -21,6 +21,7 @@ rule all:
     "data/snpvar_meta.chr1_7.parquet",
     "data/snpvar_meta.chr8_22.parquet",
     "data/abc-data.txt.gz",
+    expand("data/gwas-data/{gwas_id}.gz", gwas_id = config["finngen_gwas_ids"]),
     expand("data/eqtl-catalogue/processed-sumstats/{dataset_id}.cc.tsv",
             dataset_id = config["eqtl_catalogue_dataset_ids"]),
     expand("output/data/sim-result-{locus}.rds", locus = ["PTPN22", "IL21", "IRF5"]),
@@ -237,6 +238,14 @@ rule download_polyfun_data:
    """
    wget -O {output.chr1_7} https://github.com/omerwe/polyfun/raw/master/snpvar_meta.chr1_7.parquet
    wget -O {output.chr8_22} https://github.com/omerwe/polyfun/raw/master/snpvar_meta.chr8_22.parquet
+   """
+
+rule download_finngen_gwas_data: 
+  output: "data/gwas-data/{gwas_id}.gz"
+  localrule: True
+  shell:
+   """
+   wget -O {output} https://storage.googleapis.com/finngen-public-data-r10/summary_stats/finngen_R10_{wildcards.gwas_id}.gz
    """
 
 rule run_pqtl_eqtl_colocalisation:
