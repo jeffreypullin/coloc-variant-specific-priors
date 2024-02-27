@@ -113,6 +113,4 @@ pqtl_eqtl_coloc_dataset_ids:
  - QTD000021 # BLUEPRINT Monocyte
  - QTD000539 # TwinsUK LCL
 finngen_gwas_ids:
- - T1D_STRICT2
- - T2D
- - E4_FH_IHD 
+ - AUTOIMMUNE

@@ -21,12 +21,15 @@ rule all:
     "data/snpvar_meta.chr1_7.parquet",
     "data/snpvar_meta.chr8_22.parquet",
     "data/abc-data.txt.gz",
-    expand("data/gwas-data/{gwas_id}.gz", gwas_id = config["finngen_gwas_ids"]),
     expand("data/eqtl-catalogue/processed-sumstats/{dataset_id}.cc.tsv",
             dataset_id = config["eqtl_catalogue_dataset_ids"]),
     expand("output/data/sim-result-{locus}.rds", locus = ["PTPN22", "IL21", "IRF5"]),
     expand("data/adipos-express/processed-ab1-eur/{chromosome}.txt", chromosome = chromosomes),
-    expand("output/data/gwas-eqtl-coloc-{chr}.rds", chr = [x for x in range(1, 23)]),
+    expand(
+      "output/data/gwas-eqtl-coloc-{gwas_id_eqtl_id}-{chr}.rds", 
+      gwas_id_eqtl_id = ["AUTOIMMUNE-QTD000373", "AUTOIMMUNE-QTD000341", "AUTOIMMUNE-QTD000499", "AUTOIMMUNE-QTD000021", "AUTOIMMUNE-QTD000031"],
+      chr = [x for x in range(1, 23)]
+    ),
     expand("output/data/pqtl-eqtl-coloc-{eqtl_id}-{chr}.rds", 
            chr = [x for x in range(1, 23)],
            eqtl_id = config["pqtl_eqtl_coloc_dataset_ids"])
@@ -241,11 +244,28 @@ rule download_polyfun_data:
    """
 
 rule download_finngen_gwas_data: 
-  output: "data/gwas-data/{gwas_id}.gz"
+  output: "data/finngen/{gwas_id}.gz"
   localrule: True
   shell:
    """
    wget -O {output} https://storage.googleapis.com/finngen-public-data-r10/summary_stats/finngen_R10_{wildcards.gwas_id}.gz
+   """
+
+rule process_finngen_gwas_data: 
+  input: "data/finngen/{gwas_id}.gz"
+  output: "data/finngen/{gwas_id}.gz.tbi"
+  shell:
+   """
+   gunzip --force {input}
+   bgzip data/finngen/{wildcards.gwas_id}
+   tabix -s 1 -b 2 -e 2 -S 1 data/finngen/{wildcards.gwas_id}.gz
+   """
+
+rule download_finngen_manifest:
+  output: "data/finngen/finngen-manifest.tsv"
+  shell:
+   """
+   wget -O {output} https://storage.googleapis.com/finngen-public-data-r10/summary_stats/R10_manifest.tsv
    """
 
 rule run_pqtl_eqtl_colocalisation:
@@ -266,15 +286,16 @@ rule run_pqtl_eqtl_colocalisation:
 
 rule run_gwas_eqtl_colocalisation:
   input: 
-    eqtl_data_file = "data/eqtl-catalogue/sumstats/QTD000373.cc.tsv.gz",
-    eqtl_index_file = "data/eqtl-catalogue/sumstats/QTD000373.cc.tsv.gz.tbi",
-    gwas_data_file = "data/T1D_Chiou_34012112_1-hg38.tsv.gz",
-    gwas_index_file = "data/T1D_Chiou_34012112_1-hg38.tsv.gz.tbi",
+    eqtl_data_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.cc.tsv.gz",
+    eqtl_index_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.cc.tsv.gz.tbi",
+    gwas_data_file = "data/finngen/{gwas_id}.gz",
+    gwas_index_file = "data/finngen/{gwas_id}.gz.tbi",
     eqtl_metadata_file = "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
+    manifest_file = "data/finngen/finngen-manifest.tsv"
   output: 
-    coloc_results_file = "output/data/gwas-eqtl-coloc-{chr}.rds",
-    finemapping_results_file = "output/data/gwas-eqtl-finemapping-{chr}.rds"
-  retries: 1
+    coloc_results_file = "output/data/gwas-eqtl-coloc-{gwas_id}-{eqtl_id}-{chr}.rds",
+    finemapping_results_file = "output/data/gwas-eqtl-finemapping-{gwas_id}-{eqtl_id}-{chr}.rds"
+  retries: 0
   resources: 
     mem_mb = lambda wildcards, attempt: 14000 * attempt,
     time_min = lambda wildcards, attempt: 60 * attempt 
