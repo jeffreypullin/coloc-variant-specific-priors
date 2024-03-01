@@ -12,33 +12,50 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(forcats)
+library(yaml)
+library(glue)
 
 devtools::load_all("~/coloc")
 ```
 
 ```{r load-data}
 gwas_eqtl_colocs <- expand_grid(
-  chr = 1:22
-) |>
-  rowwise() |>
-  mutate(file = paste0(
-    here::here("output/data/gwas-eqtl-coloc"), "-", chr, ".rds")
+  chr = 1:22,
+  gwas_id_eqtl_id = c(
+    "AUTOIMMUNE-QTD000373", "AUTOIMMUNE-QTD000341", "AUTOIMMUNE-QTD000499", "AUTOIMMUNE-QTD000021", "AUTOIMMUNE-QTD000031"
+  )
   ) |>
+  separate_wider_delim(gwas_id_eqtl_id, "-", names = c("gwas_id", "eqtl_id")) |>
+  rowwise() |>
+  mutate(file = here::here(
+    glue("output/data/gwas-eqtl-coloc-{gwas_id}-{eqtl_id}-{chr}.rds")
+  )) |>
   mutate(data = list(read_rds(file))) |>
   unnest(data)
 ```
 
-```{r unif-colocs}
+```{r}
 gwas_eqtl_colocs |>
-  filter(PP.H4.abf_unif >= 0.8) |>
-  select(gene_name) |>
-  print(n = 30)
+  filter(PP.H4.abf_unif > 0.8) |>
+  filter(locus_gene_name == coloc_gene_name) |>
+  select(eqtl_id, locus_gene_name, coloc_gene_name, PP.H4.abf_unif) |>
+  print(n = 80)
 ```
 
 ```{r}
 gwas_eqtl_colocs |>
-  select(gene_name, starts_with("PP.H4.abf")) |>
-  pivot_longer(-gene_name, values_to = "pp_h4") |>
+  filter(PP.H4.abf_unif > 0.8) |>
+  filter(locus_gene_name == coloc_gene_name) |>
+  summarise(n_eqtl_data_ids = n(), .by = locus_gene_name) |>
+  arrange(desc(n_eqtl_data_ids)) |>
+  print(n = 47)
+```
+
+```{r}
+gwas_eqtl_colocs |>
+  filter(locus_gene_name == coloc_gene_name) |>
+  select(locus_gene_name, gwas_id, starts_with("PP.H4.abf")) |>
+  pivot_longer(-c(locus_gene_name, gwas_id), values_to = "pp_h4") |>
   mutate(sig_coloc = pp_h4 > 0.8) |>
   summarise(n_sig = sum(sig_coloc), .by = name) |>
   mutate(is_unif = name == "PP.H4.abf_unif") |>
@@ -46,36 +63,61 @@ gwas_eqtl_colocs |>
   ggplot(aes(name, n_sig, fill = is_unif)) + 
   geom_col() + 
   coord_flip() + 
-  theme_bw()
+  labs(
+    y = "Number of signifcant (> 0.8) colocalisations", 
+    x = "Prior type"
+  ) +
+  theme_bw() + 
+  theme(legend.position = "none")
 ```
 
 ```{r}
 gwas_eqtl_colocs |>
+  filter(locus_gene_name == coloc_gene_name) |>
   mutate(
     sig_abc_score_gwas = PP.H4.abf_abc_score_gwas > 0.8,
     sig_unif = PP.H4.abf_unif > 0.8
   ) |>
   filter(sig_abc_score_gwas != sig_unif) |>
-  select(gene_name, PP.H4.abf_unif , PP.H4.abf_abc_score_gwas)
+  select(eqtl_id, coloc_gene_name,
+         PP.H4.abf_unif, PP.H4.abf_abc_score_gwas)
 ```
 
 ```{r}
 gwas_eqtl_colocs |>
+  filter(locus_gene_name == coloc_gene_name) |>
   mutate(
     sig_gwas_tss_eqtlgen = PP.H4.abf_gwas_tss_eqtlgen > 0.8,
     sig_unif = PP.H4.abf_unif > 0.8
   ) |>
   filter(sig_gwas_tss_eqtlgen != sig_unif) |>
-  select(gene_name, PP.H4.abf_unif , PP.H4.abf_gwas_tss_eqtlgen)
+  select(eqtl_id, coloc_gene_name,
+         PP.H4.abf_unif, PP.H4.abf_gwas_tss_eqtlgen)
+```
+
+```{r}
+gwas_eqtl_colocs |>
+  filter(locus_gene_name == "GINS2") |>
+  filter(locus_gene_name == coloc_gene_name) |>
+  select(eqtl_id, coloc_gene_name, 
+        PP.H4.abf_unif, PP.H4.abf_abc_score_gwas)
 ```
 
 ```{r}
 gwas_eqtl_colocs |>
   ggplot(aes(PP.H4.abf_unif, PP.H4.abf_abc_score_gwas)) + 
   geom_point() + 
-  geom_abline(linetype = "dotted") + 
   geom_hline(yintercept = 0.8, col = "red") + 
   geom_vline(xintercept = 0.8, col = "red") + 
   theme_bw()
 ```
 
+```{r}
+gwas_eqtl_colocs |>
+  ggplot(aes(PP.H4.abf_unif, PP.H4.abf_gwas_tss_eqtlgen)) + 
+  geom_point() + 
+  geom_abline(linetype = "dotted") + 
+  geom_hline(yintercept = 0.8, col = "red") + 
+  geom_vline(xintercept = 0.8, col = "red") + 
+  theme_bw()
+```
