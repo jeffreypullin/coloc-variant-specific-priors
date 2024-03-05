@@ -114,3 +114,9 @@ pqtl_eqtl_coloc_dataset_ids:
  - QTD000539 # TwinsUK LCL
 finngen_gwas_ids:
  - AUTOIMMUNE
+gwas_eqtl_coloc_ids:
+ - "AUTOIMMUNE-QTD000373"
+ - "AUTOIMMUNE-QTD000341" 
+ - "AUTOIMMUNE-QTD000499" 
+ - "AUTOIMMUNE-QTD000021" 
+ - "AUTOIMMUNE-QTD000031"

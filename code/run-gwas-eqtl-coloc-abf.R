@@ -109,7 +109,6 @@ coloc_results <- list()
 finemapping_results <- list()
 
 for (i in seq_len(nrow(coloc_metadata))) {
-  print(i)
 
   region <- paste0(coloc_metadata$chromosome[[i]], ":",
                    coloc_metadata$start_pos[[i]], "-",
@@ -119,301 +118,285 @@ for (i in seq_len(nrow(coloc_metadata))) {
   print(paste0("Gene ID: ", coloc_metadata$gene_id[[i]]))
   print(paste0("Gene name: ", coloc_metadata$gene_name[[i]]))
 
-  locus_gwas_data <- all_gwas_data |>
+  gwas_data <- all_gwas_data |>
     filter(
       position >= coloc_metadata$start_pos[[i]] &
       position <= coloc_metadata$end_pos[[i]]
     ) |>
     as_tibble()
 
-  if (nrow(locus_gwas_data) <= 300) {
+  if (nrow(gwas_data) <= 300) {
     next
   }
 
-  if (min(locus_gwas_data$pval) > 5e-8) {
+  if (min(gwas_data$pval) > 5e-8) {
     next
   }
 
-  locus_eqtl_data <- all_eqtl_data |>
+  eqtl_data <- all_eqtl_data |>
+    filter(molecular_trait_id == coloc_metadata$gene_name[[i]]) |>
     filter(
       position >= coloc_metadata$start_pos[[i]] &
       position <= coloc_metadata$end_pos[[i]]
     )
 
-  if (nrow(locus_eqtl_data) == 0) {
+  if (nrow(eqtl_data) <= 300) {
     next
   }
 
-  eqtl_ids <- locus_eqtl_data |>
-    count(molecular_trait_id) |>
-    filter(n >= 200) |>
-    pull(molecular_trait_id)
-
-  print("Small GWAS p-values")
-  print(eqtl_ids)
-  for (j in seq_along(eqtl_ids)) {
-
-    eqtl_data <- locus_eqtl_data |>
-      filter(molecular_trait_id == eqtl_ids[[j]]) |>
-      as_tibble()
-
-    if (min(eqtl_data$pvalue) > 5e-8) {
-      next
-    }
-
-    gwas_data <- prepare_coloc_dataset(locus_gwas_data)
-    eqtl_data <- prepare_coloc_dataset(eqtl_data)
-
-    n_before <- max(nrow(eqtl_data), nrow(gwas_data))
-    if (n_before <= 300) {
-      next
-    }
-
-    eqtl_data <- eqtl_data |>
-      filter(variant %in% gwas_data$variant)
-    gwas_data <- gwas_data |>
-      filter(variant %in% eqtl_data$variant)
-
-    n_after <- max(nrow(eqtl_data), nrow(gwas_data))
-    if (n_after / n_before < 0.1) {
-      next
-    }
-
-    is_oneover_na <- all(is.na(1 / eqtl_data$se^2))
-    is_nvx_na <- all(is.na(2 * eqtl_data$an / 2 * eqtl_data$maf * (1 - eqtl_data$maf)))
-
-    if (is_oneover_na || is_nvx_na) {
-      next
-    }
-
-    eqtl_dataset <- list(
-      varbeta = eqtl_data$se^2,
-      N = eqtl_data$an / 2,
-      MAF = eqtl_data$maf,
-      type = "quant",
-      beta = eqtl_data$beta,
-      snp = eqtl_data$variant,
-      position = eqtl_data$position
-    )
-
-    is_oneover_na <- all(is.na(1 / gwas_data$se^2))
-    is_nvx_na <- all(is.na(2 * gwas_data$N * gwas_data$maf * (1 - gwas_data$maf)))
-
-    if (is_oneover_na || is_nvx_na) {
-      next
-    }
-
-    gwas_dataset <- list(
-      varbeta = gwas_data$se^2,
-      N = gwas_data$N,
-      MAF = gwas_data$maf,
-      type = "cc",
-      beta = gwas_data$beta,
-      snp = gwas_data$variant
-    )
-
-    eqtl_prior_weights_eqtlgen <- compute_eqtl_tss_dist_prior_weights(
-      eqtl_dataset$position, coloc_metadata$tss[[i]], eqtlgen_density_data
-    )
-    eqtl_prior_weights <- compute_eqtl_tss_dist_prior_weights(
-      eqtl_dataset$position, coloc_metadata$tss[[i]], density_data_round_1
-    )
-    eqtl_prior_weights_round_2 <- compute_eqtl_tss_dist_prior_weights(
-      eqtl_dataset$position, coloc_metadata$tss[[i]], density_data_round_2
-    )
-    eqtl_prior_weights_round_3 <- compute_eqtl_tss_dist_prior_weights(
-      eqtl_dataset$position, coloc_metadata$tss[[i]], density_data_round_3
-    )
-    gnocchi_prior_weights <- compute_gnocchi_prior_weights(
-      eqtl_dataset$position, chr, gnocchi_data
-    )
-    abc_score_prior_weights <- compute_abc_prior_weights(
-      eqtl_dataset$position, chr, coloc_metadata$gene_name[[i]], abc_score_data
-    )
-    abc_score_primary_blood_prior_weights <- compute_abc_prior_weights(
-      eqtl_dataset$position, chr, coloc_metadata$gene_name[[i]], abc_score_data, 
-      biosamples = "primary_blood"
-    )
-
-    if (chr %in% 1:7) {
-      polyfun_data <- snp_var_data_1_7
-    } else {
-      polyfun_data <- snp_var_data_8_22
-    }
-
-    polyfun_prior_weights <- compute_polyfun_prior_weights(
-      eqtl_dataset$position, chr, polyfun_data
-    )
-
-    # Colocalisation analysis.
-
-    # Uniform priors.
-
-    coloc_unif <- coloc.abf(
-      dataset1 = eqtl_dataset,
-      dataset2 = gwas_dataset,
-    )
-
-    # eQTLGen estimated density priors.
-
-    coloc_eqtl_tss_eqtlgen <- coloc.abf(
-      dataset1 = eqtl_dataset,
-      dataset2 = gwas_dataset,
-      prior_weights1 = eqtl_prior_weights_eqtlgen
-    )
-
-    coloc_gwas_tss_eqtlgen <- coloc.abf(
-      dataset1 = eqtl_dataset,
-      dataset2 = gwas_dataset,
-      prior_weights2 = eqtl_prior_weights_eqtlgen
-    )
-
-    coloc_eqtl_tss_gwas_tss_eqtlgen <- coloc.abf(
-      dataset1 = eqtl_dataset,
-      dataset2 = gwas_dataset,
-      prior_weights1 = eqtl_prior_weights_eqtlgen,
-      prior_weights2 = eqtl_prior_weights_eqtlgen
-    )
-
-    # OneK1K estimated density priors.
-
-    coloc_eqtl_tss_onek1k_round_1 <- coloc.abf(
-      dataset1 = eqtl_dataset,
-      dataset2 = gwas_dataset,
-      prior_weights1 = eqtl_prior_weights
-    )
-
-    coloc_eqtl_tss_onek1k_round_2 <- coloc.abf(
-      dataset1 = eqtl_dataset,
-      dataset2 = gwas_dataset,
-      prior_weights1 = eqtl_prior_weights_round_2
-    )
-
-    coloc_eqtl_tss_onek1k_round_3 <- coloc.abf(
-      dataset1 = eqtl_dataset,
-      dataset2 = gwas_dataset,
-      prior_weights1 = eqtl_prior_weights_round_3
-    )
-
-    coloc_gwas_tss_onek1k_round_1 <- coloc.abf(
-      dataset1 = eqtl_dataset,
-      dataset2 = gwas_dataset,
-      prior_weights2 = eqtl_prior_weights
-    )
-
-    coloc_eqtl_tss_gwas_tss_onek1k_round_1 <- coloc.abf(
-      dataset1 = eqtl_dataset,
-      dataset2 = gwas_dataset,
-      prior_weights1 = eqtl_prior_weights,
-      prior_weights2 = eqtl_prior_weights
-    )
-
-    # Polyfun priors.
-
-    coloc_polyfun_eqtl <- coloc.abf(
-      dataset1 = eqtl_dataset,
-      dataset2 = gwas_dataset,
-      prior_weights1 = polyfun_prior_weights
-    )
-
-    coloc_polyfun_gwas <- coloc.abf(
-      dataset1 = eqtl_dataset,
-      dataset2 = gwas_dataset,
-      prior_weights2 = polyfun_prior_weights
-    )
-
-    # Gnocchi priors.
-
-    coloc_gnocchi_eqtl <- coloc.abf(
-      dataset1 = eqtl_dataset,
-      dataset2 = gwas_dataset,
-      prior_weights1 = gnocchi_prior_weights
-    )
-
-    coloc_gnocchi_gwas <- coloc.abf(
-      dataset1 = eqtl_dataset,
-      dataset2 = gwas_dataset,
-      prior_weights2 = gnocchi_prior_weights
-    )
-
-    # ABC score priors.
-
-    coloc_abc_score_eqtl <- coloc.abf(
-      dataset1 = eqtl_dataset,
-      dataset2 = gwas_dataset,
-      prior_weights1 = abc_score_prior_weights
-    )
-
-    coloc_abc_score_gwas <- coloc.abf(
-      dataset1 = eqtl_dataset,
-      dataset2 = gwas_dataset,
-      prior_weights2 = abc_score_prior_weights
-    )
-
-    coloc_abc_score_gwas_primary_blood <- coloc.abf(
-      dataset1 = eqtl_dataset,
-      dataset2 = gwas_dataset,
-      prior_weights2 = abc_score_primary_blood_prior_weights
-    )
-
-    colocs <- bind_cols(
-      coloc_to_tibble(coloc_unif, "unif"),
-      # OneK1K estimated.
-      coloc_to_tibble(coloc_eqtl_tss_onek1k_round_1, "eqtl_tss_onek1k_round_1"),
-      coloc_to_tibble(coloc_eqtl_tss_onek1k_round_2, "eqtl_tss_onek1k_round_2"),
-      coloc_to_tibble(coloc_eqtl_tss_onek1k_round_3, "eqtl_tss_onek1k_round_3"),
-      coloc_to_tibble(coloc_gwas_tss_onek1k_round_1, "gwas_tss_onek1k_round_1"),
-      coloc_to_tibble(coloc_eqtl_tss_gwas_tss_onek1k_round_1, "eqtl_tss_gwas_tss_onek1k_round_1"),
-      # eQTLGen estimated.
-      coloc_to_tibble(coloc_eqtl_tss_eqtlgen, "eqtl_tss_eqtlgen"),
-      coloc_to_tibble(coloc_gwas_tss_eqtlgen, "gwas_tss_eqtlgen"),
-      coloc_to_tibble(coloc_eqtl_tss_gwas_tss_eqtlgen, "eqtl_tss_gwas_tss_eqtlgen"),
-      # Gnocchi.
-      coloc_to_tibble(coloc_gnocchi_eqtl, "gnocchi_eqtl"),
-      coloc_to_tibble(coloc_gnocchi_gwas, "gnocchi_gwas"),
-      # ABC score.
-      coloc_to_tibble(coloc_abc_score_eqtl, "abc_score_eqtl"),
-      coloc_to_tibble(coloc_abc_score_gwas, "abc_score_gwas"),
-      coloc_to_tibble(coloc_abc_score_gwas_primary_blood, "abc_score_gwas_primary_blood"),
-      # polyfun.
-      coloc_to_tibble(coloc_polyfun_eqtl, "polyfun_eqtl"),
-      coloc_to_tibble(coloc_polyfun_gwas, "polyfun_gwas"),
-      # WRONG!!
-      tibble(
-        locus_gene_name = coloc_metadata$gene_name[[i]],
-        coloc_gene_name = eqtl_ids[[j]]
-    ))
-    colocs <- left_join(colocs, coloc_metadata, by = join_by(locus_gene_name == gene_name))
-    coloc_results <- c(coloc_results, list(colocs))
-
-    # Finemapping analysis.
-
-    finemapping_results <- c(finemapping_results, list(tibble(
-      # Uniform.
-      unif_eqtl = finemap.abf(eqtl_dataset)$SNP.PP,
-      unif_gwas = finemap.abf(gwas_dataset)$SNP.PP,
-      # eQTLGen.
-      eqtlgen_dist_eqtl = finemap.abf(eqtl_dataset, prior_weights = eqtl_prior_weights_eqtlgen)$SNP.PP,
-      eqtlgen_dist_gwas = finemap.abf(gwas_dataset, prior_weights = eqtl_prior_weights_eqtlgen)$SNP.PP,
-      # OneK1K.
-      onek1k_r1_dist_eqtl = finemap.abf(eqtl_dataset, prior_weights = eqtl_prior_weights)$SNP.PP,
-      onek1k_r1_dist_gwas = finemap.abf(gwas_dataset, prior_weights = eqtl_prior_weights)$SNP.PP,
-      # ABC score.
-      abc_score_eqtl = finemap.abf(eqtl_dataset, prior_weights = abc_score_prior_weights)$SNP.PP,
-      abc_score_gwas = finemap.abf(gwas_dataset, prior_weights = abc_score_prior_weights)$SNP.PP,
-      # Gnocchi.
-      gnocchi_eqtl = finemap.abf(eqtl_dataset, prior_weights = gnocchi_prior_weights)$SNP.PP,
-      gnocchi_gwas = finemap.abf(gwas_dataset, prior_weights = gnocchi_prior_weights)$SNP.PP,
-      # Polyfun.
-      polyfun_eqtl = finemap.abf(eqtl_dataset, prior_weights = polyfun_prior_weights)$SNP.PP,
-      polyfun_gwas = finemap.abf(gwas_dataset, prior_weights = polyfun_prior_weights)$SNP.PP,
-      # Metadata.
-      locus_gene_name = coloc_metadata$gene_name[[i]],
-      coloc_gene_name = eqtl_ids[[j]]
-    ) |>
-      left_join(coloc_metadata, by = join_by(locus_gene_name == gene_name))
-    ))
+  if (min(eqtl_data$pvalue) > 5e-8) {
+    next
   }
+
+  gwas_data <- prepare_coloc_dataset(gwas_data)
+  eqtl_data <- prepare_coloc_dataset(eqtl_data)
+
+  n_before <- max(nrow(eqtl_data), nrow(gwas_data))
+  if (n_before <= 300) {
+    next
+  }
+
+  eqtl_data <- eqtl_data |>
+    filter(variant %in% gwas_data$variant)
+  gwas_data <- gwas_data |>
+    filter(variant %in% eqtl_data$variant)
+
+  n_after <- max(nrow(eqtl_data), nrow(gwas_data))
+  if (n_after / n_before < 0.1) {
+    next
+  }
+
+  is_oneover_na <- all(is.na(1 / eqtl_data$se^2))
+  is_nvx_na <- all(is.na(2 * eqtl_data$an / 2 * eqtl_data$maf * (1 - eqtl_data$maf)))
+
+  if (is_oneover_na || is_nvx_na) {
+    next
+  }
+
+  eqtl_dataset <- list(
+    varbeta = eqtl_data$se^2,
+    N = eqtl_data$an / 2,
+    MAF = eqtl_data$maf,
+    type = "quant",
+    beta = eqtl_data$beta,
+    snp = eqtl_data$variant,
+    position = eqtl_data$position
+  )
+
+  is_oneover_na <- all(is.na(1 / gwas_data$se^2))
+  is_nvx_na <- all(is.na(2 * gwas_data$N * gwas_data$maf * (1 - gwas_data$maf)))
+
+  if (is_oneover_na || is_nvx_na) {
+    next
+  }
+
+  gwas_dataset <- list(
+    varbeta = gwas_data$se^2,
+    N = gwas_data$N,
+    MAF = gwas_data$maf,
+    type = "cc",
+    beta = gwas_data$beta,
+    snp = gwas_data$variant
+  )
+
+  eqtl_prior_weights_eqtlgen <- compute_eqtl_tss_dist_prior_weights(
+    eqtl_dataset$position, coloc_metadata$tss[[i]], eqtlgen_density_data
+  )
+  eqtl_prior_weights <- compute_eqtl_tss_dist_prior_weights(
+    eqtl_dataset$position, coloc_metadata$tss[[i]], density_data_round_1
+  )
+  eqtl_prior_weights_round_2 <- compute_eqtl_tss_dist_prior_weights(
+    eqtl_dataset$position, coloc_metadata$tss[[i]], density_data_round_2
+  )
+  eqtl_prior_weights_round_3 <- compute_eqtl_tss_dist_prior_weights(
+    eqtl_dataset$position, coloc_metadata$tss[[i]], density_data_round_3
+  )
+  gnocchi_prior_weights <- compute_gnocchi_prior_weights(
+    eqtl_dataset$position, chr, gnocchi_data
+  )
+  abc_score_prior_weights <- compute_abc_prior_weights(
+    eqtl_dataset$position, chr, coloc_metadata$gene_name[[i]], abc_score_data
+  )
+  abc_score_primary_blood_prior_weights <- compute_abc_prior_weights(
+    eqtl_dataset$position, chr, coloc_metadata$gene_name[[i]], abc_score_data, 
+    biosamples = "primary_blood"
+  )
+
+  if (chr %in% 1:7) {
+    polyfun_data <- snp_var_data_1_7
+  } else {
+    polyfun_data <- snp_var_data_8_22
+  }
+
+  polyfun_prior_weights <- compute_polyfun_prior_weights(
+    eqtl_dataset$position, chr, polyfun_data
+  )
+
+  # Colocalisation analysis.
+
+  # Uniform priors.
+
+  coloc_unif <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+  )
+
+  # eQTLGen estimated density priors.
+
+  coloc_eqtl_tss_eqtlgen <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights1 = eqtl_prior_weights_eqtlgen
+  )
+
+  coloc_gwas_tss_eqtlgen <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights2 = eqtl_prior_weights_eqtlgen
+  )
+
+  coloc_eqtl_tss_gwas_tss_eqtlgen <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights1 = eqtl_prior_weights_eqtlgen,
+    prior_weights2 = eqtl_prior_weights_eqtlgen
+  )
+
+  # OneK1K estimated density priors.
+
+  coloc_eqtl_tss_onek1k_round_1 <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights1 = eqtl_prior_weights
+  )
+
+  coloc_eqtl_tss_onek1k_round_2 <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights1 = eqtl_prior_weights_round_2
+  )
+
+  coloc_eqtl_tss_onek1k_round_3 <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights1 = eqtl_prior_weights_round_3
+  )
+
+  coloc_gwas_tss_onek1k_round_1 <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights2 = eqtl_prior_weights
+  )
+
+  coloc_eqtl_tss_gwas_tss_onek1k_round_1 <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights1 = eqtl_prior_weights,
+    prior_weights2 = eqtl_prior_weights
+  )
+
+  # Polyfun priors.
+
+  coloc_polyfun_eqtl <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights1 = polyfun_prior_weights
+  )
+
+  coloc_polyfun_gwas <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights2 = polyfun_prior_weights
+  )
+
+  # Gnocchi priors.
+
+  coloc_gnocchi_eqtl <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights1 = gnocchi_prior_weights
+  )
+
+  coloc_gnocchi_gwas <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights2 = gnocchi_prior_weights
+  )
+
+  # ABC score priors.
+
+  coloc_abc_score_eqtl <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights1 = abc_score_prior_weights
+  )
+
+  coloc_abc_score_gwas <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights2 = abc_score_prior_weights
+  )
+
+  coloc_abc_score_gwas_primary_blood <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights2 = abc_score_primary_blood_prior_weights
+  )
+
+  colocs <- bind_cols(
+    coloc_to_tibble(coloc_unif, "unif"),
+    # OneK1K estimated.
+    coloc_to_tibble(coloc_eqtl_tss_onek1k_round_1, "eqtl_tss_onek1k_round_1"),
+    coloc_to_tibble(coloc_eqtl_tss_onek1k_round_2, "eqtl_tss_onek1k_round_2"),
+    coloc_to_tibble(coloc_eqtl_tss_onek1k_round_3, "eqtl_tss_onek1k_round_3"),
+    coloc_to_tibble(coloc_gwas_tss_onek1k_round_1, "gwas_tss_onek1k_round_1"),
+    coloc_to_tibble(coloc_eqtl_tss_gwas_tss_onek1k_round_1, "eqtl_tss_gwas_tss_onek1k_round_1"),
+    # eQTLGen estimated.
+    coloc_to_tibble(coloc_eqtl_tss_eqtlgen, "eqtl_tss_eqtlgen"),
+    coloc_to_tibble(coloc_gwas_tss_eqtlgen, "gwas_tss_eqtlgen"),
+    coloc_to_tibble(coloc_eqtl_tss_gwas_tss_eqtlgen, "eqtl_tss_gwas_tss_eqtlgen"),
+    # Gnocchi.
+    coloc_to_tibble(coloc_gnocchi_eqtl, "gnocchi_eqtl"),
+    coloc_to_tibble(coloc_gnocchi_gwas, "gnocchi_gwas"),
+    # ABC score.
+    coloc_to_tibble(coloc_abc_score_eqtl, "abc_score_eqtl"),
+    coloc_to_tibble(coloc_abc_score_gwas, "abc_score_gwas"),
+    coloc_to_tibble(coloc_abc_score_gwas_primary_blood, "abc_score_gwas_primary_blood"),
+    # polyfun.
+    coloc_to_tibble(coloc_polyfun_eqtl, "polyfun_eqtl"),
+    coloc_to_tibble(coloc_polyfun_gwas, "polyfun_gwas"),
+    tibble(
+      gene_name = coloc_metadata$gene_name[[i]]
+  ))
+  colocs <- left_join(colocs, coloc_metadata, by = "gene_name")
+  coloc_results <- c(coloc_results, list(colocs))
+
+  # Finemapping analysis.
+
+  finemapping_results <- c(finemapping_results, list(tibble(
+    # Uniform.
+    unif_eqtl = finemap.abf(eqtl_dataset)$SNP.PP,
+    unif_gwas = finemap.abf(gwas_dataset)$SNP.PP,
+    # eQTLGen.
+    eqtlgen_dist_eqtl = finemap.abf(eqtl_dataset, prior_weights = eqtl_prior_weights_eqtlgen)$SNP.PP,
+    eqtlgen_dist_gwas = finemap.abf(gwas_dataset, prior_weights = eqtl_prior_weights_eqtlgen)$SNP.PP,
+    # OneK1K.
+    onek1k_r1_dist_eqtl = finemap.abf(eqtl_dataset, prior_weights = eqtl_prior_weights)$SNP.PP,
+    onek1k_r1_dist_gwas = finemap.abf(gwas_dataset, prior_weights = eqtl_prior_weights)$SNP.PP,
+    # ABC score.
+    abc_score_eqtl = finemap.abf(eqtl_dataset, prior_weights = abc_score_prior_weights)$SNP.PP,
+    abc_score_gwas = finemap.abf(gwas_dataset, prior_weights = abc_score_prior_weights)$SNP.PP,
+    # Gnocchi.
+    gnocchi_eqtl = finemap.abf(eqtl_dataset, prior_weights = gnocchi_prior_weights)$SNP.PP,
+    gnocchi_gwas = finemap.abf(gwas_dataset, prior_weights = gnocchi_prior_weights)$SNP.PP,
+    # Polyfun.
+    polyfun_eqtl = finemap.abf(eqtl_dataset, prior_weights = polyfun_prior_weights)$SNP.PP,
+    polyfun_gwas = finemap.abf(gwas_dataset, prior_weights = polyfun_prior_weights)$SNP.PP,
+    # Metadata.
+    gene_name = coloc_metadata$gene_name[[i]],
+  ) |>
+    left_join(coloc_metadata, by = "gene_name")
+  ))
 }
 
 write_rds(

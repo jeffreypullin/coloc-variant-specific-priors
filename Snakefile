@@ -27,7 +27,7 @@ rule all:
     expand("data/adipos-express/processed-ab1-eur/{chromosome}.txt", chromosome = chromosomes),
     expand(
       "output/data/gwas-eqtl-coloc-{gwas_id_eqtl_id}-{chr}.rds", 
-      gwas_id_eqtl_id = ["AUTOIMMUNE-QTD000373", "AUTOIMMUNE-QTD000341", "AUTOIMMUNE-QTD000499", "AUTOIMMUNE-QTD000021", "AUTOIMMUNE-QTD000031"],
+      gwas_id_eqtl_id = config["gwas_eqtl_coloc_ids"],
       chr = [x for x in range(1, 23)]
     ),
     expand("output/data/pqtl-eqtl-coloc-{eqtl_id}-{chr}.rds", 
