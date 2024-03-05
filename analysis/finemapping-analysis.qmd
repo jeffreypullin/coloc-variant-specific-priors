@@ -12,6 +12,8 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(forcats)
+library(yaml)
+library(glue)
 
 devtools::load_all("~/coloc")
 ```
@@ -26,23 +28,33 @@ compute_credible_set <- function(pips, alpha = 0.95) {
 ```
 
 ```{r load-data}
+config <- read_yaml(here::here("config.yaml"))
+gwas_ids_eqtl_ids <- config$gwas_eqtl_coloc_ids
 gwas_eqtl_finemapping <- expand_grid(
-  chr = 1:22
-) |>
-  rowwise() |>
-  mutate(file = paste0(
-    here::here("output/data/gwas-eqtl-finemapping"), "-", chr, ".rds")
+  chr = 1:22,
+  gwas_id_eqtl_id = gwas_ids_eqtl_ids
   ) |>
+  separate_wider_delim(gwas_id_eqtl_id, "-", names = c("gwas_id", "eqtl_id")) |>
+  rowwise() |>
+  mutate(file = here::here(
+    glue("output/data/gwas-eqtl-finemapping-{gwas_id}-{eqtl_id}-{chr}.rds")
+  )) |>
   mutate(data = list(read_rds(file))) |>
   unnest(data)
+
 ```
 
 ```{r}
 cs_n_data <- gwas_eqtl_finemapping |>
-  select(gene_name, ends_with("eqtl"), ends_with("gwas")) |>
-  pivot_longer(-gene_name, values_to = "pip") |>
+  select(gene_name, gwas_id, eqtl_id, 
+         ends_with("eqtl"), ends_with("gwas")) |>
+  pivot_longer(
+    -c(gene_name, gwas_id, eqtl_id), 
+    values_to = "pip",
+    names_to = "prior"
+  ) |>
   summarise(cs = list(compute_credible_set(pip)), 
-            .by = c(gene_name, name)) |>
+            .by = c(gene_name, prior, gwas_id, eqtl_id)) |>
   rowwise() |>
   mutate(cs_n = length(cs)) |>
   ungroup()
@@ -50,34 +62,37 @@ cs_n_data <- gwas_eqtl_finemapping |>
 
 ```{r}
 cs_n_data |>
-  mutate(name = fct_reorder(factor(name), cs_n)) |>
-  ggplot(aes(name, log(cs_n))) + 
+  mutate(prior = fct_reorder(factor(prior), cs_n)) |>
+  ggplot(aes(prior, log(cs_n))) + 
   geom_boxplot() + 
   coord_flip() +
+  facet_wrap(~gwas_id) + 
   theme_bw()
 ```
 
 ```{r}
 cs_n_data |>
   mutate(single_cs = cs_n == 1) |>
-  summarise(prop_single_cs = sum(single_cs) / n(), .by = name) |>
-  mutate(name = fct_reorder(factor(name), prop_single_cs)) |>
-  ggplot(aes(name, prop_single_cs)) + 
+  summarise(prop_single_cs = sum(single_cs) / n(),
+           .by = c(prior, gwas_id)) |>
+  mutate(prior = fct_reorder(factor(prior), prop_single_cs)) |>
+  ggplot(aes(prior, prop_single_cs)) + 
   geom_point() + 
-  coord_flip() +
+  coord_flip() + 
+  facet_wrap(~gwas_id) + 
   theme_bw()
 ```
 
 ```{r}
 cs_n_data |>
   filter(cs_n <= 20) |>
-  count(cs_n, name) |>
+  count(cs_n, prior) |>
   ggplot(aes(cs_n, n)) + 
   geom_col() + 
   labs(
     y = "Count",
     x = "Size of single-causal variant CS"
   ) + 
-  facet_wrap(~name) + 
+  facet_wrap(~prior) + 
   theme_bw()
 ```

@@ -36,38 +36,65 @@ gwas_eqtl_colocs <- expand_grid(
 
 ```{r}
 gwas_eqtl_colocs |>
+  filter(gwas_id == "AUTOIMMUNE") |>
   filter(PP.H4.abf_unif > 0.8) |>
-  select(gwas_id, eqtl_id, gene_name, 
-         PP.H4.abf_unif, PP.H4.abf_abc_score_gwas) |>
+  select(gwas_id, eqtl_id, gene_name, PP.H4.abf_unif) |>
   print(n = 100)
 ```
 
 ```{r}
 gwas_eqtl_colocs |>
+  filter(gwas_id == "AUTOIMMUNE") |>
   filter(PP.H4.abf_unif > 0.8) |>
-  summarise(n_eqtl_data_ids = n(), .by = gene_name) |>
-  arrange(desc(n_eqtl_data_ids)) |>
+  count(gene_name) |>
+  arrange(desc(n)) |>
   print(n = 47)
 ```
 
 ```{r}
 gwas_eqtl_colocs |>
+  filter(gwas_id == "AUTOIMMUNE") |>
+  filter(PP.H4.abf_unif > 0.8) |>
+  count(eqtl_id) |>
+  arrange(desc(n)) |>
+  print(n = 47)
+```
+
+```{r}
+gwas_eqtl_colocs |>
+  filter(gwas_id == "T2D_WIDE") |>
+  filter(PP.H4.abf_unif > 0.8) |>
+  select(gwas_id, eqtl_id, gene_name, PP.H4.abf_unif) |>
+  print(n = 50)
+```
+
+```{r}
+gwas_eqtl_colocs |>
   select(gene_name, gwas_id, starts_with("PP.H4.abf")) |>
-  pivot_longer(-c(gene_name, gwas_id), values_to = "pp_h4") |>
+  pivot_longer(
+    -c(gene_name, gwas_id), 
+    names_to = "prior",
+    values_to = "pp_h4"
+  ) |>
   mutate(sig_coloc = pp_h4 > 0.8) |>
-  summarise(n_sig = sum(sig_coloc), .by = name) |>
-  mutate(is_unif = name == "PP.H4.abf_unif") |>
-  mutate(name = fct_reorder(factor(name), n_sig)) |>
-  ggplot(aes(name, n_sig, fill = is_unif)) + 
+  summarise(n_sig = sum(sig_coloc), .by = c(prior, gwas_id)) |>
+  mutate(is_unif = prior == "PP.H4.abf_unif") |>
+  mutate(prior = fct_reorder(factor(prior), n_sig, mean)) |>
+  ggplot(aes(prior, n_sig, fill = is_unif)) + 
   geom_col() + 
   coord_flip() + 
   labs(
     y = "Number of signifcant (Pr(H4) > 0.8) colocalisations", 
     x = "Prior type"
   ) +
+  facet_wrap(~gwas_id, scales = "free_x") + 
   theme_bw() + 
   theme(legend.position = "none")
 ```
+
+CRIP3 colocalises in monocytes
+CHP1 colocalises in eQTLGen
+PIGV colocalises in monocytes
 
 ```{r}
 gwas_eqtl_colocs |>
@@ -75,6 +102,7 @@ gwas_eqtl_colocs |>
     sig_abc_score_gwas = PP.H4.abf_abc_score_gwas > 0.8,
     sig_unif = PP.H4.abf_unif > 0.8
   ) |>
+  arrange(gwas_id) |>
   filter(sig_abc_score_gwas != sig_unif) |>
   select(gwas_id, eqtl_id, gene_name,
          PP.H4.abf_unif, PP.H4.abf_abc_score_gwas)
@@ -86,6 +114,7 @@ gwas_eqtl_colocs |>
     sig_gwas_tss_eqtlgen = PP.H4.abf_gwas_tss_eqtlgen > 0.8,
     sig_unif = PP.H4.abf_unif > 0.8
   ) |>
+  arrange(gwas_id) |>
   filter(sig_gwas_tss_eqtlgen != sig_unif) |>
   select(gwas_id, eqtl_id, gene_name,
          PP.H4.abf_unif, PP.H4.abf_gwas_tss_eqtlgen)
