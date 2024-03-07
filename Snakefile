@@ -23,7 +23,7 @@ rule all:
     "data/abc-data.txt.gz",
     expand("data/eqtl-catalogue/processed-sumstats/{dataset_id}.cc.tsv",
             dataset_id = config["eqtl_catalogue_dataset_ids"]),
-    expand("output/data/sim-result-{locus}.rds", locus = ["PTPN22", "IL21", "IRF5"]),
+    expand("output/data/sim-result-{locus}.rds", locus = config["simulation_loci"]),
     expand("data/adipos-express/processed-ab1-eur/{chromosome}.txt", chromosome = chromosomes),
     expand(
       "output/data/gwas-eqtl-coloc-{gwas_id_eqtl_id}-{chr}.rds", 

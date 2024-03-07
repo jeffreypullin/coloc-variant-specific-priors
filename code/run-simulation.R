@@ -19,7 +19,7 @@ simulate_dataset <- function(cv) {
 
   n_0 <- 2000
   n_1 <- 2000
-  n_rep <- 1000
+  n_rep <- 2000
 
   accept <- FALSE
   while (!accept) {
@@ -99,11 +99,18 @@ if (nrow(legend) > 500) {
   legend <- legend[sample_ind, ]
 }
 
+ld <- cor(haps)
+ind <- which(apply(ld, 2, function(x) sum(x >= 0.7)) >= 20)
+if (length(ind) > 0) {
+  haps <- haps[, ind]
+  legend <- legend[ind, ]
+}
+
 freq <- as.data.frame((haps + 1))
 freq$Probability <- 1 / nrow(freq)
 
-snps <- colnames(haps)
 ld <- cor(haps)
+snps <- colnames(haps)
 maf <- pmin(colMeans(haps), 1 - colMeans(haps))
 pos <- vapply(strsplit(snps, "-"), \(x) as.numeric(x[[2]]), numeric(1))
 

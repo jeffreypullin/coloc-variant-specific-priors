@@ -132,3 +132,7 @@ gwas_eqtl_coloc_ids:
  - "I9_HYPTENS-QTD000256" # GTEx left heart ventricle
  - "I9_HYPTENS-QTD000136" # GTEx artery coronary
  - "I9_HYPTENS-QTD000261" # GTEx kidney
+simulation_loci:
+  - "PTPN22"
+  - "IL21"
+  - "IFT172"

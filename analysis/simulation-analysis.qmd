@@ -11,11 +11,15 @@ library(dplyr)
 library(readr)
 library(ggplot2)
 library(glue)
+library(yaml)
+
+devtools::load_all("~/coloc")
 ```
 
 ```{r load-data}
-locus <- c("PTPN22", "IL21", "IRF5")
-simulation_data <- lapply(locus, function(x) {
+config <- read_yaml(here::here("config.yaml"))
+sim_loci <- config$simulation_loci
+simulation_data <- lapply(sim_loci, function(x) {
   here::here(glue("output/data/sim-result-{x}.rds")) |>
   read_rds() |>
   mutate(locus = x)
@@ -34,7 +38,7 @@ simulation_data |>
     n_tp = sum(tp),
     n_fn = sum(fn), 
     n_fp = sum(fp),
-    .by = prior
+    .by = c(prior, locus), 
   ) |>
   mutate(
     recall = n_tp / (n_tp + n_fn),
@@ -67,4 +71,35 @@ simulation_data |>
     fill = "Prior type"
   ) +
   facet_wrap(~locus)
+```
+
+```{r}
+prior_weights <- list()
+pos <- list()
+locus <- list()
+for (i in seq_along(sim_loci)) {
+  file <- glue(here::here("data/{sim_loci[[i]]}.vcf.gz.impute.legend"))
+  legend <- read_delim(file, show_col_types = FALSE) 
+  pos[[i]] <- legend$pos
+  prior_weights[[i]] <- compute_eqtl_tss_dist_prior_weights(
+    pos[[i]],
+    round(median(pos[[i]]), 0),
+    read_rds(here::here("output/densities/eqtlgen.rds"))
+  )
+  locus[[i]] <- rep(sim_loci[[i]], length(pos[[i]]))
+}
+
+tibble(
+  locus = unlist(locus),
+  pos = unlist(pos),
+  prior_weight = unlist(prior_weights)
+) |> 
+  ggplot(aes(pos, prior_weight)) + 
+  geom_point() + 
+  facet_wrap(~ locus, scales = "free_x") + 
+  labs(
+    x = "Position",
+    y = "Prior weight"
+  ) + 
+  theme_bw() 
 ```

@@ -1,8 +1,8 @@
 #!/bin/bash
 
-declare -A locus_start=( ["IL21"]=122529959 ["PTPN22"]=113771759 ["IRF5"]=128927032)
-declare -A locus_end=( ["IL21"]=122729959 ["PTPN22"]=113971759 ["IRF5"]=129037032)
-declare -A locus_chr=( ["IL21"]=4 ["PTPN22"]=1 ["IRF5"]=7)
+declare -A locus_start=( ["IL21"]=122121066 ["PTPN22"]=113313811 ["IFT172"]=26989805)
+declare -A locus_end=( ["IL21"]=123121066 ["PTPN22"]=114313811 ["IFT172"]=27989805)
+declare -A locus_chr=( ["IL21"]=4 ["PTPN22"]=1 ["IFT172"]=2)
 
 data_dir="/home/jp2045/rds/rds-wallace-share-rU5KyGZrBOo/Data/reference"
 sample_file="$data_dir/1000GP_Phase3/sparse_basis/EUR.sample"
