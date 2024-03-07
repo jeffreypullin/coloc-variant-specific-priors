@@ -189,7 +189,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(gwas_id, eqtl_id, gene_name, PP.H4.abf_unif) <span class="sc">|&gt;</span></span>
 <span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="at">n =</span> <span class="dv">100</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 78 × 4
+<pre><code># A tibble: 89 × 4
    gwas_id    eqtl_id   gene_name PP.H4.abf_unif
    &lt;chr&gt;      &lt;chr&gt;     &lt;chr&gt;              &lt;dbl&gt;
  1 AUTOIMMUNE QTD000373 MMEL1              0.943
@@ -207,69 +207,80 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 13 AUTOIMMUNE QTD000031 DRAM2              0.991
 14 AUTOIMMUNE QTD000031 CEPT1              0.991
 15 AUTOIMMUNE QTD000031 DENND2D            0.991
-16 AUTOIMMUNE QTD000373 PUS10              0.929
-17 AUTOIMMUNE QTD000373 C2orf74            0.940
-18 AUTOIMMUNE QTD000373 PPIL3              0.997
-19 AUTOIMMUNE QTD000341 TPO                0.993
-20 AUTOIMMUNE QTD000341 C2orf74            0.921
-21 AUTOIMMUNE QTD000341 ACTR1B             0.984
-22 AUTOIMMUNE QTD000341 PPIL3              0.980
-23 AUTOIMMUNE QTD000095 ADCY3              0.886
-24 AUTOIMMUNE QTD000095 PPIL3              0.997
-25 AUTOIMMUNE QTD000021 ADCY3              0.809
-26 AUTOIMMUNE QTD000021 PUS10              0.925
-27 AUTOIMMUNE QTD000021 ANKRD36            0.977
-28 AUTOIMMUNE QTD000021 ACTR1B             0.962
-29 AUTOIMMUNE QTD000021 PPIL3              0.995
-30 AUTOIMMUNE QTD000031 PUS10              0.912
-31 AUTOIMMUNE QTD000031 ANKRD36            0.983
-32 AUTOIMMUNE QTD000031 ACTR1B             0.984
-33 AUTOIMMUNE QTD000031 TYW5               0.919
-34 AUTOIMMUNE QTD000031 PPIL3              0.995
-35 AUTOIMMUNE QTD000373 ANKRD55            1.00 
-36 AUTOIMMUNE QTD000341 PDE8B              0.990
-37 AUTOIMMUNE QTD000031 ANKRD55            1.00 
-38 AUTOIMMUNE QTD000021 H4C13              0.918
-39 AUTOIMMUNE QTD000031 H4C13              0.977
-40 AUTOIMMUNE QTD000031 BACH2              0.999
-41 AUTOIMMUNE QTD000373 IRF5               0.994
-42 AUTOIMMUNE QTD000341 IRF5               0.989
-43 AUTOIMMUNE QTD000021 IRF5               0.906
-44 AUTOIMMUNE QTD000341 RAB2A              0.943
-45 AUTOIMMUNE QTD000341 RAB14              0.866
-46 AUTOIMMUNE QTD000341 NEK6               0.990
-47 AUTOIMMUNE QTD000021 TNFSF8             0.984
-48 AUTOIMMUNE QTD000021 TRAF1              0.927
-49 AUTOIMMUNE QTD000373 SLC29A3            0.999
-50 AUTOIMMUNE QTD000341 NKX2-3             1.00 
-51 AUTOIMMUNE QTD000341 IRF7               0.900
-52 AUTOIMMUNE QTD000341 DRD4               0.838
-53 AUTOIMMUNE QTD000095 PRR5L              0.992
-54 AUTOIMMUNE QTD000021 LMNTD2             0.968
-55 AUTOIMMUNE QTD000373 METTL7B            0.944
-56 AUTOIMMUNE QTD000031 MARS1              0.889
-57 AUTOIMMUNE QTD000021 COG6               0.974
-58 AUTOIMMUNE QTD000095 RASGRP1            0.985
-59 AUTOIMMUNE QTD000373 GINS2              0.808
-60 AUTOIMMUNE QTD000021 BRD7               0.884
-61 AUTOIMMUNE QTD000031 APOBR              0.998
-62 AUTOIMMUNE QTD000373 ACAP1              0.997
-63 AUTOIMMUNE QTD000373 KCTD11             0.997
-64 AUTOIMMUNE QTD000031 ACAP1              0.997
-65 AUTOIMMUNE QTD000031 KCTD11             0.997
-66 AUTOIMMUNE QTD000373 CD226              0.989
-67 AUTOIMMUNE QTD000373 IQCN               0.976
-68 AUTOIMMUNE QTD000373 NTN5               0.911
-69 AUTOIMMUNE QTD000341 NTN5               0.909
-70 AUTOIMMUNE QTD000021 IQCN               0.975
-71 AUTOIMMUNE QTD000373 UBASH3A            0.954
-72 AUTOIMMUNE QTD000341 UBASH3A            0.954
-73 AUTOIMMUNE QTD000031 UBASH3A            0.954
-74 AUTOIMMUNE QTD000373 SYNGR1             0.906
-75 AUTOIMMUNE QTD000095 SYNGR1             0.909
-76 AUTOIMMUNE QTD000021 LIF                0.998
-77 AUTOIMMUNE QTD000021 DDX17              0.920
-78 AUTOIMMUNE QTD000031 DDX17              0.962</code></pre>
+16 AUTOIMMUNE QTD000090 VAV3               0.948
+17 AUTOIMMUNE QTD000373 PUS10              0.929
+18 AUTOIMMUNE QTD000373 C2orf74            0.940
+19 AUTOIMMUNE QTD000373 PPIL3              0.997
+20 AUTOIMMUNE QTD000341 TPO                0.993
+21 AUTOIMMUNE QTD000341 C2orf74            0.921
+22 AUTOIMMUNE QTD000341 ACTR1B             0.984
+23 AUTOIMMUNE QTD000341 PPIL3              0.980
+24 AUTOIMMUNE QTD000095 ADCY3              0.886
+25 AUTOIMMUNE QTD000095 PPIL3              0.997
+26 AUTOIMMUNE QTD000021 ADCY3              0.809
+27 AUTOIMMUNE QTD000021 PUS10              0.925
+28 AUTOIMMUNE QTD000021 ANKRD36            0.977
+29 AUTOIMMUNE QTD000021 ACTR1B             0.962
+30 AUTOIMMUNE QTD000021 PPIL3              0.995
+31 AUTOIMMUNE QTD000031 PUS10              0.912
+32 AUTOIMMUNE QTD000031 ANKRD36            0.983
+33 AUTOIMMUNE QTD000031 ACTR1B             0.984
+34 AUTOIMMUNE QTD000031 TYW5               0.919
+35 AUTOIMMUNE QTD000031 PPIL3              0.995
+36 AUTOIMMUNE QTD000090 CIAO1              0.896
+37 AUTOIMMUNE QTD000090 PPIL3              0.996
+38 AUTOIMMUNE QTD000090 TIMP4              0.937
+39 AUTOIMMUNE QTD000373 ANKRD55            1.00 
+40 AUTOIMMUNE QTD000341 PDE8B              0.990
+41 AUTOIMMUNE QTD000031 ANKRD55            1.00 
+42 AUTOIMMUNE QTD000021 H4C13              0.918
+43 AUTOIMMUNE QTD000031 H4C13              0.977
+44 AUTOIMMUNE QTD000031 BACH2              0.999
+45 AUTOIMMUNE QTD000090 ITPR3              0.908
+46 AUTOIMMUNE QTD000373 IRF5               0.994
+47 AUTOIMMUNE QTD000341 IRF5               0.989
+48 AUTOIMMUNE QTD000021 IRF5               0.906
+49 AUTOIMMUNE QTD000090 IRF5               0.988
+50 AUTOIMMUNE QTD000341 RAB2A              0.943
+51 AUTOIMMUNE QTD000090 RAB2A              0.938
+52 AUTOIMMUNE QTD000341 RAB14              0.866
+53 AUTOIMMUNE QTD000341 NEK6               0.990
+54 AUTOIMMUNE QTD000021 TNFSF8             0.984
+55 AUTOIMMUNE QTD000021 TRAF1              0.927
+56 AUTOIMMUNE QTD000373 SLC29A3            0.999
+57 AUTOIMMUNE QTD000341 NKX2-3             1.00 
+58 AUTOIMMUNE QTD000341 IRF7               0.900
+59 AUTOIMMUNE QTD000341 DRD4               0.838
+60 AUTOIMMUNE QTD000095 PRR5L              0.992
+61 AUTOIMMUNE QTD000021 LMNTD2             0.968
+62 AUTOIMMUNE QTD000373 METTL7B            0.944
+63 AUTOIMMUNE QTD000031 MARS1              0.889
+64 AUTOIMMUNE QTD000021 COG6               0.974
+65 AUTOIMMUNE QTD000090 COG6               0.943
+66 AUTOIMMUNE QTD000095 RASGRP1            0.985
+67 AUTOIMMUNE QTD000373 GINS2              0.808
+68 AUTOIMMUNE QTD000021 BRD7               0.884
+69 AUTOIMMUNE QTD000031 APOBR              0.998
+70 AUTOIMMUNE QTD000373 ACAP1              0.997
+71 AUTOIMMUNE QTD000373 KCTD11             0.997
+72 AUTOIMMUNE QTD000031 ACAP1              0.997
+73 AUTOIMMUNE QTD000031 KCTD11             0.997
+74 AUTOIMMUNE QTD000090 ORMDL3             0.918
+75 AUTOIMMUNE QTD000090 KCNH4              0.934
+76 AUTOIMMUNE QTD000373 CD226              0.989
+77 AUTOIMMUNE QTD000373 IQCN               0.976
+78 AUTOIMMUNE QTD000373 NTN5               0.911
+79 AUTOIMMUNE QTD000341 NTN5               0.909
+80 AUTOIMMUNE QTD000021 IQCN               0.975
+81 AUTOIMMUNE QTD000373 UBASH3A            0.954
+82 AUTOIMMUNE QTD000341 UBASH3A            0.954
+83 AUTOIMMUNE QTD000031 UBASH3A            0.954
+84 AUTOIMMUNE QTD000090 UBASH3A            0.916
+85 AUTOIMMUNE QTD000373 SYNGR1             0.906
+86 AUTOIMMUNE QTD000095 SYNGR1             0.909
+87 AUTOIMMUNE QTD000021 LIF                0.998
+88 AUTOIMMUNE QTD000021 DDX17              0.920
+89 AUTOIMMUNE QTD000031 DDX17              0.962</code></pre>
 </div>
 </div>
 <div class="cell">
@@ -280,57 +291,57 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(n)) <span class="sc">|&gt;</span></span>
 <span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="at">n =</span> <span class="dv">47</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 50 × 2
+<pre><code># A tibble: 55 × 2
    gene_name     n
    &lt;chr&gt;     &lt;int&gt;
- 1 PPIL3         5
- 2 MMEL1         4
- 3 ACTR1B        3
- 4 IRF5          3
- 5 PUS10         3
- 6 UBASH3A       3
+ 1 PPIL3         6
+ 2 IRF5          4
+ 3 MMEL1         4
+ 4 UBASH3A       4
+ 5 ACTR1B        3
+ 6 PUS10         3
  7 ACAP1         2
  8 ADCY3         2
  9 ANKRD36       2
 10 ANKRD55       2
 11 C2orf74       2
 12 CEPT1         2
-13 DDX17         2
-14 DENND2D       2
-15 H4C13         2
-16 IQCN          2
-17 KCTD11        2
-18 NTN5          2
-19 SYNGR1        2
-20 APOBR         1
-21 BACH2         1
-22 BRD7          1
-23 CD226         1
-24 COG6          1
-25 DRAM2         1
-26 DRD4          1
-27 FUBP1         1
-28 GINS2         1
-29 GPR25         1
-30 INPP5B        1
-31 IRF7          1
-32 LIF           1
-33 LMNTD2        1
-34 MARS1         1
-35 METTL7B       1
-36 NEK6          1
-37 NKX2-3        1
-38 PDE8B         1
-39 PRR5L         1
-40 RAB14         1
-41 RAB2A         1
-42 RASGRP1       1
-43 SLC29A3       1
-44 SLC66A1       1
-45 TNFSF8        1
-46 TPO           1
-47 TRAF1         1
-# ℹ 3 more rows</code></pre>
+13 COG6          2
+14 DDX17         2
+15 DENND2D       2
+16 H4C13         2
+17 IQCN          2
+18 KCTD11        2
+19 NTN5          2
+20 RAB2A         2
+21 SYNGR1        2
+22 VAV3          2
+23 APOBR         1
+24 BACH2         1
+25 BRD7          1
+26 CD226         1
+27 CIAO1         1
+28 DRAM2         1
+29 DRD4          1
+30 FUBP1         1
+31 GINS2         1
+32 GPR25         1
+33 INPP5B        1
+34 IRF7          1
+35 ITPR3         1
+36 KCNH4         1
+37 LIF           1
+38 LMNTD2        1
+39 MARS1         1
+40 METTL7B       1
+41 NEK6          1
+42 NKX2-3        1
+43 ORMDL3        1
+44 PDE8B         1
+45 PRR5L         1
+46 RAB14         1
+47 RASGRP1       1
+# ℹ 8 more rows</code></pre>
 </div>
 </div>
 <div class="cell">
@@ -341,14 +352,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">desc</span>(n)) <span class="sc">|&gt;</span></span>
 <span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="at">n =</span> <span class="dv">47</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 5 × 2
+<pre><code># A tibble: 6 × 2
   eqtl_id       n
   &lt;chr&gt;     &lt;int&gt;
 1 QTD000031    20
 2 QTD000373    19
 3 QTD000021    17
 4 QTD000341    16
-5 QTD000095     6</code></pre>
+5 QTD000090    11
+6 QTD000095     6</code></pre>
 </div>
 </div>
 <div class="cell">
@@ -358,7 +370,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(gwas_id, eqtl_id, gene_name, PP.H4.abf_unif) <span class="sc">|&gt;</span></span>
 <span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">print</span>(<span class="at">n =</span> <span class="dv">50</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 33 × 4
+<pre><code># A tibble: 34 × 4
    gwas_id  eqtl_id   gene_name PP.H4.abf_unif
    &lt;chr&gt;    &lt;chr&gt;     &lt;chr&gt;              &lt;dbl&gt;
  1 T2D_WIDE QTD000373 PABPC4             0.935
@@ -387,13 +399,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 24 T2D_WIDE QTD000266 AP3S2              0.975
 25 T2D_WIDE QTD000321 AP3S2              0.968
 26 T2D_WIDE QTD000296 AP3S2              0.954
-27 T2D_WIDE QTD000373 RMC1               0.877
-28 T2D_WIDE QTD000090 RMC1               0.942
-29 T2D_WIDE QTD000296 NPC1               0.874
-30 T2D_WIDE QTD000373 DMPK               0.933
-31 T2D_WIDE QTD000373 DMWD               0.948
-32 T2D_WIDE QTD000296 DMWD               0.941
-33 T2D_WIDE QTD000373 NELFCD             0.990</code></pre>
+27 T2D_WIDE QTD000261 AP3S2              0.960
+28 T2D_WIDE QTD000373 RMC1               0.877
+29 T2D_WIDE QTD000090 RMC1               0.942
+30 T2D_WIDE QTD000296 NPC1               0.874
+31 T2D_WIDE QTD000373 DMPK               0.933
+32 T2D_WIDE QTD000373 DMWD               0.948
+33 T2D_WIDE QTD000296 DMWD               0.941
+34 T2D_WIDE QTD000373 NELFCD             0.990</code></pre>
 </div>
 </div>
 <div class="cell">
