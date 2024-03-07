@@ -165,7 +165,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">load_all</span>(<span class="st">"~/coloc"</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>locus <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"PTPN22"</span>, <span class="st">"IL21"</span>, <span class="st">"IRF5"</span>, <span class="st">"IFT172"</span>)</span>
+<div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>locus <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"IL21"</span>, <span class="st">"IFT172"</span>, <span class="st">"PTPN22"</span>)</span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>simulation_data <span class="ot">&lt;-</span> <span class="fu">lapply</span>(locus, <span class="cf">function</span>(x) {</span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  here<span class="sc">::</span><span class="fu">here</span>(<span class="fu">glue</span>(<span class="st">"output/data/sim-result-{x}.rds"</span>)) <span class="sc">|&gt;</span></span>
 <span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">read_rds</span>() <span class="sc">|&gt;</span></span>
@@ -184,18 +184,22 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_tp =</span> <span class="fu">sum</span>(tp),</span>
 <span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_fn =</span> <span class="fu">sum</span>(fn), </span>
 <span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>    <span class="at">n_fp =</span> <span class="fu">sum</span>(fp),</span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> prior</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">.by =</span> <span class="fu">c</span>(prior, locus), </span>
 <span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
 <span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
 <span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a>    <span class="at">recall =</span> n_tp <span class="sc">/</span> (n_tp <span class="sc">+</span> n_fn),</span>
 <span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>    <span class="at">precision =</span> n_tp <span class="sc">/</span> (n_tp <span class="sc">+</span> n_fp)</span>
 <span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a>  )</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 2 × 6
-  prior     n_tp  n_fn  n_fp recall precision
-  &lt;chr&gt;    &lt;int&gt; &lt;int&gt; &lt;int&gt;  &lt;dbl&gt;     &lt;dbl&gt;
-1 unif       132    67     9  0.663     0.936
-2 non_unif   141    58    10  0.709     0.934</code></pre>
+<pre><code># A tibble: 6 × 7
+  prior    locus   n_tp  n_fn  n_fp recall precision
+  &lt;chr&gt;    &lt;chr&gt;  &lt;int&gt; &lt;int&gt; &lt;int&gt;  &lt;dbl&gt;     &lt;dbl&gt;
+1 unif     IL21      45     3     5  0.938     0.9  
+2 non_unif IL21      47     1     5  0.979     0.904
+3 unif     IFT172    14    35     2  0.286     0.875
+4 non_unif IFT172    48     1     6  0.980     0.889
+5 unif     PTPN22    48     3     1  0.941     0.980
+6 non_unif PTPN22    49     2     2  0.961     0.961</code></pre>
 </div>
 </div>
 <div class="cell">
@@ -261,6 +265,25 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb9-29"><a href="#cb9-29" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>() </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <p><img src="simulation-analysis_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>locus <span class="ot">&lt;-</span> <span class="st">"PTPN22"</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>legend_file <span class="ot">&lt;-</span> <span class="fu">glue</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">"data/{locus}.vcf.gz.impute.legend"</span>))</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>haps_file <span class="ot">&lt;-</span> <span class="fu">glue</span>(here<span class="sc">::</span><span class="fu">here</span>(<span class="st">"data/{locus}.vcf.gz.impute.hap"</span>))</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>legend <span class="ot">&lt;-</span> <span class="fu">read_delim</span>(legend_file, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>haps <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">scan</span>(haps_file, <span class="at">what =</span> <span class="dv">0</span>), <span class="at">ncol =</span> <span class="fu">nrow</span>(legend))</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="fu">colnames</span>(haps) <span class="ot">&lt;-</span> legend<span class="sc">$</span>ID</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>ld <span class="ot">&lt;-</span> <span class="fu">cor</span>(haps)</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(<span class="fu">apply</span>(ld, <span class="dv">2</span>, <span class="cf">function</span>(x) <span class="fu">sum</span>(x <span class="sc">&gt;=</span> <span class="fl">0.7</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output-display">
+<p><img src="simulation-analysis_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
+</div>
+<div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="fu">dim</span>(ld)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>[1] 2558 2558</code></pre>
 </div>
 </div>
 
