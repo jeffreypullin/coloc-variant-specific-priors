@@ -30,7 +30,7 @@ finemapping_results_file <- snakemake@output[["finemapping_results_file"]]
 eqtl_metadata <- read_tsv(eqtl_metadata_file, show_col_types = FALSE)
 manifest_data <- read_tsv(manifest_file, show_col_types = FALSE)
 
-width <- 1e5
+width <- 5e5
 coloc_metadata <- eqtl_metadata |>
   filter(gene_type == "protein_coding") |>
   mutate(tss = if_else(strand == 1, gene_start, gene_end)) |>
@@ -218,7 +218,7 @@ for (i in seq_len(nrow(coloc_metadata))) {
     eqtl_dataset$position, chr, coloc_metadata$gene_name[[i]], abc_score_data
   )
   abc_score_primary_blood_prior_weights <- compute_abc_prior_weights(
-    eqtl_dataset$position, chr, coloc_metadata$gene_name[[i]], abc_score_data, 
+    eqtl_dataset$position, chr, coloc_metadata$gene_name[[i]], abc_score_data,
     biosamples = "primary_blood"
   )
 
@@ -231,6 +231,9 @@ for (i in seq_len(nrow(coloc_metadata))) {
   polyfun_prior_weights <- compute_polyfun_prior_weights(
     eqtl_dataset$position, chr, polyfun_data
   )
+
+  rand_prior_weights <- compute_rand_prior_weights(eqtl_dataset$position)
+  shuffled_polyfun_prior_weights <- sample(polyfun_prior_weights)
 
   # Colocalisation analysis.
 
@@ -343,6 +346,53 @@ for (i in seq_len(nrow(coloc_metadata))) {
     prior_weights2 = abc_score_primary_blood_prior_weights
   )
 
+  coloc_rand_eqtl <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights1 = rand_prior_weights
+  )
+
+  coloc_rand_gwas <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights2 = rand_prior_weights
+  )
+
+  coloc_shuffled_polyfun_eqtl <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights1 = rand_prior_weights
+  )
+
+  coloc_shuffled_polyfun_gwas <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights2 = rand_prior_weights
+  )
+
+  # Uncertainty estimation.
+  N <- 500
+  pp_h4_1 <- numeric(N)
+  pp_h4_2 <- numeric(N)
+  for (j in seq_len(N)) {
+    rand_prior_weights <- compute_rand_prior_weights(eqtl_dataset$position)
+    pp_h4_1[[j]] <- coloc.abf(
+      eqtl_dataset,
+      gwas_dataset,
+      prior_weights1 = rand_prior_weights
+    )$summary["PP.H4.abf"]
+    pp_h4_2[[j]] <- coloc.abf(
+      eqtl_dataset,
+      gwas_dataset,
+      prior_weights2 = rand_prior_weights
+    )$summary["PP.H4.abf"]
+  }
+  var_pp_h4_1 <- var(pp_h4_1)
+  var_pp_h4_2 <- var(pp_h4_2)
+  prop_sig_pp_h4_1 <- sum(pp_h4_1 > 0.8) / N
+  prop_sig_pp_h4_2 <- sum(pp_h4_2 > 0.8) / N
+  q_pp_h4_2 <- quantile(pp_h4_2, c(0, 0.05, 0.25, 0.5, 0.75, 0.95))
+
   colocs <- bind_cols(
     coloc_to_tibble(coloc_unif, "unif"),
     # OneK1K estimated.
@@ -362,10 +412,21 @@ for (i in seq_len(nrow(coloc_metadata))) {
     coloc_to_tibble(coloc_abc_score_eqtl, "abc_score_eqtl"),
     coloc_to_tibble(coloc_abc_score_gwas, "abc_score_gwas"),
     coloc_to_tibble(coloc_abc_score_gwas_primary_blood, "abc_score_gwas_primary_blood"),
-    # polyfun.
+    # Polyfun.
     coloc_to_tibble(coloc_polyfun_eqtl, "polyfun_eqtl"),
     coloc_to_tibble(coloc_polyfun_gwas, "polyfun_gwas"),
+    # Random.
+    coloc_to_tibble(coloc_rand_eqtl, "rand_eqtl"),
+    coloc_to_tibble(coloc_rand_gwas, "rand_gwas"),
+    # Shuffled Polyfun.
+    coloc_to_tibble(coloc_shuffled_polyfun_eqtl, "shuffled_polyfun_eqtl"),
+    coloc_to_tibble(coloc_shuffled_polyfun_gwas, "shuffled_polyfun_gwas"),
     tibble(
+      var_pp_h4_1 = var_pp_h4_1,
+      var_pp_h4_2 = var_pp_h4_2,
+      prop_sig_pp_h4_1 = prop_sig_pp_h4_1,
+      prop_sig_pp_h4_2 = prop_sig_pp_h4_2,
+      q_pp_h4_2 = list(q_pp_h4_2),
       gene_name = coloc_metadata$gene_name[[i]]
   ))
   colocs <- left_join(colocs, coloc_metadata, by = "gene_name")
@@ -392,6 +453,12 @@ for (i in seq_len(nrow(coloc_metadata))) {
     # Polyfun.
     polyfun_eqtl = finemap.abf(eqtl_dataset, prior_weights = polyfun_prior_weights)$SNP.PP,
     polyfun_gwas = finemap.abf(gwas_dataset, prior_weights = polyfun_prior_weights)$SNP.PP,
+    # Random.
+    rand_eqtl = finemap.abf(eqtl_dataset, prior_weights = rand_prior_weights)$SNP.PP,
+    rand_gwas = finemap.abf(gwas_dataset, prior_weights = rand_prior_weights)$SNP.PP,
+    # Shuffled polyfun.
+    shuffled_polyfun_eqtl = finemap.abf(eqtl_dataset, prior_weights = shuffled_polyfun_prior_weights)$SNP.PP,
+    shuffled_polyfun_gwas = finemap.abf(gwas_dataset, prior_weights = shuffled_polyfun_prior_weights)$SNP.PP,
     # Metadata.
     gene_name = coloc_metadata$gene_name[[i]],
   ) |>

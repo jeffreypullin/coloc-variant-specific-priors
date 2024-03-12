@@ -10,7 +10,7 @@ cluster: "
   -o logs/{rule}_{wildcards}.out
   -e logs/{rule}_{wildcards}.err
 "
-jobs: 100
+jobs: 200
 rerun-incomplete: true
 max-jobs-per-second: 1
 printshellcmds: true
