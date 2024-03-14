@@ -4,6 +4,7 @@ source(here::here("renv/activate.R"))
 library(dplyr)
 library(biomaRt)
 library(janitor)
+library(readr)
 
 density_to_tibble <- function(dens) {
   tibble(x = dens$x, y = dens$y)
@@ -20,7 +21,7 @@ hg19_tss_data <- getBM(
 ) |>
   as_tibble() |>
   mutate(transcription_start_site = if_else(strand == 1, transcript_start, transcript_end)) |>
-  select(transcription_start_site, ensembl_gene_id, strand) |>
+  dplyr::select(transcription_start_site, ensembl_gene_id, strand) |>
   rename(tss = transcription_start_site)
 
 onek1k_data <- read_tsv("data/onek1k.tsv",
@@ -38,9 +39,9 @@ onek1k_cd4nc_round_1 <- onek1k_data |>
   ) |>
   # FIXME: Is this right?
   mutate(tss_distance = if_else(strand == 1, pos - tss, tss - pos)) |>
-  filter(abs(tss_distance) <= 1e5) |>
+  filter(abs(tss_distance) <= 1e6) |>
   pull(tss_distance) |>
-  density(bw = "SJ", cut = 0, adjust = 5) |>
+  density(bw = "SJ", cut = 0, adjust = 8) |>
   density_to_tibble()
 
 onek1k_cd4nc_round_2 <- onek1k_data |>
@@ -51,9 +52,9 @@ onek1k_cd4nc_round_2 <- onek1k_data |>
   left_join(hg19_tss_data, by = join_by(gene_id == ensembl_gene_id)) |>
   # fixme: is this right?
   mutate(tss_distance = if_else(strand == 1, pos - tss, tss - pos)) |>
-  filter(abs(tss_distance) <= 1e5) |>
+  filter(abs(tss_distance) <= 1e6) |>
   pull(tss_distance) |>
-  density(bw = "sj", cut = 0, adjust = 5) |>
+  density(bw = "sj", cut = 0, adjust = 8) |>
   density_to_tibble()
 
 onek1k_cd4nc_round_3 <- onek1k_data |>
@@ -66,12 +67,12 @@ onek1k_cd4nc_round_3 <- onek1k_data |>
   ) |>
   # FIXME: Is this right?
   mutate(tss_distance = if_else(strand == 1, pos - tss, tss - pos)) |>
-  filter(abs(tss_distance) <= 1e5) |>
+  filter(abs(tss_distance) <= 1e6) |>
   pull(tss_distance) |>
-  density(bw = "SJ", cut = 0, adjust = 5) |>
+  density(bw = "SJ", cut = 0, adjust = 8) |>
   density_to_tibble()
 
-eqtlgen_data <- read_tsv("data/eqtlgen.txt",
+raw_eqtlgen_data <- read_tsv("data/eqtlgen.txt",
                          col_select = c(gene_symbol, snp_pos, gene_pos, pvalue),
                          name_repair = make_clean_names,
                          show_col_types = FALSE, progress = FALSE)
@@ -83,7 +84,7 @@ eqtlgen <- raw_eqtlgen_data |>
   filter(row_number() == 1) |>
   mutate(tss_distance = snp_pos - gene_pos) |>
   ungroup() |>
-  filter(abs(tss_distance) <= 3e5) |>
+  filter(abs(tss_distance) <= 1e6) |>
   pull(tss_distance) |>
   density(bw = "SJ", cut = 0, adjust = 5) |>
   density_to_tibble()
