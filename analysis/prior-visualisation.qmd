@@ -5,7 +5,7 @@ editor: source
 ---
 
 ```{r message = FALSE, warning = FALSE}
-renv::load("..")
+renv::load(here::here())
 
 library(ggplot2)
 library(arrow)
@@ -35,9 +35,14 @@ snp_var_data_1_7 <- read_parquet(here::here("data/snpvar_meta.chr1_7.parquet"))
 
 chr <- 1
 tss <- 113871759
+width <- 1e6
 gene_name <- "PTPN22"
+region <- paste0(chr, ":", tss - width, "-",  tss + width)
 
-position <- tabix.read.table(here::here("data/T1D_Chiou_34012112_1-hg38.tsv.gz"), "1:1-2147483647") |> 
+position <- tabix.read.table(
+  here::here("data/T1D_Chiou_34012112_1-hg38.tsv.gz"), 
+  region
+) |> 
   as_tibble() |>
   rename(
     rsid = SNPID,
@@ -53,11 +58,6 @@ position <- tabix.read.table(here::here("data/T1D_Chiou_34012112_1-hg38.tsv.gz")
     variant = paste0("chr", chromosome, "_", position, "_", REF, "_", ALT)
   ) |>
   select(-c(sample_size, REF, ALT)) |>
-    filter(chromosome == chr) |>
-    filter(
-      position <= tss + 100000 &
-      position >= tss - 100000
-  ) |>
   prepare_coloc_dataset() |>
   pull(position)
 ```
