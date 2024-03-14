@@ -25,8 +25,9 @@ chr <- as.numeric(snakemake@wildcards[["chr"]])
 eqtl_metadata <- read_tsv(eqtl_metadata_file, show_col_types = FALSE)
 pqtl_metadata <- read_tsv(pqtl_metadata_file, show_col_types = FALSE)
 
-width <- 1e5
+width <- 1e6
 coloc_metadata <- eqtl_metadata |>
+  filter(gene_type == "protein_coding") |>
   mutate(tss = if_else(strand == 1, gene_start, gene_end)) |>
   rowwise() |>
   mutate(
@@ -59,8 +60,6 @@ coloc_metadata <- coloc_metadata |>
   filter(!is.na(phenotype_id)) |>
   filter(!is.na(gene_id))
 
-n <- nrow(coloc_metadata)
-
 gnocchi_data <- read_tsv("data/gnocchi-windows.bed",
                          col_names = FALSE, show_col_types = FALSE)
 colnames(gnocchi_data) <- c("chromosome", "start_pos", "end_pos", "score")
@@ -76,7 +75,7 @@ snp_var_data_1_7 <- read_parquet("data/snpvar_meta.chr1_7.parquet")
 snp_var_data_8_22 <- read_parquet("data/snpvar_meta.chr8_22.parquet")
 
 results <- list()
-for (i in 1:n) {
+for (i in seq_len(nrow(coloc_metadata))) {
 
   region <- paste0(coloc_metadata$chromosome[[i]], ":",
                    coloc_metadata$start_pos[[i]], "-",
@@ -85,6 +84,7 @@ for (i in 1:n) {
   print(paste0("Region: ", region))
   print(paste0("Gene ID: ", coloc_metadata$gene_id[[i]]))
   print(paste0("Gene name: ", coloc_metadata$gene_name[[i]]))
+  print(paste0("Protein ID: ", coloc_metadata$phenotype_id[[i]]))
 
   eqtl_data <- all_eqtl_data |>
     setNames(eqtl_catalouge_colnames) |>
@@ -107,6 +107,13 @@ for (i in 1:n) {
     as_tibble()
 
   if (nrow(eqtl_data) == 0 || nrow(pqtl_data) == 0) {
+    next
+  }
+
+  if (min(eqtl_data$pvalue) > 5e-8) {
+    next
+  }
+  if (min(pqtl_data$pvalue) > 5e-8) {
     next
   }
 
