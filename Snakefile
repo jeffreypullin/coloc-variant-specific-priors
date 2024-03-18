@@ -122,13 +122,15 @@ rule download_eqtl_catalogue_files:
   input: metadata_file = "data/eqtl-catalogue/eqtl-catalogue-metadata.tsv"
   output: 
     dataset_file = "data/eqtl-catalogue/sumstats/{dataset_id}.cc.tsv.gz",
-    tabix_file =  "data/eqtl-catalogue/sumstats/{dataset_id}.cc.tsv.gz.tbi"
+    tabix_file =  "data/eqtl-catalogue/sumstats/{dataset_id}.cc.tsv.gz.tbi",
+    permuted_file = "data/eqtl-catalogue/sumstats/{dataset_id}.permuted.tsv.gz"
   localrule: True
   script: "code/download-eqtl-catalogue.R"
   
 rule filter_eqtl_catalogue_files:
   input: "data/eqtl-catalogue/sumstats/{dataset_id}.cc.tsv.gz"
   output: "data/eqtl-catalogue/processed-sumstats/{dataset_id}.cc.tsv"
+  localrule: True
   shell:
     """
     zcat {input} | awk 'NR == 1 {{ print }} NR != 1 {{ if ($9 <= 5E-8) {{ print }} }} ' > {output}
@@ -272,13 +274,14 @@ rule run_pqtl_eqtl_colocalisation:
   input: 
     eqtl_data_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.cc.tsv.gz",
     eqtl_index_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.cc.tsv.gz.tbi",
+    permutation_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.permuted.tsv.gz",
     pqtl_data_file = "data/eqtl-catalogue/sumstats/QTD000584.cc.tsv.gz",
     pqtl_index_file = "data/eqtl-catalogue/sumstats/QTD000584.cc.tsv.gz.tbi",
     eqtl_metadata_file = "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
     pqtl_metadata_file = "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
   output: 
     result_file = "output/data/pqtl-eqtl-coloc-{eqtl_id}-{chr}.rds"
-  retries: 1
+  retries: 0
   resources: 
     mem_mb = lambda wildcards, attempt: 14000 * attempt,
     time_min = lambda wildcards, attempt: 120 * attempt
@@ -287,6 +290,7 @@ rule run_pqtl_eqtl_colocalisation:
 rule run_gwas_eqtl_colocalisation:
   input: 
     eqtl_data_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.cc.tsv.gz",
+    permutation_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.permuted.tsv.gz",
     eqtl_index_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.cc.tsv.gz.tbi",
     gwas_data_file = "data/finngen/{gwas_id}.gz",
     gwas_index_file = "data/finngen/{gwas_id}.gz.tbi",

@@ -19,6 +19,7 @@ suppressPackageStartupMessages({
 source("code/coloc-utils.R")
 
 eqtl_file <- snakemake@input[["eqtl_data_file"]]
+permutation_file <- snakemake@input[["permutation_file"]]
 gwas_file <- snakemake@input[["gwas_data_file"]]
 eqtl_metadata_file <- snakemake@input[["eqtl_metadata_file"]]
 manifest_file <- snakemake@input[["manifest_file"]]
@@ -28,9 +29,17 @@ coloc_results_file <- snakemake@output[["coloc_results_file"]]
 finemapping_results_file <- snakemake@output[["finemapping_results_file"]]
 
 eqtl_metadata <- read_tsv(eqtl_metadata_file, show_col_types = FALSE)
+permutation_data <- read_tsv(permutation_file, show_col_types = FALSE)
 manifest_data <- read_tsv(manifest_file, show_col_types = FALSE)
 
-width <- 5e5
+permutations <- permutation_data |>
+  print(n = 100) |>
+  mutate(FDR = p.adjust(p = p_beta, method = "fdr")) |>
+  filter(FDR < 0.01) |>
+  select(molecular_trait_object_id, molecular_trait_id) |>
+  distinct()
+
+width <- 1e6
 coloc_metadata <- eqtl_metadata |>
   filter(gene_type == "protein_coding") |>
   mutate(tss = if_else(strand == 1, gene_start, gene_end)) |>
@@ -43,11 +52,13 @@ coloc_metadata <- eqtl_metadata |>
   select(gene_name, region, gene_id, chromosome, start_pos, end_pos, tss, gene_name) |>
   ungroup() |>
   filter(chromosome == chr) |>
-  filter(!is.na(gene_id))
+  filter(!is.na(gene_id)) |>
+  filter(gene_id %in% permutations$molecular_trait_id)
 
 all_eqtl_data <- tabix.read.table(eqtl_file, paste0(chr, ":1-2147483647")) |>
   as_tibble() |>
   setNames(eqtl_catalouge_colnames) |>
+  print(n = 100) |>
   left_join(
     eqtl_metadata |>
       select(gene_id, gene_name, gene_type),
@@ -95,7 +106,7 @@ gnocchi_data <- read_tsv("data/gnocchi-windows.bed",
                          col_names = FALSE, show_col_types = FALSE)
 colnames(gnocchi_data) <- c("chromosome", "start_pos", "end_pos", "score")
 
-abc_score_data <- read_tsv("data/abc-score-data.txt.gz", show_col_types = FALSE)
+abc_score_data <- read_tsv("data/abc-data.txt.gz", show_col_types = FALSE)
 
 density_data_round_1 <- read_rds("output/densities/onek1k_cd4nc_round_1.rds")
 density_data_round_2 <- read_rds("output/densities/onek1k_cd4nc_round_2.rds")

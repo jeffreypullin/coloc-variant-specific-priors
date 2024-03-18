@@ -18,12 +18,20 @@ source("code/coloc-utils.R")
 
 eqtl_file <- snakemake@input[["eqtl_data_file"]]
 pqtl_file <- snakemake@input[["pqtl_data_file"]]
+permutation_file <- snakemake@input[["permutation_file"]]
 eqtl_metadata_file <- snakemake@input[["eqtl_metadata_file"]]
 pqtl_metadata_file <- snakemake@input[["pqtl_metadata_file"]]
 chr <- as.numeric(snakemake@wildcards[["chr"]])
 
 eqtl_metadata <- read_tsv(eqtl_metadata_file, show_col_types = FALSE)
 pqtl_metadata <- read_tsv(pqtl_metadata_file, show_col_types = FALSE)
+permutation_data <- read_tsv(permutation_file, show_col_types = FALSE)
+
+permutations <- permutation_data |>
+  mutate(FDR = p.adjust(p = p_beta, method = "fdr")) |>
+  filter(FDR < 0.01) |>
+  select(molecular_trait_object_id, molecular_trait_id) |>
+  distinct()
 
 width <- 1e6
 coloc_metadata <- eqtl_metadata |>
@@ -48,23 +56,22 @@ coloc_metadata <- eqtl_metadata |>
   ) |>
   select(gene_name, gene_id, phenotype_id, region, chromosome,
          start_pos, end_pos, tss, pqtl_gene_id, phenotype_pos,
-         phenotype_start, phenotype_end)
+         phenotype_start, phenotype_end) |>
+  filter(chromosome == chr) |>
+  filter(!is.na(phenotype_id)) |>
+  filter(!is.na(gene_id)) |>
+  filter(gene_id %in% permutations$molecular_trait_id)
 
 all_eqtl_data <- tabix.read.table(eqtl_file, paste0(chr, ":1-2147483647")) |>
   as_tibble()
 all_pqtl_data <- tabix.read.table(pqtl_file, paste0(chr, ":1-2147483647")) |>
   as_tibble()
 
-coloc_metadata <- coloc_metadata |>
-  filter(chromosome == chr) |>
-  filter(!is.na(phenotype_id)) |>
-  filter(!is.na(gene_id))
-
 gnocchi_data <- read_tsv("data/gnocchi-windows.bed",
                          col_names = FALSE, show_col_types = FALSE)
 colnames(gnocchi_data) <- c("chromosome", "start_pos", "end_pos", "score")
 
-abc_score_data <- read_tsv("data/abc-score-data.txt.gz", show_col_types = FALSE)
+abc_score_data <- read_tsv("data/abc-data.txt.gz", show_col_types = FALSE)
 
 density_data_round_1 <- read_rds("output/densities/onek1k_cd4nc_round_1.rds")
 density_data_round_2 <- read_rds("output/densities/onek1k_cd4nc_round_2.rds")

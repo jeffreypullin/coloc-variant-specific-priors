@@ -162,8 +162,8 @@ gwas_eqtl_colocs |>
 ```{r}
 gwas_eqtl_colocs |>
   mutate(
-    sig_gwas_tss_eqtlgen = PP.H4.abf_abc_score_eqtl > 0.8,
-    sig_unif = PP.H4.abf_unif > 0.8
+    sig_gwas_tss_eqtlgen = PP.H4.abf_abc_score_eqtl > 0.5,
+    sig_unif = PP.H4.abf_unif > 0.5
   ) |>
   arrange(gwas_id) |>
   filter(sig_gwas_tss_eqtlgen != sig_unif) |>

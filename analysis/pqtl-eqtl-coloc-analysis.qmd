@@ -16,6 +16,10 @@ library(ggrepel)
 library(patchwork)
 library(yaml)
 library(forcats)
+library(glue)
+library(seqminer)
+
+source(here::here("code/coloc-utils.R"))
 
 devtools::load_all("~/coloc")
 ```
@@ -51,17 +55,189 @@ protein_metadata <- read_tsv(
 )
 ```
 
+```{r}
+tambets_data <- readxl::read_xlsx("data/tambets-etal-supp.xlsx", sheet = 1)
+tambets_data$quant_method
+tambets_data |>
+  select(gene_name, protein, is_true_positive) |>
+  print(n = 100)
+
+hist(tambets_data$PP.H4.abf)
+
+tambets_data |>
+  select(gene_name, protein, is_true_positive) |>
+  print(n = 100)
+```
+
 ```{r coloc-level-performance}
+get_pqtl_eqtl_datasets <- function(eqtl_data_id, gene, protein) {
+
+  eqtl_metadata <- read_tsv(
+    "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz", 
+    show_col_types = FALSE
+  )
+  pqtl_metadata <- read_tsv(
+    "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz", 
+    show_col_types = FALSE
+  )
+
+  eqtl_file <- glue::glue("data/eqtl-catalogue/sumstats/{eqtl_data_id}.cc.tsv.gz")
+  pqtl_file <- "data/eqtl-catalogue/sumstats/QTD000584.cc.tsv.gz"
+
+  width <- 1e6
+  coloc_metadata <- eqtl_metadata |>
+    mutate(tss = if_else(strand == 1, gene_start, gene_end)) |>
+    rowwise() |>
+    mutate(
+      start_pos = max(tss - width, 1),
+      end_pos = tss + width
+    ) |>
+    mutate(region = paste0(chromosome, ":", start_pos, "-", end_pos)) |>
+    select(gene_name, region, gene_id, chromosome, start_pos, end_pos, tss) |>
+    filter(gene_name == !!gene) |>
+    ungroup() |>
+    left_join(
+      pqtl_metadata |>
+        select(phenotype_id, chromosome, phenotype_pos, pqtl_gene_id = gene_id,
+               phenotype_start = gene_start, phenotype_end = gene_end) |>
+        mutate(chromosome = as.character(chromosome)),
+      by = join_by(chromosome == chromosome,
+                   start_pos <= phenotype_pos,
+                   end_pos >= phenotype_pos)
+    ) |>
+    select(gene_name, gene_id, phenotype_id, region, chromosome,
+           start_pos, end_pos, tss, pqtl_gene_id, phenotype_pos,
+           phenotype_start, phenotype_end)  
+
+  region <- coloc_metadata$region[[1]]
+  gene_id <- coloc_metadata$gene_id[[1]]
+
+  eqtl_data <- tabix.read.table(eqtl_file, region) |>
+    setNames(eqtl_catalouge_colnames) |>
+    filter(molecular_trait_id == !!gene_id) |>
+    as_tibble()
+
+  pqtl_data <- tabix.read.table(pqtl_file, region) |>
+    setNames(eqtl_catalouge_colnames) |>
+    filter(molecular_trait_id == !!protein) |>
+    as_tibble()
+
+  pqtl_data <- prepare_coloc_dataset(pqtl_data)
+  eqtl_data <- prepare_coloc_dataset(eqtl_data)
+
+  eqtl_data <- eqtl_data |>
+    filter(variant %in% pqtl_data$variant)
+  pqtl_data <- pqtl_data |>
+    filter(variant %in% eqtl_data$variant)
+
+  eqtl_dataset <- list(
+    varbeta = eqtl_data$se^2,
+    N = eqtl_data$an / 2,
+    MAF = eqtl_data$maf,
+    type = "quant",
+    beta = eqtl_data$beta,
+    snp = eqtl_data$variant,
+    position = eqtl_data$position
+  )
+
+  pqtl_dataset <- list(
+    varbeta = pqtl_data$se^2,
+    N = pqtl_data$an / 2,
+    MAF = pqtl_data$maf,
+    type = "quant",
+    beta = pqtl_data$beta,
+    snp = pqtl_data$variant,
+    position = pqtl_data$position
+  )
+
+  list(eqtl_dataset = eqtl_dataset, pqtl_dataset = pqtl_dataset)
+}
+
+test <- get_pqtl_eqtl_datasets("QTD000373", "NMB", "NMB.9321.400.3..1")
+
+tmp <- numeric(500)
+for (i in 1:500) {
+  tmp[[i]] <- coloc.abf(
+    test[[1]],
+    test[[2]],
+    prior_weights1 = compute_rand_prior_weights(test[[1]]$position) 
+  )$summary[["PP.H4.abf"]]
+}
+
+eqtlgen_density_data <- read_rds("output/densities/eqtlgen.rds")
+eqtl_prior_weights_eqtlgen <- compute_eqtl_tss_dist_prior_weights(
+  test[[1]]$position, 84658563, eqtlgen_density_data
+)
+
+out <- coloc.abf(
+  test[[1]],
+  test[[2]]
+)
+
+devtools::load_all("~/coloc")
+out <- coloc.abf(
+  test[[1]],
+  test[[2]],
+  prior_weights1 = eqtl_prior_weights_eqtlgen
+)
+
+density_data_round_3 <- read_rds("output/densities/onek1k_cd4nc_round_3.rds")
+round_3_prior_weights <- compute_eqtl_tss_dist_prior_weights(
+  test[[1]]$position, 84658563, density_data_round_3
+)
+
+out <- coloc.abf(
+  test[[1]],
+  test[[2]],
+  prior_weights1 = round_3_prior_weights
+)
+
+a <- abs(test[[1]]$position - 84658563)
+p <- a / sum(a)
+
+out <- coloc.abf(
+  test[[1]],
+  test[[2]],
+  prior_weights1 = p
+)
+
+plot(test[[1]]$position, round_3_prior_weights)
+plot(test[[1]]$position, eqtl_prior_weights_eqtlgen)
+abline(v = 37342827)
+plot_dataset(test[[1]]) 
+abline(v = 37342827)
+plot_dataset(test[[2]])
+abline(v = 37342827)
+
+
+left_join(
+  pqtl_eqtl_colocs |>
+    select(eqtl_data_id, starts_with("PP.H4.abf"), phenotype_id, 
+           coloc_gene_id = gene_id, gene_name), 
+  protein_metadata |>
+    select(coding_gene_id = gene_id, phenotype_id),
+  by = "phenotype_id"
+) |>
+  rename(protein = phenotype_id) |>
+  mutate(
+    sig_unif = PP.H4.abf_unif > 0.8, 
+    sig_eqtl_tss_eqtlgen = PP.H4.abf_eqtl_tss_eqtlgen > 0.8
+  ) |>
+  filter(sig_unif != sig_eqtl_tss_eqtlgen) |>
+  select(gene_name, protein, PP.H4.abf_unif, PP.H4.abf_eqtl_tss_eqtlgen) |>
+  print(n = 100)
+  
+
 coloc_level_data <- left_join(
   pqtl_eqtl_colocs |>
     select(eqtl_data_id, starts_with("PP.H4.abf"), phenotype_id, 
-           coloc_gene_id = gene_id), 
+           coloc_gene_id = gene_id, gene_name), 
   protein_metadata |>
     select(coding_gene_id = gene_id, phenotype_id),
   by = "phenotype_id"
 ) |>
   rename(protein_id = phenotype_id) |>
-  pivot_longer(-c(protein_id, coding_gene_id, eqtl_data_id, coloc_gene_id),
+  pivot_longer(-c(protein_id, coding_gene_id, eqtl_data_id, coloc_gene_id, gene_name),
                values_to = "pp_h4", 
                names_to = c("junk", "prior_type"),
                names_pattern = "(.*?)_(.*)") |>
@@ -75,7 +251,6 @@ coloc_level_data <- left_join(
     is_fp = any(sig_coloc) & !any(sig_coloc & gene_match),
     .by = c(protein_id, prior_type, eqtl_data_id)
   ) |>
-  # FIXME: Monocyte issues with ABC score.
   summarise(
     n_colocalised = sum(colocalised, na.rm = TRUE),
     n_tp = sum(is_tp, na.rm = TRUE),
@@ -206,11 +381,55 @@ coloc_level_data |>
 ```
 
 ```{r}
-protein_level_data |>
+coloc_level_data |>
+  summarise(
+    recall = median(recall),
+    precision = median(precision),
+    .by = prior_type
+  ) |>
   mutate(is_unif = prior_type == "unif") |>
   ggplot(aes(recall, precision, col = is_unif, label = prior_type)) + 
   geom_point() + 
   geom_label_repel() + 
+  labs(
+    x = "Recall", 
+    y = "Precision",
+  ) + 
+  guides(col = "none") + 
+  theme_bw()
+```
+
+```{r}
+protein_level_data |>
+  summarise(
+    recall = median(recall),
+    precision = median(precision),
+    .by = prior_type
+  ) |>
+  mutate(is_unif = prior_type == "unif") |>
+  ggplot(aes(recall, precision, col = is_unif, label = prior_type)) + 
+  geom_point() + 
+  geom_label_repel() + 
+  labs(
+    x = "Recall", 
+    y = "Precision",
+  ) + 
+  guides(col = "none") + 
+  theme_bw()
+```
+
+```{r}
+protein_level_data |>
+  summarise(
+    recall = median(recall),
+    precision = median(precision),
+    .by = prior_type
+  ) |>
+  mutate(is_unif = prior_type == "unif") |>
+  ggplot(aes(recall, precision, col = is_unif, label = prior_type)) + 
+  geom_point() + 
+  geom_label_repel() + 
+  coord_cartesian(xlim = c(0.075, NA), ylim = c(0.64, NA)) + 
   labs(
     x = "Recall", 
     y = "Precision",
