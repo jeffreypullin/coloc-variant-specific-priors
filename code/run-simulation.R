@@ -99,12 +99,12 @@ if (nrow(legend) > 500) {
   legend <- legend[sample_ind, ]
 }
 
-ld <- cor(haps)
-ind <- which(apply(ld, 2, function(x) sum(x >= 0.7)) >= 20)
-if (length(ind) > 0) {
-  haps <- haps[, ind]
-  legend <- legend[ind, ]
-}
+#ld <- cor(haps)
+#ind <- apply(ld, 2, function(x) sum(x >= 0.7)) <= 5
+#if (length(ind) > 0) {
+#  haps <- haps[, !ind]
+#  legend <- legend[!ind, ]
+#}
 
 freq <- as.data.frame((haps + 1))
 freq$Probability <- 1 / nrow(freq)

@@ -135,7 +135,7 @@ gwas_eqtl_coloc_ids:
  - "I9_HYPTENS-QTD000136" # GTEx artery coronary
  - "I9_HYPTENS-QTD000261" # GTEx kidney
  - "I9_HYPTENS-QTD000296" # GTEx pancreas
-simulation_loci:
+simulation_genes:
   - "PTPN22"
   - "IL21"
   - "IFT172"

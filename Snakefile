@@ -23,7 +23,7 @@ rule all:
     "data/abc-data.txt.gz",
     expand("data/eqtl-catalogue/processed-sumstats/{dataset_id}.cc.tsv",
             dataset_id = config["eqtl_catalogue_dataset_ids"]),
-    expand("output/data/sim-result-{locus}.rds", locus = config["simulation_loci"]),
+    expand("output/data/sim-result-{gene}.rds", gene = config["simulation_genes"]),
     expand("data/adipos-express/processed-ab1-eur/{chromosome}.txt", chromosome = chromosomes),
     expand(
       "output/data/gwas-eqtl-coloc-{gwas_id_eqtl_id}-{chr}.rds", 
@@ -307,13 +307,13 @@ rule run_gwas_eqtl_colocalisation:
 
 rule make_ref_block:
   output: 
-    leg_file = "data/{locus}.vcf.gz.impute.legend",
-    haps_file = "data/{locus}.vcf.gz.impute.hap",
+    leg_file = "data/{gene}.vcf.gz.impute.legend",
+    haps_file = "data/{gene}.vcf.gz.impute.hap",
   script: "code/make-ref-block.sh"
 
 rule run_simulations:
   input:
-    leg_file = "data/{locus}.vcf.gz.impute.legend",
-    haps_file = "data/{locus}.vcf.gz.impute.hap",
-  output: sim_file = "output/data/sim-result-{locus}.rds"
+    leg_file = "data/{gene}.vcf.gz.impute.legend",
+    haps_file = "data/{gene}.vcf.gz.impute.hap",
+  output: sim_file = "output/data/sim-result-{gene}.rds"
   script: "code/run-simulation.R"

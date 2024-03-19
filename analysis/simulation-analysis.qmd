@@ -18,8 +18,8 @@ devtools::load_all("~/coloc")
 
 ```{r load-data}
 config <- read_yaml(here::here("config.yaml"))
-sim_loci <- config$simulation_loci
-simulation_data <- lapply(sim_loci, function(x) {
+simulation_genes <- config$simulation_genes
+simulation_data <- lapply(simulation_genes, function(x) {
   here::here(glue("output/data/sim-result-{x}.rds")) |>
   read_rds() |>
   mutate(locus = x)
@@ -67,7 +67,7 @@ simulation_data |>
   theme_bw() +
   labs(
     x = "True hypothesis",
-    y = "Mean Pr(H4)",
+    y = "Pr(H4)",
     fill = "Prior type"
   ) +
   facet_wrap(~locus)
@@ -76,9 +76,9 @@ simulation_data |>
 ```{r}
 prior_weights <- list()
 pos <- list()
-locus <- list()
-for (i in seq_along(sim_loci)) {
-  file <- glue(here::here("data/{sim_loci[[i]]}.vcf.gz.impute.legend"))
+gene <- list()
+for (i in seq_along(simulation_genes)) {
+  file <- glue(here::here("data/{simulation_genes[[i]]}.vcf.gz.impute.legend"))
   legend <- read_delim(file, show_col_types = FALSE) 
   pos[[i]] <- legend$pos
   prior_weights[[i]] <- compute_eqtl_tss_dist_prior_weights(
@@ -86,17 +86,17 @@ for (i in seq_along(sim_loci)) {
     round(median(pos[[i]]), 0),
     read_rds(here::here("output/densities/eqtlgen.rds"))
   )
-  locus[[i]] <- rep(sim_loci[[i]], length(pos[[i]]))
+  gene[[i]] <- rep(simulation_genes[[i]], length(pos[[i]]))
 }
 
 tibble(
-  locus = unlist(locus),
+  gene = unlist(gene),
   pos = unlist(pos),
   prior_weight = unlist(prior_weights)
 ) |> 
   ggplot(aes(pos, prior_weight)) + 
   geom_point() + 
-  facet_wrap(~ locus, scales = "free_x") + 
+  facet_wrap(~ gene, scales = "free_x") + 
   labs(
     x = "Position",
     y = "Prior weight"
