@@ -10,8 +10,11 @@ density_to_tibble <- function(dens) {
   tibble(x = dens$x, y = dens$y)
 }
 
-hg19_mart <- useEnsembl(biomart = "ensembl", dataset = "hsapiens_gene_ensembl",
-                        "https://feb2014.archive.ensembl.org")
+hg19_mart <- useEnsembl(
+  biomart = "ensembl",
+  dataset = "hsapiens_gene_ensembl",
+  "https://grch37.ensembl.org"
+)
 
 hg19_tss_data <- getBM(
   attributes = c("ensembl_gene_id", "transcript_start", "transcript_end", "strand"),

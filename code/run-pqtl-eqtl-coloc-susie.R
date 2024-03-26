@@ -1,5 +1,5 @@
 # The code in this file is heavily based on:
-# https://github.com/ralf-tambets/coloc/blob/main/bin/coloc_v3_pqtl.R
+# https://github.com/ralf-tambets/coloc/blob/main/bin/coloc_v5_pqtl.R
 
 source(here::here("renv/activate.R"))
 
@@ -11,13 +11,20 @@ suppressPackageStartupMessages({
   library(dplyr)
   library(janitor)
   library(arrow)
+  library(stringr)
+  library(purrr)
+  library(tibble)
   devtools::load_all("~/coloc")
 })
 
 source("code/coloc-utils.R")
 
-eqtl_file <- snakemake@input[["eqtl_data_file"]]
-pqtl_file <- snakemake@input[["pqtl_data_file"]]
+eqtl_lbf_file <- snakemake@input[["eqtl_lbf_file"]]
+eqtl_cs_file <- snakemake@input[["eqtl_cs_file"]]
+
+pqtl_lbf_file <- snakemake@input[["pqtl_lbf_file"]]
+pqtl_cs_file <- snakemake@input[["pqtl_cs_file"]]
+
 permutation_file <- snakemake@input[["permutation_file"]]
 eqtl_metadata_file <- snakemake@input[["eqtl_metadata_file"]]
 pqtl_metadata_file <- snakemake@input[["pqtl_metadata_file"]]
@@ -33,7 +40,7 @@ permutations <- permutation_data |>
   select(molecular_trait_object_id, molecular_trait_id) |>
   distinct()
 
-width <- 5e5
+width <- 1e6
 coloc_metadata <- eqtl_metadata |>
   filter(gene_type == "protein_coding") |>
   mutate(tss = if_else(strand == 1, gene_start, gene_end)) |>
@@ -62,10 +69,15 @@ coloc_metadata <- eqtl_metadata |>
   filter(!is.na(gene_id)) |>
   filter(gene_id %in% permutations$molecular_trait_id)
 
-all_eqtl_data <- tabix.read.table(eqtl_file, paste0(chr, ":1-2147483647")) |>
-  as_tibble()
-all_pqtl_data <- tabix.read.table(pqtl_file, paste0(chr, ":1-2147483647")) |>
-  as_tibble()
+eqtl_cs_data <- read_tsv(eqtl_cs_file, show_col_types = FALSE)
+eqtl_lbf_data <- tabix.read.table(eqtl_lbf_file, paste0(chr, ":1-2147483647")) |>
+  as_tibble() |>
+  setNames(c("molecular_trait_id", "region", "variant", "chromosome", "position", paste0("lbf_variable", 1:10)))
+
+pqtl_cs_data <- read_tsv(pqtl_cs_file, show_col_types = FALSE)
+pqtl_lbf_data <- tabix.read.table(pqtl_lbf_file, paste0(chr, ":1-2147483647")) |>
+  as_tibble() |>
+  setNames(c("molecular_trait_id", "region", "variant", "chromosome", "position", paste0("lbf_variable", 1:10)))
 
 gnocchi_data <- read_tsv("data/gnocchi-windows.bed",
                          col_names = FALSE, show_col_types = FALSE)
@@ -93,108 +105,83 @@ for (i in seq_len(nrow(coloc_metadata))) {
   print(paste0("Gene name: ", coloc_metadata$gene_name[[i]]))
   print(paste0("Protein ID: ", coloc_metadata$phenotype_id[[i]]))
 
-  eqtl_data <- all_eqtl_data |>
-    setNames(eqtl_catalouge_colnames) |>
-    filter_qtl_dataset(
-      trait_id = coloc_metadata$gene_id[[i]],
-      chrom = coloc_metadata$chromosome[[i]],
-      start_pos = coloc_metadata$start_pos[[i]],
-      end_pos = coloc_metadata$end_pos[[i]]
-    ) |>
-    as_tibble()
+  gene_eqtl_cs_data <- eqtl_cs_data |>
+    filter(molecular_trait_id == coloc_metadata$gene_id[[i]])
 
-  pqtl_data <- all_pqtl_data |>
-    setNames(eqtl_catalouge_colnames) |>
-    filter_qtl_dataset(
-      trait_id = coloc_metadata$phenotype_id[[i]],
-      chrom = coloc_metadata$chromosome[[i]],
-      start_pos = coloc_metadata$start_pos[[i]],
-      end_pos = coloc_metadata$end_pos[[i]]
-    ) |>
-    as_tibble()
-
-  if (nrow(eqtl_data) == 0 || nrow(pqtl_data) == 0) {
+  if (nrow(gene_eqtl_cs_data) == 0) {
     next
   }
 
-  if (min(eqtl_data$pvalue) > 5e-8) {
-    next
-  }
-  if (min(pqtl_data$pvalue) > 5e-8) {
-    next
-  }
+  gene_pqtl_cs_data <- pqtl_cs_data |>
+    filter(molecular_trait_id == coloc_metadata$phenotype_id[[i]])
 
-  pqtl_data <- prepare_coloc_dataset(pqtl_data)
-  eqtl_data <- prepare_coloc_dataset(eqtl_data)
-
-  n_before <- max(nrow(eqtl_data), nrow(pqtl_data))
-  if (n_before <= 300) {
+  if (nrow(gene_pqtl_cs_data) == 0) {
     next
   }
 
-  eqtl_data <- eqtl_data |>
-    filter(variant %in% pqtl_data$variant)
-  pqtl_data <- pqtl_data |>
-    filter(variant %in% eqtl_data$variant)
+  eqtl_cs_ids <- gene_eqtl_cs_data |>
+    pull(cs_id) |>
+    unique()
+  pqtl_cs_ids <- gene_pqtl_cs_data |>
+    pull(cs_id) |>
+    unique()
 
-  n_after <- max(nrow(eqtl_data), nrow(pqtl_data))
-  if (n_after / n_before < 0.1) {
-    next
-  }
+  split_pqtl_cs_ids <- str_split(pqtl_cs_ids, "_")
+  protein_ids <- unique(map_chr(split_pqtl_cs_ids, 1))
+  pqtl_cs_inds <- map_chr(split_pqtl_cs_ids, \(x) str_sub(x[[2]], 2, 2)) |>
+    as.numeric() |>
+    order(decreasing = TRUE)
+  pqtl_cs_col_names <- paste0("lbf_variable", pqtl_cs_inds)
 
-  is_oneover_na <- all(is.na(1 / eqtl_data$se^2))
-  is_nvx_na <- all(is.na(2 * eqtl_data$an / 2 * eqtl_data$maf * (1 - eqtl_data$maf)))
+  split_eqtl_cs_ids <- str_split(eqtl_cs_ids, "_")
+  gene_ids <- unique(map_chr(split_eqtl_cs_ids, 1))
+  eqtl_cs_inds <- map_chr(split_eqtl_cs_ids, \(x) str_sub(x[[2]], 2, 2)) |>
+    as.numeric() |>
+    order(decreasing = TRUE)
+  eqtl_cs_col_names <- paste0("lbf_variable", eqtl_cs_inds)
 
-  if (is_oneover_na || is_nvx_na) {
-    next
-  }
+  print(gene_ids)
+  print(protein_ids)
 
-  eqtl_dataset <- list(
-    varbeta = eqtl_data$se^2,
-    N = eqtl_data$an / 2,
-    MAF = eqtl_data$maf,
-    type = "quant",
-    beta = eqtl_data$beta,
-    snp = eqtl_data$variant,
-    position = eqtl_data$position
-  )
+  pqtl_lbf_mat <- pqtl_lbf_data |>
+    filter(molecular_trait_id %in% protein_ids) |>
+    select(variant, !!pqtl_cs_col_names) |>
+    column_to_rownames("variant") |>
+    as.matrix() |>
+    t()
 
-  is_oneover_na <- all(is.na(1 / pqtl_data$se^2))
-  is_nvx_na <- all(is.na(2 * pqtl_data$an / 2 * pqtl_data$maf * (1 - pqtl_data$maf)))
+  eqtl_lbf_mat <- eqtl_lbf_data |>
+    filter(molecular_trait_id %in% gene_ids) |>
+    select(variant, !!eqtl_cs_col_names) |>
+    column_to_rownames("variant") |>
+    as.matrix() |>
+    t()
 
-  if (is_oneover_na || is_nvx_na) {
-    next
-  }
-
-  pqtl_dataset <- list(
-    varbeta = pqtl_data$se^2,
-    N = pqtl_data$an / 2,
-    MAF = pqtl_data$maf,
-    type = "quant",
-    beta = pqtl_data$beta,
-    snp = pqtl_data$variant
-  )
+  # FIXME: Which position should be used?
+  position <- eqtl_lbf_data |>
+    filter(molecular_trait_id %in% gene_ids) |>
+    pull(position)
 
   eqtl_prior_weights_eqtlgen <- compute_eqtl_tss_dist_prior_weights(
-    eqtl_dataset$position, coloc_metadata$tss[[i]], eqtlgen_density_data
+    position, coloc_metadata$tss[[i]], eqtlgen_density_data
   )
   eqtl_prior_weights <- compute_eqtl_tss_dist_prior_weights(
-    eqtl_dataset$position, coloc_metadata$tss[[i]], density_data_round_1
+    position, coloc_metadata$tss[[i]], density_data_round_1
   )
   eqtl_prior_weights_round_2 <- compute_eqtl_tss_dist_prior_weights(
-    eqtl_dataset$position, coloc_metadata$tss[[i]], density_data_round_2
+    position, coloc_metadata$tss[[i]], density_data_round_2
   )
   eqtl_prior_weights_round_3 <- compute_eqtl_tss_dist_prior_weights(
-    eqtl_dataset$position, coloc_metadata$tss[[i]], density_data_round_3
+    position, coloc_metadata$tss[[i]], density_data_round_3
   )
   gnocchi_prior_weights <- compute_gnocchi_prior_weights(
-    eqtl_dataset$position, chr, gnocchi_data
+    position, chr, gnocchi_data
   )
   abc_score_prior_weights <- compute_abc_prior_weights(
-    eqtl_dataset$position, chr, coloc_metadata$gene_name[[i]], abc_score_data
+    position, chr, coloc_metadata$gene_name[[i]], abc_score_data
   )
   abc_score_primary_blood_prior_weights <- compute_abc_prior_weights(
-    eqtl_dataset$position, chr, coloc_metadata$gene_name[[i]], abc_score_data,
+    position, chr, coloc_metadata$gene_name[[i]], abc_score_data,
     biosamples = "primary_blood"
   )
 
@@ -205,115 +192,112 @@ for (i in seq_len(nrow(coloc_metadata))) {
   }
 
   polyfun_prior_weights <- compute_polyfun_prior_weights(
-    eqtl_dataset$position, chr, polyfun_data
+    position, chr, polyfun_data
   )
 
   # Uniform priors.
 
-  coloc_unif <- coloc.abf(
-    dataset1 = eqtl_dataset,
-    dataset2 = pqtl_dataset,
-  )
+  coloc_unif <- coloc.bf_bf(eqtl_lbf_mat, pqtl_lbf_mat)
 
   # eQTLGen estimated density priors.
 
-  coloc_eqtl_tss_eqtlgen <- coloc.abf(
-    dataset1 = eqtl_dataset,
-    dataset2 = pqtl_dataset,
+  coloc_eqtl_tss_eqtlgen <- coloc.bf_bf(
+    eqtl_lbf_mat,
+    pqtl_lbf_mat,
     prior_weights1 = eqtl_prior_weights_eqtlgen
   )
 
-  coloc_pqtl_tss_eqtlgen <- coloc.abf(
-    dataset1 = eqtl_dataset,
-    dataset2 = pqtl_dataset,
+  coloc_pqtl_tss_eqtlgen <- coloc.bf_bf(
+    eqtl_lbf_mat,
+    pqtl_lbf_mat,
     prior_weights2 = eqtl_prior_weights_eqtlgen
   )
 
-  coloc_eqtl_tss_pqtl_tss_eqtlgen <- coloc.abf(
-    dataset1 = eqtl_dataset,
-    dataset2 = pqtl_dataset,
+  coloc_eqtl_tss_pqtl_tss_eqtlgen <- coloc.bf_bf(
+    eqtl_lbf_mat,
+    pqtl_lbf_mat,
     prior_weights1 = eqtl_prior_weights_eqtlgen,
     prior_weights2 = eqtl_prior_weights_eqtlgen
   )
 
   # OneK1K estimated density priors.
 
-  coloc_eqtl_tss_onek1k_round_1 <- coloc.abf(
-    dataset1 = eqtl_dataset,
-    dataset2 = pqtl_dataset,
+  coloc_eqtl_tss_onek1k_round_1 <- coloc.bf_bf(
+    eqtl_lbf_mat,
+    pqtl_lbf_mat,
     prior_weights1 = eqtl_prior_weights
   )
 
-  coloc_eqtl_tss_onek1k_round_2 <- coloc.abf(
-    dataset1 = eqtl_dataset,
-    dataset2 = pqtl_dataset,
+  coloc_eqtl_tss_onek1k_round_2 <- coloc.bf_bf(
+    eqtl_lbf_mat,
+    pqtl_lbf_mat,
     prior_weights1 = eqtl_prior_weights_round_2
   )
 
-  coloc_eqtl_tss_onek1k_round_3 <- coloc.abf(
-    dataset1 = eqtl_dataset,
-    dataset2 = pqtl_dataset,
+  coloc_eqtl_tss_onek1k_round_3 <- coloc.bf_bf(
+    eqtl_lbf_mat,
+    pqtl_lbf_mat,
     prior_weights1 = eqtl_prior_weights_round_3
   )
 
-  coloc_pqtl_tss_onek1k_round_1 <- coloc.abf(
-    dataset1 = eqtl_dataset,
-    dataset2 = pqtl_dataset,
+  coloc_pqtl_tss_onek1k_round_1 <- coloc.bf_bf(
+    eqtl_lbf_mat,
+    pqtl_lbf_mat,
     prior_weights2 = eqtl_prior_weights
   )
 
-  coloc_eqtl_tss_pqtl_tss_onek1k_round_1 <- coloc.abf(
-    dataset1 = eqtl_dataset,
-    dataset2 = pqtl_dataset,
+  coloc_eqtl_tss_pqtl_tss_onek1k_round_1 <- coloc.bf_bf(
+    eqtl_lbf_mat,
+    pqtl_lbf_mat,
     prior_weights1 = eqtl_prior_weights,
     prior_weights2 = eqtl_prior_weights
   )
 
   # Polyfun priors.
 
-  coloc_polyfun_eqtl <- coloc.abf(
-    dataset1 = eqtl_dataset,
-    dataset2 = pqtl_dataset,
+  coloc_polyfun_eqtl <- coloc.bf_bf(
+    eqtl_lbf_mat,
+    pqtl_lbf_mat,
     prior_weights1 = polyfun_prior_weights
   )
 
-  coloc_polyfun_pqtl <- coloc.abf(
-    dataset1 = eqtl_dataset,
-    dataset2 = pqtl_dataset,
+  coloc_polyfun_pqtl <- coloc.bf_bf(
+    eqtl_lbf_mat,
+    pqtl_lbf_mat,
     prior_weights2 = polyfun_prior_weights
   )
 
   # Gnocchi priors.
 
-  coloc_gnocchi_eqtl <- coloc.abf(
-    dataset1 = eqtl_dataset,
-    dataset2 = pqtl_dataset,
+  coloc_gnocchi_eqtl <- coloc.bf_bf(
+    eqtl_lbf_mat,
+    pqtl_lbf_mat,
     prior_weights1 = gnocchi_prior_weights
   )
 
-  coloc_gnocchi_pqtl <- coloc.abf(
-    dataset1 = eqtl_dataset,
-    dataset2 = pqtl_dataset,
+  coloc_gnocchi_pqtl <- coloc.bf_bf(
+    eqtl_lbf_mat,
+    pqtl_lbf_mat,
     prior_weights2 = gnocchi_prior_weights
   )
 
   # ABC score priors.
 
-  coloc_abc_score_eqtl <- coloc.abf(
-    dataset1 = eqtl_dataset,
-    dataset2 = pqtl_dataset,
+  coloc_abc_score_eqtl <- coloc.bf_bf(
+    eqtl_lbf_mat,
+    pqtl_lbf_mat,
     prior_weights1 = abc_score_prior_weights
   )
 
-  coloc_abc_score_pqtl <- coloc.abf(
-    dataset1 = eqtl_dataset,
-    dataset2 = pqtl_dataset,
+  coloc_abc_score_pqtl <- coloc.bf_bf(
+    eqtl_lbf_mat,
+    pqtl_lbf_mat,
     prior_weights2 = abc_score_prior_weights
   )
 
-  coloc_abc_score_pqtl_primary_blood <- coloc.abf(
-    dataset1 = eqtl_dataset,
-    dataset2 = pqtl_dataset,
+  coloc_abc_score_pqtl_primary_blood <- coloc.bf_bf(
+    eqtl_lbf_mat,
+    pqtl_lbf_mat,
     prior_weights2 = abc_score_primary_blood_prior_weights
   )
 

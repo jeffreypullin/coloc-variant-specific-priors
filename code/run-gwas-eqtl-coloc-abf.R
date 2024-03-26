@@ -382,7 +382,7 @@ for (i in seq_len(nrow(coloc_metadata))) {
   )
 
   # Uncertainty estimation.
-  N <- 500
+  N <- 100
   pp_h4_1 <- numeric(N)
   pp_h4_2 <- numeric(N)
   for (j in seq_len(N)) {

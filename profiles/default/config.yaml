@@ -2,8 +2,7 @@ cluster: "
   sbatch
   --parsable
   -A mrc-bsu-sl2-cpu
-  -p icelake-himem
-  -D /home/jp2045/coloc-estimated-eqtl-priors/
+  -p icelake
   -t {resources.time_min}
   --mem={resources.mem_mb}
   -c {resources.cpus}
@@ -14,7 +13,7 @@ jobs: 100
 rerun-incomplete: true
 max-jobs-per-second: 1
 printshellcmds: true
-default-resources: [cpus=1, mem_mb=7000, time_min=30]
+default-resources: [cpus=1, mem_mb=3000, time_min=30]
 nolock: true
 keep-going: true
 cluster-status: ./profiles/default/cluster-status.py

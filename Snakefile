@@ -21,16 +21,26 @@ rule all:
     "data/snpvar_meta.chr1_7.parquet",
     "data/snpvar_meta.chr8_22.parquet",
     "data/abc-data.txt.gz",
+    expand("data/finngen/{gwas_id}.SUSIE.snp.bgz.tbi", gwas_id = ["AUTOIMMUNE", "I9_HYPTENS", "T2D_WIDE"]),
+    expand("data/finngen/{gwas_id}.SUSIE.snp.bgz", gwas_id = ["AUTOIMMUNE", "I9_HYPTENS", "T2D_WIDE"]),
     expand("data/eqtl-catalogue/processed-sumstats/{dataset_id}.cc.tsv",
             dataset_id = config["eqtl_catalogue_dataset_ids"]),
-    expand("output/data/sim-result-{gene}.rds", gene = config["simulation_genes"]),
+    expand("data/output/sim-result-{gene}.rds", gene = config["simulation_genes"]),
     expand("data/adipos-express/processed-ab1-eur/{chromosome}.txt", chromosome = chromosomes),
     expand(
-      "output/data/gwas-eqtl-coloc-{gwas_id_eqtl_id}-{chr}.rds", 
+      "data/output/gwas-eqtl-coloc-abf-{gwas_id_eqtl_id}-{chr}.rds", 
       gwas_id_eqtl_id = config["gwas_eqtl_coloc_ids"],
       chr = [x for x in range(1, 23)]
     ),
-    expand("output/data/pqtl-eqtl-coloc-{eqtl_id}-{chr}.rds", 
+    expand(
+      "data/output/gwas-eqtl-coloc-susie-{gwas_id_eqtl_id}-{chr}.rds", 
+      gwas_id_eqtl_id = config["gwas_eqtl_coloc_ids"],
+      chr = [x for x in range(1, 23)]
+    ),
+    expand("data/output/pqtl-eqtl-coloc-abf-{eqtl_id}-{chr}.rds", 
+           chr = [x for x in range(1, 23)],
+           eqtl_id = config["pqtl_eqtl_coloc_dataset_ids"]),
+    expand("data/output/pqtl-eqtl-coloc-susie-{eqtl_id}-{chr}.rds", 
            chr = [x for x in range(1, 23)],
            eqtl_id = config["pqtl_eqtl_coloc_dataset_ids"])
 
@@ -123,8 +133,9 @@ rule download_eqtl_catalogue_files:
   output: 
     dataset_file = "data/eqtl-catalogue/sumstats/{dataset_id}.cc.tsv.gz",
     tabix_file =  "data/eqtl-catalogue/sumstats/{dataset_id}.cc.tsv.gz.tbi",
-    permuted_file = "data/eqtl-catalogue/sumstats/{dataset_id}.permuted.tsv.gz"
-  localrule: True
+    permuted_file = "data/eqtl-catalogue/sumstats/{dataset_id}.permuted.tsv.gz",
+    cred_set_file = "data/eqtl-catalogue/susie/{dataset_id}.credible_sets.tsv.gz",
+    lbf_file = "data/eqtl-catalogue/susie/{dataset_id}.lbf_variable.txt.gz"
   script: "code/download-eqtl-catalogue.R"
   
 rule filter_eqtl_catalogue_files:
@@ -134,6 +145,18 @@ rule filter_eqtl_catalogue_files:
   shell:
     """
     zcat {input} | awk 'NR == 1 {{ print }} NR != 1 {{ if ($9 <= 5E-8) {{ print }} }} ' > {output}
+    """
+
+rule run_tabix_susie_lbf_eqtl_catalogue_files:
+  input: "data/eqtl-catalogue/susie/{dataset_id}.lbf_variable.txt.gz",
+  output: "data/eqtl-catalogue/susie/{dataset_id}.lbf_variable.txt.gz.tbi",
+  resources: 
+    time_min = 120 
+  shell:
+    """
+    cp {input} data/tmp-{wildcards.dataset_id}.gz
+    zcat data/tmp-{wildcards.dataset_id}.gz | awk -F'\\t' 'BEGIN{{OFS=FS}}NR==1{{print $0; next}}{{print $0 | "sort -T data -k4,4n -k5,5n"}}' | bgzip > {input}
+    tabix -s 4 -b 5 -e 5 -S 1 -f {input}
     """
 
 rule process_eqtl_catalogue_data:
@@ -245,30 +268,34 @@ rule download_polyfun_data:
    wget -O {output.chr8_22} https://github.com/omerwe/polyfun/raw/master/snpvar_meta.chr8_22.parquet
    """
 
-rule download_finngen_gwas_data: 
-  output: "data/finngen/{gwas_id}.gz"
-  localrule: True
-  shell:
-   """
-   wget -O {output} https://storage.googleapis.com/finngen-public-data-r10/summary_stats/finngen_R10_{wildcards.gwas_id}.gz
-   """
-
-rule process_finngen_gwas_data: 
-  input: "data/finngen/{gwas_id}.gz"
-  output: "data/finngen/{gwas_id}.gz.tbi"
-  shell:
-   """
-   gunzip --force {input}
-   bgzip data/finngen/{wildcards.gwas_id}
-   tabix -s 1 -b 2 -e 2 -S 1 data/finngen/{wildcards.gwas_id}.gz
-   """
-
 rule download_finngen_manifest:
   output: "data/finngen/finngen-manifest.tsv"
   shell:
    """
    wget -O {output} https://storage.googleapis.com/finngen-public-data-r10/summary_stats/R10_manifest.tsv
    """
+
+rule download_finngen_gwas_data: 
+  output: 
+    sum_stat = "data/finngen/{gwas_id}.gz",
+    tabix = "data/finngen/{gwas_id}.gz.tbi",
+    cs = "data/finngen/{gwas_id}.SUSIE.cred.bgz",
+    lbf = "data/finngen/{gwas_id}.SUSIE.snp.bgz",
+  shell:
+   """
+   wget -O {output.sum_stat} https://storage.googleapis.com/finngen-public-data-r10/summary_stats/finngen_R10_{wildcards.gwas_id}.gz
+   wget -O {output.tabix} https://storage.googleapis.com/finngen-public-data-r10/summary_stats/finngen_R10_{wildcards.gwas_id}.gz.tbi
+   wget -O {output.cs} https://storage.googleapis.com/finngen-public-data-r10/finemap/full/susie/finngen_R10_{wildcards.gwas_id}.SUSIE.cred.bgz
+   wget -O {output.lbf} https://storage.googleapis.com/finngen-public-data-r10/finemap/full/susie/finngen_R10_{wildcards.gwas_id}.SUSIE.snp.bgz
+   """
+
+rule run_tabix_finngen_lbf_files:
+  input: "data/finngen/{gwas_id}.SUSIE.snp.bgz",
+  output: "data/finngen/{gwas_id}.SUSIE.snp.bgz.tbi",
+  shell:
+    """
+    tabix -S 1 -s 5 -b 6 -e 6 data/finngen/{wildcards.gwas_id}.SUSIE.snp.bgz 
+    """
 
 rule run_pqtl_eqtl_colocalisation:
   input: 
@@ -280,12 +307,31 @@ rule run_pqtl_eqtl_colocalisation:
     eqtl_metadata_file = "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
     pqtl_metadata_file = "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
   output: 
-    result_file = "output/data/pqtl-eqtl-coloc-{eqtl_id}-{chr}.rds"
-  retries: 0
+    result_file = "data/output/pqtl-eqtl-coloc-abf-{eqtl_id}-{chr}.rds"
+  retries: 1
   resources: 
-    mem_mb = lambda wildcards, attempt: 14000 * attempt,
+    mem_mb = lambda wildcards, attempt: 7000 * attempt,
     time_min = lambda wildcards, attempt: 120 * attempt
   script: "code/run-pqtl-eqtl-coloc-abf.R"
+
+rule run_pqtl_eqtl_coloc_susie_colocalisation:
+  input: 
+    eqtl_cs_file = "data/eqtl-catalogue/susie/{eqtl_id}.credible_sets.tsv.gz",
+    eqtl_lbf_file = "data/eqtl-catalogue/susie/{eqtl_id}.lbf_variable.txt.gz",
+    eqtl_lbf_index_file = "data/eqtl-catalogue/susie/{eqtl_id}.lbf_variable.txt.gz.tbi",
+    pqtl_cs_file = "data/eqtl-catalogue/susie/QTD000584.credible_sets.tsv.gz",
+    pqtl_lbf_file = "data/eqtl-catalogue/susie/QTD000584.lbf_variable.txt.gz",
+    pqtl_lbf_index_file = "data/eqtl-catalogue/susie/QTD000584.lbf_variable.txt.gz.tbi",
+    permutation_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.permuted.tsv.gz",
+    eqtl_metadata_file = "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
+    pqtl_metadata_file = "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
+  output: 
+    result_file = "data/output/pqtl-eqtl-coloc-susie-{eqtl_id}-{chr}.rds"
+  retries: 1
+  resources: 
+    mem_mb = lambda wildcards, attempt: 10000 * attempt,
+    time_min = lambda wildcards, attempt: 120 * attempt
+  script: "code/run-pqtl-eqtl-coloc-susie.R"
 
 rule run_gwas_eqtl_colocalisation:
   input: 
@@ -297,13 +343,31 @@ rule run_gwas_eqtl_colocalisation:
     eqtl_metadata_file = "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
     manifest_file = "data/finngen/finngen-manifest.tsv"
   output: 
-    coloc_results_file = "output/data/gwas-eqtl-coloc-{gwas_id}-{eqtl_id}-{chr}.rds",
-    finemapping_results_file = "output/data/gwas-eqtl-finemapping-{gwas_id}-{eqtl_id}-{chr}.rds"
-  retries: 0
+    coloc_results_file = "data/output/gwas-eqtl-coloc-abf-{gwas_id}-{eqtl_id}-{chr}.rds",
+    finemapping_results_file = "data/output/gwas-eqtl-finemapping-{gwas_id}-{eqtl_id}-{chr}.rds"
+  retries: 1
   resources: 
-    mem_mb = lambda wildcards, attempt: 14000 * attempt,
+    mem_mb = lambda wildcards, attempt: 7000 * attempt,
     time_min = lambda wildcards, attempt: 60 * attempt 
   script: "code/run-gwas-eqtl-coloc-abf.R"
+
+rule run_gwas_eqtl_coloc_susie_colocalisation:
+  input: 
+    eqtl_cs_file = "data/eqtl-catalogue/susie/{eqtl_id}.credible_sets.tsv.gz",
+    eqtl_lbf_file = "data/eqtl-catalogue/susie/{eqtl_id}.lbf_variable.txt.gz",
+    eqtl_lbf_index_file = "data/eqtl-catalogue/susie/{eqtl_id}.lbf_variable.txt.gz.tbi",
+    gwas_cs_file = "data/finngen/{gwas_id}.SUSIE.cred.bgz",
+    gwas_lbf_file = "data/finngen/{gwas_id}.SUSIE.snp.bgz",
+    gwas_lbf_index_file = "data/finngen/{gwas_id}.SUSIE.snp.bgz.tbi",
+    permutation_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.permuted.tsv.gz",
+    eqtl_metadata_file = "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
+  output: 
+    result_file = "data/output/gwas-eqtl-coloc-susie-{gwas_id}-{eqtl_id}-{chr}.rds"
+  retries: 1
+  resources: 
+    mem_mb = lambda wildcards, attempt: 7000 * attempt,
+    time_min = lambda wildcards, attempt: 60 * attempt
+  script: "code/run-gwas-eqtl-coloc-susie.R"
 
 rule make_ref_block:
   output: 
@@ -315,5 +379,5 @@ rule run_simulations:
   input:
     leg_file = "data/{gene}.vcf.gz.impute.legend",
     haps_file = "data/{gene}.vcf.gz.impute.hap",
-  output: sim_file = "output/data/sim-result-{gene}.rds"
+  output: sim_file = "data/output/sim-result-{gene}.rds"
   script: "code/run-simulation.R"

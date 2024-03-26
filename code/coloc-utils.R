@@ -1,6 +1,13 @@
 
 coloc_to_tibble <- function(coloc_out, suffix) {
-  out <- t(as.data.frame(coloc_out$summary))
+
+  coloc_summary <- coloc_out$summary
+  # SuSiE output.
+  if (inherits(coloc_summary, "data.frame")) {
+    out <- as.data.frame(coloc_summary)
+  } else {
+    out <- t(as.data.frame(coloc_summary))
+  }
   colnames(out) <- paste0(colnames(out), "_", suffix)
   out
 }
