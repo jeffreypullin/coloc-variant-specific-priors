@@ -1,6 +1,7 @@
 configfile: "config.yaml"
 
 chromosomes = ["chr" + str(x) for x in range(1, 23)] + ["chrX"]
+chrs = [x for x in range(1, 23)]
 
 rule all: 
   input: 
@@ -311,7 +312,7 @@ rule run_pqtl_eqtl_colocalisation:
   retries: 1
   resources: 
     mem_mb = lambda wildcards, attempt: 7000 * attempt,
-    time_min = lambda wildcards, attempt: 120 * attempt
+    time = lambda wildcards, attempt: 20 * attempt ** 4
   script: "code/run-pqtl-eqtl-coloc-abf.R"
 
 rule run_pqtl_eqtl_coloc_susie_colocalisation:
@@ -330,7 +331,7 @@ rule run_pqtl_eqtl_coloc_susie_colocalisation:
   retries: 1
   resources: 
     mem_mb = lambda wildcards, attempt: 10000 * attempt,
-    time_min = lambda wildcards, attempt: 120 * attempt
+    time = lambda wildcards, attempt: 20 * attempt ** 4
   script: "code/run-pqtl-eqtl-coloc-susie.R"
 
 rule run_gwas_eqtl_colocalisation:
@@ -348,7 +349,7 @@ rule run_gwas_eqtl_colocalisation:
   retries: 1
   resources: 
     mem_mb = lambda wildcards, attempt: 7000 * attempt,
-    time_min = lambda wildcards, attempt: 60 * attempt 
+    time = lambda wildcards, attempt: 20 * attempt ** 3
   script: "code/run-gwas-eqtl-coloc-abf.R"
 
 rule run_gwas_eqtl_coloc_susie_colocalisation:
@@ -366,7 +367,7 @@ rule run_gwas_eqtl_coloc_susie_colocalisation:
   retries: 1
   resources: 
     mem_mb = lambda wildcards, attempt: 7000 * attempt,
-    time_min = lambda wildcards, attempt: 60 * attempt
+    time = lambda wildcards, attempt: 20 * attempt ** 3
   script: "code/run-gwas-eqtl-coloc-susie.R"
 
 rule make_ref_block:

@@ -368,7 +368,6 @@ for (i in seq_len(nrow(coloc_metadata))) {
       gene_id = coloc_metadata$gene_id[[i]],
       gwas_region = coloc_metadata$gwas_region[[i]],
       gene_name = coloc_metadata$gene_name[[i]],
-      unif_result = list(coloc_unif$results),
       tss = coloc_metadata$tss[[i]]
   ))
 
