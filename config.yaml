@@ -123,8 +123,8 @@ gwas_eqtl_coloc_ids:
  #- "AUTOIMMUNE-QTD000021" # BlUEPRINT monocytes
  #- "AUTOIMMUNE-QTD000031" # BLUEPRINT T cells
  #- "AUTOIMMUNE-QTD000090" # FUSION adipose
- #- "T2D_WIDE-QTD000373" # Lepik blood
- #- "T2D_WIDE-QTD000090" # FUSION adipose
+ - "T2D_WIDE-QTD000373" # Lepik blood
+ - "T2D_WIDE-QTD000090" # FUSION adipose
  #- "T2D_WIDE-QTD000266" # GTEx liver
  #- "T2D_WIDE-QTD000321" # GTEx small intestine
  #- "T2D_WIDE-QTD000296" # GTEx pancreas
