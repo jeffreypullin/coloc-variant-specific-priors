@@ -42,7 +42,7 @@ onek1k_cd4nc_round_1 <- onek1k_data |>
   ) |>
   # FIXME: Is this right?
   mutate(tss_distance = if_else(strand == 1, pos - tss, tss - pos)) |>
-  filter(abs(tss_distance) <= 1e6) |>
+  filter(abs(tss_distance) <= 5e5) |>
   pull(tss_distance) |>
   density(bw = "SJ", cut = 0, adjust = 8) |>
   density_to_tibble()
@@ -55,7 +55,7 @@ onek1k_cd4nc_round_2 <- onek1k_data |>
   left_join(hg19_tss_data, by = join_by(gene_id == ensembl_gene_id)) |>
   # fixme: is this right?
   mutate(tss_distance = if_else(strand == 1, pos - tss, tss - pos)) |>
-  filter(abs(tss_distance) <= 1e6) |>
+  filter(abs(tss_distance) <= 5e5) |>
   pull(tss_distance) |>
   density(bw = "sj", cut = 0, adjust = 8) |>
   density_to_tibble()
@@ -70,7 +70,7 @@ onek1k_cd4nc_round_3 <- onek1k_data |>
   ) |>
   # FIXME: Is this right?
   mutate(tss_distance = if_else(strand == 1, pos - tss, tss - pos)) |>
-  filter(abs(tss_distance) <= 1e6) |>
+  filter(abs(tss_distance) <= 5e5) |>
   pull(tss_distance) |>
   density(bw = "SJ", cut = 0, adjust = 8) |>
   density_to_tibble()
@@ -87,9 +87,9 @@ eqtlgen <- raw_eqtlgen_data |>
   filter(row_number() == 1) |>
   mutate(tss_distance = snp_pos - gene_pos) |>
   ungroup() |>
-  filter(abs(tss_distance) <= 1e6) |>
+  filter(abs(tss_distance) <= 5e5) |>
   pull(tss_distance) |>
-  density(bw = "SJ", cut = 0, adjust = 5) |>
+  density(bw = "SJ", cut = 0, adjust = 8) |>
   density_to_tibble()
 
 saveRDS(eqtlgen, "output/densities/eqtlgen.rds")
