@@ -9,7 +9,7 @@ sample_file="$data_dir/1000GP_Phase3/sparse_basis/EUR.sample"
 out_file="data/$(basename ${snakemake_output[0]} .impute.legend)"
 gene=$(basename $out_file .vcf.gz)
 
-width=1000000
+width=500000
 region_start=$((${gene_tss[$gene]} - $width))
 region_end=$((${gene_tss[$gene]} + $width))
 
@@ -25,4 +25,4 @@ zcat ${vcf_file} | \
   --chr "chr${gene_chr[$gene]}" \
   --from-bp ${region_start[$gene]} --to-bp ${region_end[$gene]} \
   --remove-indels --remove-filtered-all --keep ${sample_file} \
-  --maf 0.1 --max-alleles 2
+  --maf 0.01 --max-alleles 2

@@ -40,7 +40,7 @@ permutations <- permutation_data |>
   select(molecular_trait_object_id, molecular_trait_id) |>
   distinct()
 
-width <- 1e6
+width <- 5e5
 coloc_metadata <- eqtl_metadata |>
   filter(gene_type == "protein_coding") |>
   mutate(tss = if_else(strand == 1, gene_start, gene_end)) |>

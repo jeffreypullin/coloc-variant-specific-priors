@@ -93,18 +93,18 @@ legend <- read_delim(legend_file, show_col_types = FALSE)
 haps <- matrix(scan(haps_file, what = 0), ncol = nrow(legend))
 colnames(haps) <- legend$ID
 
+ld <- cor(haps)
+ind <- which(apply(ld, 2, function(x) sum(x >= 0.7)) >= 30)
+if (length(ind) > 0) {
+  haps <- haps[, ind]
+  legend <- legend[ind, ]
+}
+
 if (nrow(legend) > 500) {
   sample_ind <- sort(sample(seq_len(nrow(legend)), 500))
   haps <- haps[, sample_ind]
   legend <- legend[sample_ind, ]
 }
-
-#ld <- cor(haps)
-#ind <- apply(ld, 2, function(x) sum(x >= 0.7)) <= 5
-#if (length(ind) > 0) {
-#  haps <- haps[, !ind]
-#  legend <- legend[!ind, ]
-#}
 
 freq <- as.data.frame((haps + 1))
 freq$Probability <- 1 / nrow(freq)
