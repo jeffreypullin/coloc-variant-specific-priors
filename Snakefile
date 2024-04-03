@@ -312,7 +312,7 @@ rule run_pqtl_eqtl_colocalisation:
   retries: 1
   resources: 
     mem_mb = lambda wildcards, attempt: 7000 * attempt,
-    time = lambda wildcards, attempt: 20 * attempt ** 4
+    time_min = lambda wildcards, attempt: 20 * attempt ** 4
   script: "code/run-pqtl-eqtl-coloc-abf.R"
 
 rule run_pqtl_eqtl_coloc_susie_colocalisation:
@@ -330,8 +330,8 @@ rule run_pqtl_eqtl_coloc_susie_colocalisation:
     result_file = "data/output/pqtl-eqtl-coloc-susie-{eqtl_id}-{chr}.rds"
   retries: 1
   resources: 
-    mem_mb = lambda wildcards, attempt: 10000 * attempt,
-    time = lambda wildcards, attempt: 20 * attempt ** 4
+    mem_mb = lambda wildcards, attempt: 8000 * attempt,
+    time_min = lambda wildcards, attempt: 20 * attempt ** 3
   script: "code/run-pqtl-eqtl-coloc-susie.R"
 
 rule run_gwas_eqtl_colocalisation:
@@ -349,7 +349,7 @@ rule run_gwas_eqtl_colocalisation:
   retries: 1
   resources: 
     mem_mb = lambda wildcards, attempt: 7000 * attempt,
-    time = lambda wildcards, attempt: 20 * attempt ** 3
+    time_min = lambda wildcards, attempt: 20 * attempt ** 3
   script: "code/run-gwas-eqtl-coloc-abf.R"
 
 rule run_gwas_eqtl_coloc_susie_colocalisation:
@@ -367,7 +367,7 @@ rule run_gwas_eqtl_coloc_susie_colocalisation:
   retries: 1
   resources: 
     mem_mb = lambda wildcards, attempt: 7000 * attempt,
-    time = lambda wildcards, attempt: 20 * attempt ** 3
+    time_min = lambda wildcards, attempt: 20 * attempt ** 3
   script: "code/run-gwas-eqtl-coloc-susie.R"
 
 rule make_ref_block:

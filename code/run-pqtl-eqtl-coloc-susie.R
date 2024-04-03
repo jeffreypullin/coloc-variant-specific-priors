@@ -43,27 +43,29 @@ permutations <- permutation_data |>
 width <- 5e5
 coloc_metadata <- eqtl_metadata |>
   filter(gene_type == "protein_coding") |>
-  mutate(tss = if_else(strand == 1, gene_start, gene_end)) |>
+  mutate(gene_tss = if_else(strand == 1, gene_start, gene_end)) |>
   rowwise() |>
   mutate(
-    start_pos = max(tss - width, 1),
-    end_pos = tss + width
+    start_pos = max(gene_tss - width, 1),
+    end_pos = gene_tss + width
   ) |>
   mutate(region = paste0(chromosome, ":", start_pos, "-", end_pos)) |>
-  select(gene_name, region, gene_id, chromosome, start_pos, end_pos, tss) |>
+  select(gene_name, region, gene_id, chromosome, start_pos, end_pos, gene_tss) |>
   ungroup() |>
   left_join(
     pqtl_metadata |>
+      mutate(protein_tss = if_else(strand == 1, gene_start, gene_end)) |>
       select(phenotype_id, chromosome, phenotype_pos, pqtl_gene_id = gene_id,
-             phenotype_start = gene_start, phenotype_end = gene_end) |>
+             phenotype_start = gene_start, phenotype_end = gene_end,
+             protein_tss) |>
       mutate(chromosome = as.character(chromosome)),
     by = join_by(chromosome == chromosome,
                  start_pos <= phenotype_pos,
                  end_pos >= phenotype_pos)
   ) |>
   select(gene_name, gene_id, phenotype_id, region, chromosome,
-         start_pos, end_pos, tss, pqtl_gene_id, phenotype_pos,
-         phenotype_start, phenotype_end) |>
+         start_pos, end_pos, gene_tss, pqtl_gene_id, phenotype_pos,
+         phenotype_start, phenotype_end, protein_tss) |>
   filter(chromosome == chr) |>
   filter(!is.na(phenotype_id)) |>
   filter(!is.na(gene_id)) |>
@@ -140,9 +142,6 @@ for (i in seq_len(nrow(coloc_metadata))) {
     order(decreasing = TRUE)
   eqtl_cs_col_names <- paste0("lbf_variable", eqtl_cs_inds)
 
-  print(gene_ids)
-  print(protein_ids)
-
   pqtl_lbf_mat <- pqtl_lbf_data |>
     filter(molecular_trait_id %in% protein_ids) |>
     select(variant, !!pqtl_cs_col_names) |>
@@ -163,17 +162,31 @@ for (i in seq_len(nrow(coloc_metadata))) {
     pull(position)
 
   eqtl_prior_weights_eqtlgen <- compute_eqtl_tss_dist_prior_weights(
-    position, coloc_metadata$tss[[i]], eqtlgen_density_data
+    position, coloc_metadata$gene_tss[[i]], eqtlgen_density_data
   )
   eqtl_prior_weights <- compute_eqtl_tss_dist_prior_weights(
-    position, coloc_metadata$tss[[i]], density_data_round_1
+    position, coloc_metadata$gene_tss[[i]], density_data_round_1
   )
   eqtl_prior_weights_round_2 <- compute_eqtl_tss_dist_prior_weights(
-    position, coloc_metadata$tss[[i]], density_data_round_2
+    position, coloc_metadata$gene_tss[[i]], density_data_round_2
   )
   eqtl_prior_weights_round_3 <- compute_eqtl_tss_dist_prior_weights(
-    position, coloc_metadata$tss[[i]], density_data_round_3
+    position, coloc_metadata$gene_tss[[i]], density_data_round_3
   )
+
+  pqtl_prior_weights_eqtlgen <- compute_eqtl_tss_dist_prior_weights(
+    position, coloc_metadata$protein_tss[[i]], eqtlgen_density_data
+  )
+  pqtl_prior_weights <- compute_eqtl_tss_dist_prior_weights(
+    position, coloc_metadata$protein_tss[[i]], density_data_round_1
+  )
+  pqtl_prior_weights_round_2 <- compute_eqtl_tss_dist_prior_weights(
+    position, coloc_metadata$protein_tss[[i]], density_data_round_2
+  )
+  pqtl_prior_weights_round_3 <- compute_eqtl_tss_dist_prior_weights(
+    position, coloc_metadata$protein_tss[[i]], density_data_round_3
+  )
+
   gnocchi_prior_weights <- compute_gnocchi_prior_weights(
     position, chr, gnocchi_data
   )
@@ -210,14 +223,14 @@ for (i in seq_len(nrow(coloc_metadata))) {
   coloc_pqtl_tss_eqtlgen <- coloc.bf_bf(
     eqtl_lbf_mat,
     pqtl_lbf_mat,
-    prior_weights2 = eqtl_prior_weights_eqtlgen
+    prior_weights2 = pqtl_prior_weights_eqtlgen
   )
 
   coloc_eqtl_tss_pqtl_tss_eqtlgen <- coloc.bf_bf(
     eqtl_lbf_mat,
     pqtl_lbf_mat,
     prior_weights1 = eqtl_prior_weights_eqtlgen,
-    prior_weights2 = eqtl_prior_weights_eqtlgen
+    prior_weights2 = pqtl_prior_weights_eqtlgen
   )
 
   # OneK1K estimated density priors.
@@ -243,14 +256,14 @@ for (i in seq_len(nrow(coloc_metadata))) {
   coloc_pqtl_tss_onek1k_round_1 <- coloc.bf_bf(
     eqtl_lbf_mat,
     pqtl_lbf_mat,
-    prior_weights2 = eqtl_prior_weights
+    prior_weights2 = pqtl_prior_weights
   )
 
   coloc_eqtl_tss_pqtl_tss_onek1k_round_1 <- coloc.bf_bf(
     eqtl_lbf_mat,
     pqtl_lbf_mat,
     prior_weights1 = eqtl_prior_weights,
-    prior_weights2 = eqtl_prior_weights
+    prior_weights2 = pqtl_prior_weights
   )
 
   # Polyfun priors.
@@ -329,7 +342,8 @@ for (i in seq_len(nrow(coloc_metadata))) {
       gene_id = coloc_metadata$gene_id[[i]],
       region = coloc_metadata$region[[i]],
       gene_name = coloc_metadata$gene_name[[i]],
-      tss = coloc_metadata$tss[[i]]
+      gene_tss = coloc_metadata$gene_tss[[i]],
+      protein_tss = coloc_metadata$protein_tss[[i]]
   ))
 
   results[[i]] <- coloc_results
