@@ -1,104 +1,63 @@
 configfile: "config.yaml"
 
-chromosomes = ["chr" + str(x) for x in range(1, 23)] + ["chrX"]
 chrs = [x for x in range(1, 23)]
 
 rule all: 
   input: 
-    "data/T1D_Chiou_34012112_1-hg38.tsv.gz",
-    "data/T1D_Chiou_34012112_1-hg38.tsv.gz.tbi",
     "data/processed-data/eqtl-catalogue.rds",
     "data/processed-data/gtex.rds",
     "data/processed-data/adipos-express-marginal.rds",
     "data/processed-data/eqtlgen.rds",
     "data/processed-data/onek1k.rds",
-    "data/eqtlgen-sig.txt.gz",
-    #"data/eqtlgen-all.txt.gz.tbi",
     "data/abc-data.txt.gz",
-    "data/fauman-hyde/eqtlgen.txt",
     "data/tss-data/hg19-tss-data.rds",
     "data/gnocchi-windows.bed",
-    "data/tambets-etal-supp.xlsx",
     "data/snpvar_meta.chr1_7.parquet",
     "data/snpvar_meta.chr8_22.parquet",
     "data/abc-data.txt.gz",
-    expand("data/finngen/{gwas_id}.SUSIE.snp.bgz.tbi", gwas_id = ["AUTOIMMUNE", "I9_HYPTENS", "T2D_WIDE"]),
-    expand("data/finngen/{gwas_id}.SUSIE.snp.bgz", gwas_id = ["AUTOIMMUNE", "I9_HYPTENS", "T2D_WIDE"]),
-    expand("data/eqtl-catalogue/processed-sumstats/{dataset_id}.cc.tsv",
-            dataset_id = config["eqtl_catalogue_dataset_ids"]),
-    expand("data/output/sim-result-{gene}.rds", gene = config["simulation_genes"]),
-    expand("data/adipos-express/processed-ab1-eur/{chromosome}.txt", chromosome = chromosomes),
+    expand(
+      "data/eqtl-catalogue/processed-sumstats/{dataset_id}.cc.tsv",
+      dataset_id = config["eqtl_catalogue_dataset_ids"]
+    ),
     expand(
       "data/output/gwas-eqtl-coloc-abf-{gwas_id_eqtl_id}-{chr}.rds", 
       gwas_id_eqtl_id = config["gwas_eqtl_coloc_ids"],
-      chr = [x for x in range(1, 23)]
+      chr = chrs 
     ),
     expand(
       "data/output/gwas-eqtl-coloc-susie-{gwas_id_eqtl_id}-{chr}.rds", 
       gwas_id_eqtl_id = config["gwas_eqtl_coloc_ids"],
-      chr = [x for x in range(1, 23)]
+      chr = chrs
     ),
-    expand("data/output/pqtl-eqtl-coloc-abf-{eqtl_id}-{chr}.rds", 
-           chr = [x for x in range(1, 23)],
-           eqtl_id = config["pqtl_eqtl_coloc_dataset_ids"]),
-    expand("data/output/pqtl-eqtl-coloc-susie-{eqtl_id}-{chr}.rds", 
-           chr = [x for x in range(1, 23)],
-           eqtl_id = config["pqtl_eqtl_coloc_dataset_ids"])
-
-rule fetch_t1d_gwas_data:
-  output: 
-    data_file = "data/T1D_Chiou_34012112_1-hg38.tsv.gz",
-    tabix_file = "data/T1D_Chiou_34012112_1-hg38.tsv.gz.tbi"
-  shell:
-    """ 
-    cp /home/jp2045/rds/rds-basis-YRWZsjDGyaU/02-Processed/T1D_Chiou_34012112_1-hg38.tsv.gz /home/jp2045/coloc-estimated-eqtl-priors/data/
-    mv data/T1D_Chiou_34012112_1-hg38.tsv.gz data/tmp-T1D_Chiou_34012112_1-hg38.tsv.gz  
-    gunzip --force data/tmp-T1D_Chiou_34012112_1-hg38.tsv.gz
-    bgzip data/tmp-T1D_Chiou_34012112_1-hg38.tsv
-    tabix -s 3 -b 4 -e 4 -c S data/tmp-T1D_Chiou_34012112_1-hg38.tsv.gz
-    mv data/tmp-T1D_Chiou_34012112_1-hg38.tsv.gz.tbi {output.tabix_file}
-    mv data/tmp-T1D_Chiou_34012112_1-hg38.tsv.gz {output.data_file}
-    """
+    expand(
+      "data/output/pqtl-eqtl-coloc-abf-{eqtl_id}-{chr}.rds", 
+      eqtl_id = config["pqtl_eqtl_coloc_dataset_ids"],
+      chr = chrs
+    ),
+    expand(
+      "data/output/pqtl-eqtl-coloc-susie-{eqtl_id}-{chr}.rds", 
+      eqtl_id = config["pqtl_eqtl_coloc_dataset_ids"],
+      chr = chrs
+    ),
+    expand(
+      "data/output/sim-result-{gene}.rds", 
+      gene = config["simulation_genes"]
+    )
 
 rule download_tss_data: 
   output: hg19_tss_data_path = "data/tss-data/hg19-tss-data.rds",
           hg38_tss_data_path = "data/tss-data/hg38-tss-data.rds"
   script: "code/download-tss-data.R"
     
-rule download_fauman_hyde_data: 
-  output: eqtlgen = "data/fauman-hyde/eqtlgen.txt",
-          ferkingstad = "data/fauman-hyde/ferkingstad.txt" 
-  shell:
-    """
-    wget -O {output.eqtlgen} https://static-content.springer.com/esm/art%3A10.1186%2Fs12859-022-04706-x/MediaObjects/12859_2022_4706_MOESM3_ESM.txt
-    wget -O {output.ferkingstad} https://static-content.springer.com/esm/art%3A10.1186%2Fs12859-022-04706-x/MediaObjects/12859_2022_4706_MOESM2_ESM.txt
-    """
-
 rule download_eqtlgen_data:
-  output: 
-    eqtlgen_sig = "data/eqtlgen-sig.txt.gz",
-    eqtlgen_all = "data/eqtlgen-all.txt.gz"
+  output: "data/eqtlgen.txt.gz",
   shell:
     """
-    wget -O {output.eqtlgen_sig} https://molgenis26.gcc.rug.nl/downloads/eqtlgen/cis-eqtl/2019-12-11-cis-eQTLsFDR0.05-ProbeLevel-CohortInfoRemoved-BonferroniAdded.txt.gz
-    wget -O {output.eqtlgen_all} https://molgenis26.gcc.rug.nl/downloads/eqtlgen/cis-eqtl/2019-12-11-cis-eQTLsFDR-ProbeLevel-CohortInfoRemoved-BonferroniAdded.txt.gz
+    wget -O {output} https://molgenis26.gcc.rug.nl/downloads/eqtlgen/cis-eqtl/2019-12-11-cis-eQTLsFDR0.05-ProbeLevel-CohortInfoRemoved-BonferroniAdded.txt.gz
     """
 
-rule tabix_eqtlgen:
-  input: "data/eqtlgen-all.txt.gz"
-  output: "data/eqtlgen-all.txt.gz.tbi"
-  conda: "envs/tabix.yaml"
-  shell:
-    """
-    cp data/eqtlgen-all.txt.gz data/tmp-eqtlgen-all.txt.gz
-    gunzip data/tmp-eqtlgen-all.txt.gz
-    bgzip data/tmp-eqtlgen-all.txt
-    tabix -s 4 -b 3 -e 3 -c P data/tmp-eqtlgen-all.txt.gz
-    mv data/tmp-eqtlgen-all.txt.gx.tbi {output}
-    """
-    
 rule process_eqtlgen_data:
-  input: eqtlgen_path =  "data/eqtlgen-sig.txt.gz"
+  input: eqtlgen_path =  "data/eqtlgen.txt.gz"
   output: processed_data_path = "data/processed-data/eqtlgen.rds"
   script: "code/process-data/process-eqtlgen-data.R"
     
@@ -170,49 +129,16 @@ rule process_eqtl_catalogue_data:
     processed_data_path = "data/processed-data/eqtl-catalogue.rds"
   script: "code/process-data/process-eqtl-catalogue-data.R"
   
-rule download_adipos_express_tars: 
-  output: temporary("data/adipos-express-marginal-eur-by-chr.tar"),
-  shell:
-    """
-    wget ftp://mohlkeanon:anon@rc-ns-ftp.its.unc.edu/marginal_byChr_EURonly.tar.gz -O - | gunzip -d > {output}
-    """
-
-rule extract_adipos_express_marginal_files:
-  input: "data/adipos-express-marginal-eur-by-chr.tar",
-  output: "data/adipos-express/marginal-eur/{chromosome}.txt"
-  shell:
-    """
-    tar -Oxf {input} marginal_byChr_EURonly/EURonly_marginal_local_eQTL_meta_{wildcards.chromosome}.txt > \
-    {output}
-    """
-    
-rule filter_adipos_express_marginal_files:
-  input: "data/adipos-express/marginal-eur/{chromosome}.txt"
-  output: "data/adipos-express/processed-marginal-eur/{chromosome}.txt"
-  shell: 
-    """
-    awk 'NR == 1 {{ print }} NR != 1 {{ if ($10 <= 5E-8) {{ print }} }} ' {input} > {output}
-    """
-
-rule process_adipos_express_marginal_data:
-  input:
-    adipos_express_marginal_paths = expand("data/adipos-express/processed-marginal-eur/{chromosome}.txt",
-                                            chromosome = chromosomes),
-    tss_data_path = "data/tss_data/hg19-tss-data.rds"                                      
-  output:
-    processed_data_path = "data/processed-data/adipos-express-marginal.rds"
-  script: "code/process-data/process-adipos-express-marginal-data.R"
-  
 rule download_onek1k_data:
-  output: "data/onek1k.tsv"
+  output: "data/onek1k.tsv.gz"
   shell:
     """
-    wget https://onek1k.s3.ap-southeast-2.amazonaws.com/esnp/esnp_table.tsv.gz -O - | gunzip -c > {output}
+    wget -O {output} https://onek1k.s3.ap-southeast-2.amazonaws.com/esnp/esnp_table.tsv.gz
     """
     
 rule process_onek1k_data:
   input: 
-    onek1k_path =  "data/onek1k.tsv",
+    onek1k_path =  "data/onek1k.tsv.gz",
     tss_data_path = "data/tss-data/hg19-tss-data.rds"
   output: processed_data_path = "data/processed-data/onek1k.rds"
   script: "code/process-data/process-onek1k-data.R"
@@ -226,13 +152,6 @@ rule download_metadata:
     wget -O {output.eqtl_metadata_file} https://zenodo.org/record/7808390/files/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz
     wget -O {output.pqtl_metadata_file} https://zenodo.org/record/7808390/files/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz
     """ 
-
-rule download_tambets_etal_supp:
-  output: "data/tambets-etal-supp.xlsx"
-  shell:
-    """
-    wget -O {output} "https://www.biorxiv.org/content/biorxiv/early/2023/09/30/2023.09.29.560109/DC1/embed/media-1.xlsx?download=true"
-    """
 
 rule download_gnochhi_data: 
   output: "data/gnocchi-windows.bed" 
@@ -269,6 +188,8 @@ rule download_polyfun_data:
    wget -O {output.chr8_22} https://github.com/omerwe/polyfun/raw/master/snpvar_meta.chr8_22.parquet
    """
 
+# Download Finngen data.
+
 rule download_finngen_manifest:
   output: "data/finngen/finngen-manifest.tsv"
   shell:
@@ -297,6 +218,8 @@ rule run_tabix_finngen_lbf_files:
     """
     tabix -S 1 -s 5 -b 6 -e 6 data/finngen/{wildcards.gwas_id}.SUSIE.snp.bgz 
     """
+
+# Run colocalsiations.
 
 rule run_pqtl_eqtl_colocalisation:
   input: 
@@ -369,6 +292,8 @@ rule run_gwas_eqtl_coloc_susie_colocalisation:
     mem_mb = lambda wildcards, attempt: 7000 * attempt,
     time_min = lambda wildcards, attempt: 20 * attempt ** 3
   script: "code/run-gwas-eqtl-coloc-susie.R"
+
+# Run simulations.
 
 rule make_ref_block:
   output: 
