@@ -154,9 +154,9 @@ rule download_metadata:
     """ 
 
 rule download_gnochhi_data: 
-  output: "data/gnocchi-windows.bed" 
+  output: "data/raw-gnocchi-windows.bed" 
   shell: 
-    """"
+    """
     wget https://static-content.springer.com/esm/art%3A10.1038%2Fs41586-023-06045-0/MediaObjects/41586_2023_6045_MOESM4_ESM.zip
     unzip 41586_2023_6045_MOESM4_ESM.zip 
     gunzip Supplementary_Data_2.bed.gz 
@@ -165,6 +165,11 @@ rule download_gnochhi_data:
     rm Supplementary_Data_1.tsv  Supplementary_Data_3.bed.gz Supplementary_Data_4.tsv
     rm Supplementary_Data_5.tsv Supplementary_Data_6_ESM.txt
     """
+
+rule process_gnocchi_data:
+  input: "data/raw-gnocchi-windows.bed",
+  output: "data/gnocchi-windows.bed"
+  script: "code/process-gnocchi-data.R"
 
 rule download_abc_score_data:
   output: "data/raw-abc-data.txt.gz"
