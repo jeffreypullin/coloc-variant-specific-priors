@@ -42,7 +42,8 @@ rule all:
     expand(
       "data/output/sim-result-{gene}.rds", 
       gene = config["simulation_genes"]
-    )
+    ),
+    "output/figures/prior-plot.pdf"
 
 rule download_tss_data: 
   output: hg19_tss_data_path = "data/tss-data/hg19-tss-data.rds",
@@ -312,3 +313,9 @@ rule run_simulations:
     haps_file = "data/{gene}.vcf.gz.impute.hap",
   output: sim_file = "data/output/sim-result-{gene}.rds"
   script: "code/run-simulation.R"
+
+# Make figures.
+
+rule plot_priors:
+  output: "output/figures/prior-plot.pdf"
+  script: "code/plot-priors.R"
