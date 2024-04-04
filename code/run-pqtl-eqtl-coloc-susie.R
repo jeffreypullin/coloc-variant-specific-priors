@@ -81,17 +81,12 @@ pqtl_lbf_data <- tabix.read.table(pqtl_lbf_file, paste0(chr, ":1-2147483647")) |
   as_tibble() |>
   setNames(c("molecular_trait_id", "region", "variant", "chromosome", "position", paste0("lbf_variable", 1:10)))
 
-gnocchi_data <- read_tsv("data/gnocchi-windows.bed",
-                         col_names = FALSE, show_col_types = FALSE)
-colnames(gnocchi_data) <- c("chromosome", "start_pos", "end_pos", "score")
-
+gnocchi_data <- read_tsv("data/gnocchi-windows.bed", show_col_types = FALSE)
 abc_score_data <- read_tsv("data/abc-data.txt.gz", show_col_types = FALSE)
-
 density_data_round_1 <- read_rds("output/densities/onek1k_cd4nc_round_1.rds")
 density_data_round_2 <- read_rds("output/densities/onek1k_cd4nc_round_2.rds")
 density_data_round_3 <- read_rds("output/densities/onek1k_cd4nc_round_3.rds")
 eqtlgen_density_data <- read_rds("output/densities/eqtlgen.rds")
-
 snp_var_data_1_7 <- read_parquet("data/snpvar_meta.chr1_7.parquet")
 snp_var_data_8_22 <- read_parquet("data/snpvar_meta.chr8_22.parquet")
 
@@ -333,7 +328,7 @@ for (i in seq_len(nrow(coloc_metadata))) {
     coloc_to_tibble(coloc_abc_score_eqtl, "abc_score_eqtl"),
     coloc_to_tibble(coloc_abc_score_pqtl, "abc_score_pqtl"),
     coloc_to_tibble(coloc_abc_score_pqtl_primary_blood, "abc_score_pqtl_primary_blood"),
-    # polyfun.
+    # PolyFun.
     coloc_to_tibble(coloc_polyfun_eqtl, "polyfun_eqtl"),
     coloc_to_tibble(coloc_polyfun_pqtl, "polyfun_pqtl"),
     tibble(
@@ -349,7 +344,14 @@ for (i in seq_len(nrow(coloc_metadata))) {
   results[[i]] <- coloc_results
 }
 
+all_results <- bind_rows(!!!results)
+# Caused by 'snp overlap too small' issue.
+if (nrow(all_results) != 0) {
+  all_results <- all_results |>
+    filter(!is.na(PP.H4.abf_unif))
+}
+
 write_rds(
-  bind_rows(!!!results),
+  all_results,
   snakemake@output[["result_file"]]
 )
