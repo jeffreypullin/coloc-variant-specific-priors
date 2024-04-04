@@ -33,14 +33,11 @@ rule all:
       eqtl_id = config["pqtl_eqtl_coloc_dataset_ids"],
       chr = chrs
     ),
-    expand(
-      "data/output/sim-result-{gene}.rds", 
-      gene = config["simulation_genes"]
-    ),
     "output/figures/eqtl-dist-plot.pdf",
     "output/figures/onek1k-plot.pdf",
     "output/figures/dataset-plot.pdf",
-    "output/figures/prior-plot.pdf"
+    "output/figures/prior-plot.pdf",
+    "output/figures/simulation-plot.pdf"
 
 rule download_tss_data: 
   output: hg19_tss_data_path = "data/tss-data/hg19-tss-data.rds",
@@ -328,3 +325,8 @@ rule plot_eqtl_tss_dist:
 rule plot_priors:
   output: "output/figures/prior-plot.pdf"
   script: "code/plot-priors.R"
+
+rule plot_simulations: 
+  input: expand("data/output/sim-result-{gene}.rds", gene = config["simulation_genes"])
+  output: "output/figures/simulation-plot.pdf"
+  script: "code/plot-simulations.R"
