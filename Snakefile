@@ -4,12 +4,6 @@ chrs = [x for x in range(1, 23)]
 
 rule all: 
   input: 
-    "data/processed-data/eqtl-catalogue.rds",
-    "data/processed-data/gtex.rds",
-    "data/processed-data/adipos-express-marginal.rds",
-    "data/processed-data/eqtlgen.rds",
-    "data/processed-data/onek1k.rds",
-    "data/abc-data.txt.gz",
     "data/tss-data/hg19-tss-data.rds",
     "data/gnocchi-windows.bed",
     "data/snpvar_meta.chr1_7.parquet",
@@ -43,6 +37,9 @@ rule all:
       "data/output/sim-result-{gene}.rds", 
       gene = config["simulation_genes"]
     ),
+    "output/figures/eqtl-dist-plot.pdf",
+    "output/figures/onek1k-plot.pdf",
+    "output/figures/dataset-plot.pdf",
     "output/figures/prior-plot.pdf"
 
 rule download_tss_data: 
@@ -315,6 +312,18 @@ rule run_simulations:
   script: "code/run-simulation.R"
 
 # Make figures.
+
+rule plot_eqtl_tss_dist: 
+  input: 
+    eqtl_catalogue_data_file = "data/processed-data/eqtl-catalogue.rds",
+    gtex_data_file = "data/processed-data/gtex.rds",
+    eqtlgen_data_file = "data/processed-data/eqtlgen.rds",
+    onek1k_data_file = "data/processed-data/onek1k.rds",
+  output: 
+    dist_plot_file = "output/figures/eqtl-dist-plot.pdf",
+    onek1k_plot_file = "output/figures/onek1k-plot.pdf",
+    dataset_plot_file = "output/figures/dataset-plot.pdf"
+  script: "code/plot-eqtl-tss-dist.R"
 
 rule plot_priors:
   output: "output/figures/prior-plot.pdf"
