@@ -19,6 +19,7 @@ suppressPackageStartupMessages({
 })
 
 source("code/coloc-utils.R")
+source("code/prior-probabilities-funs.R")
 
 eqtl_lbf_file <- snakemake@input[["eqtl_lbf_file"]]
 eqtl_cs_file <- snakemake@input[["eqtl_cs_file"]]
@@ -121,17 +122,12 @@ if (n_regions == 0) {
 }
 
 
-gnocchi_data <- read_tsv("data/gnocchi-windows.bed",
-                         col_names = FALSE, show_col_types = FALSE)
-colnames(gnocchi_data) <- c("chromosome", "start_pos", "end_pos", "score")
-
+gnocchi_data <- read_tsv("data/gnocchi-windows.bed", show_col_types = FALSE)
 abc_score_data <- read_tsv("data/abc-data.txt.gz", show_col_types = FALSE)
-
 density_data_round_1 <- read_rds("output/densities/onek1k_cd4nc_round_1.rds")
 density_data_round_2 <- read_rds("output/densities/onek1k_cd4nc_round_2.rds")
 density_data_round_3 <- read_rds("output/densities/onek1k_cd4nc_round_3.rds")
 eqtlgen_density_data <- read_rds("output/densities/eqtlgen.rds")
-
 snp_var_data_1_7 <- read_parquet("data/snpvar_meta.chr1_7.parquet")
 snp_var_data_8_22 <- read_parquet("data/snpvar_meta.chr8_22.parquet")
 

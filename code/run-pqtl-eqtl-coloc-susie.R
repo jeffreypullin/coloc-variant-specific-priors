@@ -18,6 +18,7 @@ suppressPackageStartupMessages({
 })
 
 source("code/coloc-utils.R")
+source("code/prior-probabilities-funs.R")
 
 eqtl_lbf_file <- snakemake@input[["eqtl_lbf_file"]]
 eqtl_cs_file <- snakemake@input[["eqtl_cs_file"]]
@@ -82,6 +83,7 @@ pqtl_lbf_data <- tabix.read.table(pqtl_lbf_file, paste0(chr, ":1-2147483647")) |
   setNames(c("molecular_trait_id", "region", "variant", "chromosome", "position", paste0("lbf_variable", 1:10)))
 
 gnocchi_data <- read_tsv("data/gnocchi-windows.bed", show_col_types = FALSE)
+print(gnocchi_data)
 abc_score_data <- read_tsv("data/abc-data.txt.gz", show_col_types = FALSE)
 density_data_round_1 <- read_rds("output/densities/onek1k_cd4nc_round_1.rds")
 density_data_round_2 <- read_rds("output/densities/onek1k_cd4nc_round_2.rds")

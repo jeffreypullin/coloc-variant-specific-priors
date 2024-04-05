@@ -15,6 +15,7 @@ suppressPackageStartupMessages({
 })
 
 source("code/coloc-utils.R")
+source("code/prior-probabilities-funs.R")
 
 eqtl_file <- snakemake@input[["eqtl_data_file"]]
 pqtl_file <- snakemake@input[["pqtl_data_file"]]
@@ -70,17 +71,12 @@ all_eqtl_data <- tabix.read.table(eqtl_file, paste0(chr, ":1-2147483647")) |>
 all_pqtl_data <- tabix.read.table(pqtl_file, paste0(chr, ":1-2147483647")) |>
   as_tibble()
 
-gnocchi_data <- read_tsv("data/gnocchi-windows.bed",
-                         col_names = FALSE, show_col_types = FALSE)
-colnames(gnocchi_data) <- c("chromosome", "start_pos", "end_pos", "score")
-
+gnocchi_data <- read_tsv("data/gnocchi-windows.bed", show_col_types = FALSE)
 abc_score_data <- read_tsv("data/abc-data.txt.gz", show_col_types = FALSE)
-
 density_data_round_1 <- read_rds("output/densities/onek1k_cd4nc_round_1.rds")
 density_data_round_2 <- read_rds("output/densities/onek1k_cd4nc_round_2.rds")
 density_data_round_3 <- read_rds("output/densities/onek1k_cd4nc_round_3.rds")
 eqtlgen_density_data <- read_rds("output/densities/eqtlgen.rds")
-
 snp_var_data_1_7 <- read_parquet("data/snpvar_meta.chr1_7.parquet")
 snp_var_data_8_22 <- read_parquet("data/snpvar_meta.chr8_22.parquet")
 
