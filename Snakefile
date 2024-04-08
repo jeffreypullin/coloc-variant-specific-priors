@@ -5,10 +5,6 @@ chrs = [x for x in range(1, 23)]
 rule all: 
   input: 
     expand(
-      "data/eqtl-catalogue/processed-sumstats/{dataset_id}.cc.tsv",
-      dataset_id = config["eqtl_catalogue_dataset_ids"]
-    ),
-    expand(
       "data/output/gwas-eqtl-coloc-abf-{gwas_id_eqtl_id}-{chr}.rds", 
       gwas_id_eqtl_id = config["gwas_eqtl_coloc_ids"],
       chr = chrs 
@@ -18,21 +14,18 @@ rule all:
       gwas_id_eqtl_id = config["gwas_eqtl_coloc_ids"],
       chr = chrs
     ),
-    expand(
-      "data/output/pqtl-eqtl-coloc-abf-{eqtl_id}-{chr}.rds", 
-      eqtl_id = config["pqtl_eqtl_coloc_dataset_ids"],
-      chr = chrs
-    ),
-    expand(
-      "data/output/pqtl-eqtl-coloc-susie-{eqtl_id}-{chr}.rds", 
-      eqtl_id = config["pqtl_eqtl_coloc_dataset_ids"],
-      chr = chrs
-    ),
     "output/figures/eqtl-dist-plot.pdf",
     "output/figures/onek1k-plot.pdf",
     "output/figures/dataset-plot.pdf",
     "output/figures/prior-plot.pdf",
-    "output/figures/simulation-plot.pdf"
+    "output/figures/simulation-plot.pdf",
+    "output/figures/pqtl-eqtl-coloc-abf-perf-by-dataset-plot.pdf",
+    "output/figures/pqtl-eqtl-coloc-abf-perf-median-plot.pdf",
+    "output/figures/pqtl-eqtl-coloc-abf-n-coloc-plot.pdf",
+    "output/figures/pqtl-eqtl-coloc-abf-pph4-scatter-plot.pdf",
+    "output/figures/pqtl-eqtl-coloc-susie-perf-by-dataset-plot.pdf",
+    "output/figures/pqtl-eqtl-coloc-susie-perf-median-plot.pdf",
+    "output/figures/pqtl-eqtl-coloc-susie-pph4-scatter-plot.pdf" 
 
 # Download metadata.
 
@@ -391,3 +384,26 @@ rule plot_simulations:
   input: expand("data/output/sim-result-{gene}.rds", gene = config["simulation_genes"])
   output: "output/figures/simulation-plot.pdf"
   script: "code/plot-simulations.R"
+
+rule plot_pqtl_eqtl_colocalisatons:
+  input: 
+    coloc_abf_paths = expand(
+      "data/output/pqtl-eqtl-coloc-abf-{eqtl_id}-{chr}.rds", 
+      eqtl_id = config["pqtl_eqtl_coloc_dataset_ids"],
+      chr = chrs
+    ),
+    coloc_susie_paths = expand(
+      "data/output/pqtl-eqtl-coloc-susie-{eqtl_id}-{chr}.rds", 
+      eqtl_id = config["pqtl_eqtl_coloc_dataset_ids"],
+      chr = chrs
+    ), 
+    protein_metadata_path = "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
+  output: 
+    abf_perf_by_dataset_plot_path = "output/figures/pqtl-eqtl-coloc-abf-perf-by-dataset-plot.pdf",
+    abf_perf_median_plot_path = "output/figures/pqtl-eqtl-coloc-abf-perf-median-plot.pdf",
+    abf_n_colocs_plot_path = "output/figures/pqtl-eqtl-coloc-abf-n-coloc-plot.pdf",
+    abf_pph4_scatter_plot_path = "output/figures/pqtl-eqtl-coloc-abf-pph4-scatter-plot.pdf",
+    susie_perf_by_dataset_plot_path = "output/figures/pqtl-eqtl-coloc-susie-perf-by-dataset-plot.pdf",
+    susie_perf_median_plot_path = "output/figures/pqtl-eqtl-coloc-susie-perf-median-plot.pdf",
+    susie_pph4_scatter_plot_path = "output/figures/pqtl-eqtl-coloc-susie-pph4-scatter-plot.pdf",
+  script: "code/plot-pqtl-eqtl-colocs.R"
