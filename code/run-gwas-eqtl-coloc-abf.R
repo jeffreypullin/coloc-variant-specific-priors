@@ -29,12 +29,20 @@ chr <- as.numeric(snakemake@wildcards[["chr"]])
 coloc_results_file <- snakemake@output[["coloc_results_file"]]
 finemapping_results_file <- snakemake@output[["finemapping_results_file"]]
 
+gnocchi_data_path <- snakemake@input[["gnocchi_data_path"]]
+polyfun_data_1_7_path <- snakemake@input[["polyfun_data_1_7_path"]]
+polyfun_data_8_22_path <- snakemake@input[["polyfun_data_8_22_path"]]
+abc_score_data_path <- snakemake@input[["abc_score_data_path"]]
+eqtlgen_density_path <- snakemake@input[["eqtlgen_density_path"]]
+onek1k_r1_density_path <- snakemake@input[["onek1k_r1_density_path"]]
+onek1k_r2_density_path <- snakemake@input[["onek1k_r2_density_path"]]
+onek1k_r3_density_path <- snakemake@input[["onek1k_r3_density_path"]]
+
 eqtl_metadata <- read_tsv(eqtl_metadata_file, show_col_types = FALSE)
 permutation_data <- read_tsv(permutation_file, show_col_types = FALSE)
 manifest_data <- read_tsv(manifest_file, show_col_types = FALSE)
 
 permutations <- permutation_data |>
-  print(n = 100) |>
   mutate(FDR = p.adjust(p = p_beta, method = "fdr")) |>
   filter(FDR < 0.01) |>
   select(molecular_trait_object_id, molecular_trait_id) |>
@@ -59,7 +67,6 @@ coloc_metadata <- eqtl_metadata |>
 all_eqtl_data <- tabix.read.table(eqtl_file, paste0(chr, ":1-2147483647")) |>
   as_tibble() |>
   setNames(eqtl_catalouge_colnames) |>
-  print(n = 100) |>
   left_join(
     eqtl_metadata |>
       select(gene_id, gene_name, gene_type),
@@ -103,14 +110,14 @@ if (chr == 6) {
 }
 
 # Prior information.
-gnocchi_data <- read_tsv("data/gnocchi-windows.bed", show_col_types = FALSE)
-abc_score_data <- read_tsv("data/abc-data.txt.gz", show_col_types = FALSE)
-density_data_round_1 <- read_rds("output/densities/onek1k_cd4nc_round_1.rds")
-density_data_round_2 <- read_rds("output/densities/onek1k_cd4nc_round_2.rds")
-density_data_round_3 <- read_rds("output/densities/onek1k_cd4nc_round_3.rds")
-eqtlgen_density_data <- read_rds("output/densities/eqtlgen.rds")
-snp_var_data_1_7 <- read_parquet("data/snpvar_meta.chr1_7.parquet")
-snp_var_data_8_22 <- read_parquet("data/snpvar_meta.chr8_22.parquet")
+gnocchi_data <- read_tsv(gnocchi_data_path, show_col_types = FALSE)
+abc_score_data <- read_tsv(abc_score_data_path, show_col_types = FALSE)
+density_data_round_1 <- read_rds(onek1k_r1_density_path)
+density_data_round_2 <- read_rds(onek1k_r2_density_path)
+density_data_round_3 <- read_rds(onek1k_r3_density_path)
+eqtlgen_density_data <- read_rds(eqtlgen_density_path)
+snp_var_data_1_7 <- read_parquet(polyfun_data_1_7_path)
+snp_var_data_8_22 <- read_parquet(polyfun_data_8_22_path)
 
 coloc_results <- list()
 finemapping_results <- list()

@@ -75,6 +75,22 @@ ggsave(
 
 # OneK1K analysis.
 
+onek1k_data <- onek1k_data |>
+  group_by(gene_id, tss_distance, round) |>
+  summarise(
+    cell_type_collapsed = paste0(sort(unlist(cell_type)), collapse = "-"),
+    cell_type = list(cell_type),
+    n_cell_types = n(),
+    .groups = "drop"
+  ) |>
+  mutate(
+    abs_tss_distance = abs(tss_distance),
+    log10_tss_distance = log10(tss_distance),
+    log10_abs_tss_distance = log10(abs_tss_distance)
+  )
+
+print(onek1k_data)
+
 n_cell_types_plot <- onek1k_data |>
   mutate(abs_tss_distance = log10(abs_tss_distance)) |>
   ggplot(aes(factor(n_cell_types), abs_tss_distance)) +

@@ -14,17 +14,17 @@ suppressPackageStartupMessages({
 
 source("code/coloc-utils.R")
 source("code/plot-utils.R")
+source("code/prior-probabilities-funs.R")
 
-devtools::load_all("~/coloc")
+sn <- snakemake
+gnocchi_data <- read_tsv(sn@input[["gnocchi_data_path"]], show_col_types = FALSE)
+abc_score_data <- read_tsv(sn@input[["abc_score_data_path"]], show_col_types = FALSE)
+density_data_round_1 <- read_rds(sn@input[["density_data_r1_path"]])
+density_data_round_2 <- read_rds(sn@input[["density_data_r2_path"]])
+eqtlgen_density_data <- read_rds(sn@input[["eqtlgen_density_data_path"]])
+snp_var_data_1_7 <- read_parquet(sn@input[["snp_var_data_1_7_path"]])
 
 plot_path <- snakemake@output[[1]]
-
-gnocchi_data <- read_tsv("data/gnocchi-windows.bed", show_col_types = FALSE)
-abc_score_data <- read_tsv("data/abc-data.txt.gz", show_col_types = FALSE)
-density_data_round_1 <- read_rds("output/densities/onek1k_cd4nc_round_1.rds")
-density_data_round_2 <- read_rds("output/densities/onek1k_cd4nc_round_2.rds")
-eqtlgen_density_data <- read_rds("output/densities/eqtlgen.rds")
-snp_var_data_1_7 <- read_parquet("data/snpvar_meta.chr1_7.parquet")
 
 chr <- 1
 tss <- 113871759
@@ -33,7 +33,7 @@ gene_name <- "PTPN22"
 region <- paste0(chr, ":", tss - width, "-",  tss + width)
 
 position <- tabix.read.table(
-  here::here("data/finngen/AUTOIMMUNE.gz"),
+  sn@input[["autoimmune_gwas_path"]],
   region
 ) |>
   as_tibble() |>

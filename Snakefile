@@ -4,11 +4,6 @@ chrs = [x for x in range(1, 23)]
 
 rule all: 
   input: 
-    "data/tss-data/hg19-tss-data.rds",
-    "data/gnocchi-windows.bed",
-    "data/snpvar_meta.chr1_7.parquet",
-    "data/snpvar_meta.chr8_22.parquet",
-    "data/abc-data.txt.gz",
     expand(
       "data/eqtl-catalogue/processed-sumstats/{dataset_id}.cc.tsv",
       dataset_id = config["eqtl_catalogue_dataset_ids"]
@@ -39,11 +34,24 @@ rule all:
     "output/figures/prior-plot.pdf",
     "output/figures/simulation-plot.pdf"
 
+# Download metadata.
+
+rule download_metadata:
+  output: 
+    eqtl_metadata_file = "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
+    pqtl_metadata_file = "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
+  shell:
+    """
+    wget -O {output.eqtl_metadata_file} https://zenodo.org/record/7808390/files/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz
+    wget -O {output.pqtl_metadata_file} https://zenodo.org/record/7808390/files/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz
+    """ 
+
 rule download_tss_data: 
   output: hg19_tss_data_path = "data/tss-data/hg19-tss-data.rds",
-          hg38_tss_data_path = "data/tss-data/hg38-tss-data.rds"
   script: "code/download-tss-data.R"
-    
+
+# Download and process eQTL data.
+ 
 rule download_eqtlgen_data:
   output: "data/eqtlgen.txt.gz",
   shell:
@@ -52,7 +60,9 @@ rule download_eqtlgen_data:
     """
 
 rule process_eqtlgen_data:
-  input: eqtlgen_path =  "data/eqtlgen.txt.gz"
+  input: 
+    eqtlgen_path =  "data/eqtlgen.txt.gz",
+    hg19_tss_data_path = "data/tss-data/hg19-tss-data.rds",
   output: processed_data_path = "data/processed-data/eqtlgen.rds"
   script: "code/process-data/process-eqtlgen-data.R"
     
@@ -138,15 +148,18 @@ rule process_onek1k_data:
   output: processed_data_path = "data/processed-data/onek1k.rds"
   script: "code/process-data/process-onek1k-data.R"
 
-rule download_metadata:
+# Download and create prior probabilities data.
+
+rule compute_eqtl_densitites:
+  input: 
+    processed_eqtlgen_data_path = "data/processed-data/eqtlgen.rds",
+    processed_onek1k_data_path = "data/processed-data/onek1k.rds"
   output: 
-    eqtl_metadata_file = "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
-    pqtl_metadata_file = "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
-  shell:
-    """
-    wget -O {output.eqtl_metadata_file} https://zenodo.org/record/7808390/files/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz
-    wget -O {output.pqtl_metadata_file} https://zenodo.org/record/7808390/files/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz
-    """ 
+    eqtlgen_density_path = "output/densities/eqtlgen.rds",
+    onek1k_r1_density_path = "output/densities/onek1k_cd4nc_round_1.rds",
+    onek1k_r2_density_path = "output/densities/onek1k_cd4nc_round_2.rds",
+    onek1k_r3_density_path = "output/densities/onek1k_cd4nc_round_3.rds"
+  script: "code/compute-eqtl-densities.R"
 
 rule download_gnochhi_data: 
   output: "data/raw-gnocchi-windows.bed" 
@@ -188,7 +201,7 @@ rule download_polyfun_data:
    wget -O {output.chr8_22} https://github.com/omerwe/polyfun/raw/master/snpvar_meta.chr8_22.parquet
    """
 
-# Download Finngen data.
+# Download Finngen GWAS data.
 
 rule download_finngen_manifest:
   output: "data/finngen/finngen-manifest.tsv"
@@ -221,15 +234,25 @@ rule run_tabix_finngen_lbf_files:
 
 # Run colocalsiations.
 
-rule run_pqtl_eqtl_colocalisation:
+rule run_pqtl_eqtl_coloc_abf_colocalisation:
   input: 
+    # Input files.
     eqtl_data_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.cc.tsv.gz",
     eqtl_index_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.cc.tsv.gz.tbi",
     permutation_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.permuted.tsv.gz",
     pqtl_data_file = "data/eqtl-catalogue/sumstats/QTD000584.cc.tsv.gz",
     pqtl_index_file = "data/eqtl-catalogue/sumstats/QTD000584.cc.tsv.gz.tbi",
     eqtl_metadata_file = "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
-    pqtl_metadata_file = "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
+    pqtl_metadata_file = "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz",
+    # Prior data.
+    gnocchi_data_path = "data/gnocchi-windows.bed",
+    polyfun_data_1_7_path = "data/snpvar_meta.chr1_7.parquet",
+    polyfun_data_8_22_path = "data/snpvar_meta.chr8_22.parquet",
+    abc_score_data_path = "data/abc-data.txt.gz",
+    eqtlgen_density_path = "output/densities/eqtlgen.rds",
+    onek1k_r1_density_path = "output/densities/onek1k_cd4nc_round_1.rds",
+    onek1k_r2_density_path = "output/densities/onek1k_cd4nc_round_2.rds",
+    onek1k_r3_density_path = "output/densities/onek1k_cd4nc_round_3.rds"
   output: 
     result_file = "data/output/pqtl-eqtl-coloc-abf-{eqtl_id}-{chr}.rds"
   retries: 1
@@ -240,6 +263,7 @@ rule run_pqtl_eqtl_colocalisation:
 
 rule run_pqtl_eqtl_coloc_susie_colocalisation:
   input: 
+    # Input files.
     eqtl_cs_file = "data/eqtl-catalogue/susie/{eqtl_id}.credible_sets.tsv.gz",
     eqtl_lbf_file = "data/eqtl-catalogue/susie/{eqtl_id}.lbf_variable.txt.gz",
     eqtl_lbf_index_file = "data/eqtl-catalogue/susie/{eqtl_id}.lbf_variable.txt.gz.tbi",
@@ -248,7 +272,16 @@ rule run_pqtl_eqtl_coloc_susie_colocalisation:
     pqtl_lbf_index_file = "data/eqtl-catalogue/susie/QTD000584.lbf_variable.txt.gz.tbi",
     permutation_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.permuted.tsv.gz",
     eqtl_metadata_file = "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
-    pqtl_metadata_file = "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
+    pqtl_metadata_file = "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz",
+    # Prior data.
+    gnocchi_data_path = "data/gnocchi-windows.bed",
+    polyfun_data_1_7_path = "data/snpvar_meta.chr1_7.parquet",
+    polyfun_data_8_22_path = "data/snpvar_meta.chr8_22.parquet",
+    abc_score_data_path = "data/abc-data.txt.gz",
+    eqtlgen_density_path = "output/densities/eqtlgen.rds",
+    onek1k_r1_density_path = "output/densities/onek1k_cd4nc_round_1.rds",
+    onek1k_r2_density_path = "output/densities/onek1k_cd4nc_round_2.rds",
+    onek1k_r3_density_path = "output/densities/onek1k_cd4nc_round_3.rds"
   output: 
     result_file = "data/output/pqtl-eqtl-coloc-susie-{eqtl_id}-{chr}.rds"
   retries: 1
@@ -257,15 +290,25 @@ rule run_pqtl_eqtl_coloc_susie_colocalisation:
     time_min = lambda wildcards, attempt: 20 * attempt ** 3
   script: "code/run-pqtl-eqtl-coloc-susie.R"
 
-rule run_gwas_eqtl_colocalisation:
+rule run_gwas_eqtl_coloc_abf_colocalisation:
   input: 
+    # Input files.
     eqtl_data_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.cc.tsv.gz",
     permutation_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.permuted.tsv.gz",
     eqtl_index_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.cc.tsv.gz.tbi",
     gwas_data_file = "data/finngen/{gwas_id}.gz",
     gwas_index_file = "data/finngen/{gwas_id}.gz.tbi",
     eqtl_metadata_file = "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
-    manifest_file = "data/finngen/finngen-manifest.tsv"
+    manifest_file = "data/finngen/finngen-manifest.tsv",
+    # Prior data.
+    gnocchi_data_path = "data/gnocchi-windows.bed",
+    polyfun_data_1_7_path = "data/snpvar_meta.chr1_7.parquet",
+    polyfun_data_8_22_path = "data/snpvar_meta.chr8_22.parquet",
+    abc_score_data_path = "data/abc-data.txt.gz",
+    eqtlgen_density_path = "output/densities/eqtlgen.rds",
+    onek1k_r1_density_path = "output/densities/onek1k_cd4nc_round_1.rds",
+    onek1k_r2_density_path = "output/densities/onek1k_cd4nc_round_2.rds",
+    onek1k_r3_density_path = "output/densities/onek1k_cd4nc_round_3.rds"
   output: 
     coloc_results_file = "data/output/gwas-eqtl-coloc-abf-{gwas_id}-{eqtl_id}-{chr}.rds",
     finemapping_results_file = "data/output/gwas-eqtl-finemapping-{gwas_id}-{eqtl_id}-{chr}.rds"
@@ -277,6 +320,7 @@ rule run_gwas_eqtl_colocalisation:
 
 rule run_gwas_eqtl_coloc_susie_colocalisation:
   input: 
+    # Input files.
     eqtl_cs_file = "data/eqtl-catalogue/susie/{eqtl_id}.credible_sets.tsv.gz",
     eqtl_lbf_file = "data/eqtl-catalogue/susie/{eqtl_id}.lbf_variable.txt.gz",
     eqtl_lbf_index_file = "data/eqtl-catalogue/susie/{eqtl_id}.lbf_variable.txt.gz.tbi",
@@ -285,6 +329,15 @@ rule run_gwas_eqtl_coloc_susie_colocalisation:
     gwas_lbf_index_file = "data/finngen/{gwas_id}.SUSIE.snp.bgz.tbi",
     permutation_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.permuted.tsv.gz",
     eqtl_metadata_file = "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
+    # Prior data.
+    gnocchi_data_path = "data/gnocchi-windows.bed",
+    polyfun_data_1_7_path = "data/snpvar_meta.chr1_7.parquet",
+    polyfun_data_8_22_path = "data/snpvar_meta.chr8_22.parquet",
+    abc_score_data_path = "data/abc-data.txt.gz",
+    eqtlgen_density_path = "output/densities/eqtlgen.rds",
+    onek1k_r1_density_path = "output/densities/onek1k_cd4nc_round_1.rds",
+    onek1k_r2_density_path = "output/densities/onek1k_cd4nc_round_2.rds",
+    onek1k_r3_density_path = "output/densities/onek1k_cd4nc_round_3.rds",
   output: 
     result_file = "data/output/gwas-eqtl-coloc-susie-{gwas_id}-{eqtl_id}-{chr}.rds"
   retries: 1
@@ -323,6 +376,14 @@ rule plot_eqtl_tss_dist:
   script: "code/plot-eqtl-tss-dist.R"
 
 rule plot_priors:
+  input: 
+    autoimmune_gwas_path = "data/finngen/AUTOIMMUNE.gz",
+    gnocchi_data_path = "data/gnocchi-windows.bed",
+    abc_score_data_path = "data/abc-data.txt.gz",
+    density_data_r1_path = "output/densities/onek1k_cd4nc_round_1.rds",
+    density_data_r2_path = "output/densities/onek1k_cd4nc_round_2.rds",
+    eqtlgen_density_data_path = "output/densities/eqtlgen.rds",
+    snp_var_data_1_7_path = "data/snpvar_meta.chr1_7.parquet"
   output: "output/figures/prior-plot.pdf"
   script: "code/plot-priors.R"
 

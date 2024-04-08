@@ -2,6 +2,12 @@
 
 # renv::install("liftOver")
 
+logsum <- function(x) {
+    my.max <- max(x)                              ##take out the maximum value in log form
+    my.res <- my.max + log(sum(exp(x - my.max ))) 
+    return(my.res)
+}
+
 hg38tohg19 <- function(pos, chrom) {
 
   path <- system.file(package = "liftOver", "extdata", "hg38ToHg19.over.chain")

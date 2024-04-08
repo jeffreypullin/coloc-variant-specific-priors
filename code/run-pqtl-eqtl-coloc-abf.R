@@ -28,6 +28,15 @@ eqtl_metadata <- read_tsv(eqtl_metadata_file, show_col_types = FALSE)
 pqtl_metadata <- read_tsv(pqtl_metadata_file, show_col_types = FALSE)
 permutation_data <- read_tsv(permutation_file, show_col_types = FALSE)
 
+gnocchi_data_path <- snakemake@input[["gnocchi_data_path"]]
+polyfun_data_1_7_path <- snakemake@input[["polyfun_data_1_7_path"]]
+polyfun_data_8_22_path <- snakemake@input[["polyfun_data_8_22_path"]]
+abc_score_data_path <- snakemake@input[["abc_score_data_path"]]
+eqtlgen_density_path <- snakemake@input[["eqtlgen_density_path"]]
+onek1k_r1_density_path <- snakemake@input[["onek1k_r1_density_path"]]
+onek1k_r2_density_path <- snakemake@input[["onek1k_r2_density_path"]]
+onek1k_r3_density_path <- snakemake@input[["onek1k_r3_density_path"]]
+
 permutations <- permutation_data |>
   mutate(FDR = p.adjust(p = p_beta, method = "fdr")) |>
   filter(FDR < 0.01) |>
@@ -71,14 +80,14 @@ all_eqtl_data <- tabix.read.table(eqtl_file, paste0(chr, ":1-2147483647")) |>
 all_pqtl_data <- tabix.read.table(pqtl_file, paste0(chr, ":1-2147483647")) |>
   as_tibble()
 
-gnocchi_data <- read_tsv("data/gnocchi-windows.bed", show_col_types = FALSE)
-abc_score_data <- read_tsv("data/abc-data.txt.gz", show_col_types = FALSE)
-density_data_round_1 <- read_rds("output/densities/onek1k_cd4nc_round_1.rds")
-density_data_round_2 <- read_rds("output/densities/onek1k_cd4nc_round_2.rds")
-density_data_round_3 <- read_rds("output/densities/onek1k_cd4nc_round_3.rds")
-eqtlgen_density_data <- read_rds("output/densities/eqtlgen.rds")
-snp_var_data_1_7 <- read_parquet("data/snpvar_meta.chr1_7.parquet")
-snp_var_data_8_22 <- read_parquet("data/snpvar_meta.chr8_22.parquet")
+gnocchi_data <- read_tsv(gnocchi_data_path, show_col_types = FALSE)
+abc_score_data <- read_tsv(abc_score_data_path, show_col_types = FALSE)
+density_data_round_1 <- read_rds(onek1k_r1_density_path)
+density_data_round_2 <- read_rds(onek1k_r2_density_path)
+density_data_round_3 <- read_rds(onek1k_r3_density_path)
+eqtlgen_density_data <- read_rds(eqtlgen_density_path)
+snp_var_data_1_7 <- read_parquet(polyfun_data_1_7_path)
+snp_var_data_8_22 <- read_parquet(polyfun_data_8_22_path)
 
 results <- list()
 for (i in seq_len(nrow(coloc_metadata))) {
