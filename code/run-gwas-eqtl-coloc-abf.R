@@ -235,6 +235,8 @@ for (i in seq_len(nrow(coloc_metadata))) {
     eqtl_dataset$position, chr, coloc_metadata$gene_name[[i]], abc_score_data,
     biosamples = "primary_blood"
   )
+  rand_prior_weights <- compute_rand_prior_weights(eqtl_dataset$position)
+  permuted_eqtl_prior_weights <- sample(eqtl_prior_weights)
 
   if (chr %in% 1:7) {
     polyfun_data <- snp_var_data_1_7
@@ -360,9 +362,33 @@ for (i in seq_len(nrow(coloc_metadata))) {
     prior_weights2 = abc_score_primary_blood_prior_weights
   )
 
+  coloc_rand_eqtl <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights1 = rand_prior_weights
+  )
+
+  coloc_rand_gwas <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights2 = rand_prior_weights
+  )
+
+  coloc_perm_eqtlgen_eqtl <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights1 = permuted_eqtl_prior_weights
+  )
+
+  coloc_perm_eqtlgen_gwas <- coloc.abf(
+    dataset1 = eqtl_dataset,
+    dataset2 = gwas_dataset,
+    prior_weights2 = permuted_eqtl_prior_weights
+  )
+
   # Uncertainty estimation.
   N <- 100
-  qs <- c(0, 0.05, 0.2, 0.25, 0.5, 0.75, 0.8, 0.95)
+  qs <- c(0.05, 0.25, 0.5, 0.75, 0.95)
 
   pph4_rand_eqtl <- numeric(N)
   pph4_rand_gwas <- numeric(N)
@@ -396,10 +422,15 @@ for (i in seq_len(nrow(coloc_metadata))) {
     )$summary["PP.H4.abf"]
   }
 
+  prop_sig_pph4_rand_eqtl <- sum(pph4_rand_eqtl > 0.8) / N
+  prop_sig_pph4_rand_gwas <- sum(pph4_rand_gwas > 0.8) / N
+  prop_sig_pph4_perm_eqtlgen_eqtl <- sum(pph4_perm_eqtlgen_eqtl > 0.8) / N
+  prop_sig_pph4_perm_eqtlgen_gwas <- sum(pph4_perm_eqtlgen_gwas > 0.8) / N
+
   q_pph4_rand_eqtl <- quantile(pph4_rand_eqtl, qs)
   q_pph4_rand_gwas <- quantile(pph4_rand_gwas, qs)
   q_pph4_perm_eqtlgen_eqtl <- quantile(pph4_perm_eqtlgen_eqtl, qs)
-  q_pph4_perm_eqtlgen_gwas <- quantile(pph4_perm_eqtlgen_eqtl, qs)
+  q_pph4_perm_eqtlgen_gwas <- quantile(pph4_perm_eqtlgen_gwas, qs)
 
   colocs <- bind_cols(
     coloc_to_tibble(coloc_unif, "unif"),
@@ -423,11 +454,21 @@ for (i in seq_len(nrow(coloc_metadata))) {
     # Polyfun.
     coloc_to_tibble(coloc_polyfun_eqtl, "polyfun_eqtl"),
     coloc_to_tibble(coloc_polyfun_gwas, "polyfun_gwas"),
+    # Random.
+    coloc_to_tibble(coloc_rand_eqtl, "rand_eqtl"),
+    coloc_to_tibble(coloc_rand_gwas, "rand_gwas"),
+    # Permuted.
+    coloc_to_tibble(coloc_perm_eqtlgen_eqtl, "perm_eqtlgen_eqtl"),
+    coloc_to_tibble(coloc_perm_eqtlgen_gwas, "perm_eqtlgen_gwas"),
     tibble(
       q_pph4_rand_eqtl = list(q_pph4_rand_eqtl),
       q_pph4_rand_gwas = list(q_pph4_rand_gwas),
       q_pph4_perm_eqtlgen_eqtl = list(q_pph4_perm_eqtlgen_eqtl),
-      q_pph4_perm_eqtlgen_gwas = list( q_pph4_perm_eqtlgen_gwas),
+      q_pph4_perm_eqtlgen_gwas = list(q_pph4_perm_eqtlgen_gwas),
+      prop_sig_pph4_rand_eqtl = prop_sig_pph4_rand_eqtl,
+      prop_sig_pph4_rand_gwas = prop_sig_pph4_rand_gwas,
+      prop_sig_pph4_perm_eqtlgen_eqtl = prop_sig_pph4_perm_eqtlgen_eqtl,
+      prop_sig_pph4_perm_eqtlgen_gwas = prop_sig_pph4_perm_eqtlgen_gwas,
       gene_name = coloc_metadata$gene_name[[i]]
   ))
   colocs <- left_join(colocs, coloc_metadata, by = "gene_name")
