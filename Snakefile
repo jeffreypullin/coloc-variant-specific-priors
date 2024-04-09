@@ -4,16 +4,6 @@ chrs = [x for x in range(1, 23)]
 
 rule all: 
   input: 
-    expand(
-      "data/output/gwas-eqtl-coloc-abf-{gwas_id_eqtl_id}-{chr}.rds", 
-      gwas_id_eqtl_id = config["gwas_eqtl_coloc_ids"],
-      chr = chrs 
-    ),
-    expand(
-      "data/output/gwas-eqtl-coloc-susie-{gwas_id_eqtl_id}-{chr}.rds", 
-      gwas_id_eqtl_id = config["gwas_eqtl_coloc_ids"],
-      chr = chrs
-    ),
     "output/figures/eqtl-dist-plot.pdf",
     "output/figures/onek1k-plot.pdf",
     "output/figures/dataset-plot.pdf",
@@ -25,7 +15,13 @@ rule all:
     "output/figures/pqtl-eqtl-coloc-abf-pph4-scatter-plot.pdf",
     "output/figures/pqtl-eqtl-coloc-susie-perf-by-dataset-plot.pdf",
     "output/figures/pqtl-eqtl-coloc-susie-perf-median-plot.pdf",
-    "output/figures/pqtl-eqtl-coloc-susie-pph4-scatter-plot.pdf" 
+    "output/figures/pqtl-eqtl-coloc-susie-pph4-scatter-plot.pdf",
+    "output/figures/gwas-eqtl-coloc-abf-n-colocs-plot.pdf",
+    "output/figures/gwas-eqtl-coloc-abf-boostrap-scatter-plot.pdf",
+    "output/figures/gwas-eqtl-coloc-abf-prob-sig-scatter-plot.pdf",
+    "output/tables/gwas-eqtl-coloc-abf-results.xlsx",
+    "output/tables/gwas-eqtl-coloc-susie-results.xlsx",
+    "output/figures/gwas-eqtl-prior-effect-scatter-plot.pdf"
 
 # Download metadata.
 
@@ -407,3 +403,24 @@ rule plot_pqtl_eqtl_colocalisatons:
     susie_perf_median_plot_path = "output/figures/pqtl-eqtl-coloc-susie-perf-median-plot.pdf",
     susie_pph4_scatter_plot_path = "output/figures/pqtl-eqtl-coloc-susie-pph4-scatter-plot.pdf",
   script: "code/plot-pqtl-eqtl-colocs.R"
+
+rule plot_gwas_eqtl_colocalisatons:
+  input: 
+    coloc_abf_paths = expand(
+      "data/output/gwas-eqtl-coloc-abf-{gwas_id_eqtl_id}-{chr}.rds", 
+      gwas_id_eqtl_id = config["gwas_eqtl_coloc_ids"],
+      chr = chrs 
+    ),
+    coloc_susie_paths = expand(
+      "data/output/gwas-eqtl-coloc-susie-{gwas_id_eqtl_id}-{chr}.rds", 
+      gwas_id_eqtl_id = config["gwas_eqtl_coloc_ids"],
+      chr = chrs
+    ), 
+  output: 
+    abf_n_colocs_plot_path = "output/figures/gwas-eqtl-coloc-abf-n-colocs-plot.pdf",
+    abf_bootstrap_scatter_plot_path = "output/figures/gwas-eqtl-coloc-abf-boostrap-scatter-plot.pdf",
+    abf_prob_sig_scatter_plot_path = "output/figures/gwas-eqtl-coloc-abf-prob-sig-scatter-plot.pdf",
+    abf_coloc_results_table_path = "output/tables/gwas-eqtl-coloc-abf-results.xlsx",
+    susie_coloc_results_table_path = "output/tables/gwas-eqtl-coloc-susie-results.xlsx",
+    susie_prior_effect_scatter_plot_path = "output/figures/gwas-eqtl-prior-effect-scatter-plot.pdf"
+  script: "code/plot-gwas-eqtl-colocs.R"
