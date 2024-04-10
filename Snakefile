@@ -397,10 +397,12 @@ rule plot_pqtl_eqtl_colocalisatons:
   output: 
     abf_perf_by_dataset_plot_path = "output/figures/pqtl-eqtl-coloc-abf-perf-by-dataset-plot.pdf",
     abf_perf_median_plot_path = "output/figures/pqtl-eqtl-coloc-abf-perf-median-plot.pdf",
+    abf_perf_max_plot_path = "output/figures/pqtl-eqtl-coloc-abf-perf-max-plot.pdf",
     abf_n_colocs_plot_path = "output/figures/pqtl-eqtl-coloc-abf-n-coloc-plot.pdf",
     abf_pph4_scatter_plot_path = "output/figures/pqtl-eqtl-coloc-abf-pph4-scatter-plot.pdf",
     susie_perf_by_dataset_plot_path = "output/figures/pqtl-eqtl-coloc-susie-perf-by-dataset-plot.pdf",
     susie_perf_median_plot_path = "output/figures/pqtl-eqtl-coloc-susie-perf-median-plot.pdf",
+    susie_perf_max_plot_path = "output/figures/pqtl-eqtl-coloc-susie-perf-max-plot.pdf",
     susie_pph4_scatter_plot_path = "output/figures/pqtl-eqtl-coloc-susie-pph4-scatter-plot.pdf",
   script: "code/plot-pqtl-eqtl-colocs.R"
 
