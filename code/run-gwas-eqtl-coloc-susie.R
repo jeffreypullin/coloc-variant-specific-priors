@@ -31,9 +31,6 @@ permutation_file <- snakemake@input[["permutation_file"]]
 eqtl_metadata_file <- snakemake@input[["eqtl_metadata_file"]]
 chr <- as.numeric(snakemake@wildcards[["chr"]])
 
-eqtl_metadata <- read_tsv(eqtl_metadata_file, show_col_types = FALSE)
-permutation_data <- read_tsv(permutation_file, show_col_types = FALSE)
-
 gnocchi_data_path <- snakemake@input[["gnocchi_data_path"]]
 polyfun_data_1_7_path <- snakemake@input[["polyfun_data_1_7_path"]]
 polyfun_data_8_22_path <- snakemake@input[["polyfun_data_8_22_path"]]
@@ -42,12 +39,6 @@ eqtlgen_density_path <- snakemake@input[["eqtlgen_density_path"]]
 onek1k_r1_density_path <- snakemake@input[["onek1k_r1_density_path"]]
 onek1k_r2_density_path <- snakemake@input[["onek1k_r2_density_path"]]
 onek1k_r3_density_path <- snakemake@input[["onek1k_r3_density_path"]]
-
-permutations <- permutation_data |>
-  mutate(FDR = p.adjust(p = p_beta, method = "fdr")) |>
-  filter(FDR < 0.01) |>
-  select(molecular_trait_object_id, molecular_trait_id) |>
-  distinct()
 
 calculate_region_overlap <- function(region_1, region_2) {
 
@@ -76,6 +67,15 @@ calculate_region_overlap <- function(region_1, region_2) {
 
   out
 }
+
+eqtl_metadata <- read_tsv(eqtl_metadata_file, show_col_types = FALSE)
+permutation_data <- read_tsv(permutation_file, show_col_types = FALSE)
+
+permutations <- permutation_data |>
+  mutate(FDR = p.adjust(p = p_beta, method = "fdr")) |>
+  filter(FDR < 0.01) |>
+  select(molecular_trait_object_id, molecular_trait_id) |>
+  distinct()
 
 eqtl_cs_data <- read_tsv(eqtl_cs_file, show_col_types = FALSE)
 eqtl_lbf_data <- tabix.read.table(eqtl_lbf_file, paste0(chr, ":1-2147483647")) |>
@@ -129,7 +129,6 @@ if (n_regions == 0) {
     filter(gene_type == "protein_coding") |>
     mutate(tss = if_else(strand == 1, gene_start, gene_end))
 }
-
 
 gnocchi_data <- read_tsv(gnocchi_data_path, show_col_types = FALSE)
 abc_score_data <- read_tsv(abc_score_data_path, show_col_types = FALSE)
@@ -365,13 +364,14 @@ for (i in seq_len(nrow(coloc_metadata))) {
     coloc_to_tibble(coloc_abc_score_eqtl, "abc_score_eqtl"),
     coloc_to_tibble(coloc_abc_score_gwas, "abc_score_gwas"),
     coloc_to_tibble(coloc_abc_score_gwas_primary_blood, "abc_score_gwas_primary_blood"),
-    # polyfun.
+    # PolyFun.
     coloc_to_tibble(coloc_polyfun_eqtl, "polyfun_eqtl"),
     coloc_to_tibble(coloc_polyfun_gwas, "polyfun_gwas"),
     tibble(
       chromosome = coloc_metadata$chromosome[[i]],
       gene_id = coloc_metadata$gene_id[[i]],
       gwas_region = coloc_metadata$gwas_region[[i]],
+      eqtl_region = coloc_metadata$eqtl_region[[i]],
       gene_name = coloc_metadata$gene_name[[i]],
       tss = coloc_metadata$tss[[i]]
   ))
@@ -380,6 +380,7 @@ for (i in seq_len(nrow(coloc_metadata))) {
 }
 
 all_results <- bind_rows(!!!results)
+# NAs caused by 'snp overlap too small' issue.
 if (nrow(all_results) != 0) {
   all_results <- all_results |>
     filter(!is.na(PP.H4.abf_unif))
