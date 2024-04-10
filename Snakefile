@@ -21,7 +21,7 @@ rule all:
     "output/figures/gwas-eqtl-coloc-abf-prob-sig-scatter-plot.pdf",
     "output/tables/gwas-eqtl-coloc-abf-results.xlsx",
     "output/tables/gwas-eqtl-coloc-susie-results.xlsx",
-    "output/figures/gwas-eqtl-prior-effect-scatter-plot.pdf"
+    "output/figures/gwas-eqtl-coloc-susie-prior-effect-plot.pdf" 
 
 # Download metadata.
 
@@ -424,5 +424,6 @@ rule plot_gwas_eqtl_colocalisatons:
     abf_prob_sig_scatter_plot_path = "output/figures/gwas-eqtl-coloc-abf-prob-sig-scatter-plot.pdf",
     abf_coloc_results_table_path = "output/tables/gwas-eqtl-coloc-abf-results.xlsx",
     susie_coloc_results_table_path = "output/tables/gwas-eqtl-coloc-susie-results.xlsx",
-    susie_prior_effect_scatter_plot_path = "output/figures/gwas-eqtl-prior-effect-scatter-plot.pdf"
+    susie_prior_effect_plot_path = "output/figures/gwas-eqtl-coloc-susie-prior-effect-plot.pdf",
+  localrule: True
   script: "code/plot-gwas-eqtl-colocs.R"

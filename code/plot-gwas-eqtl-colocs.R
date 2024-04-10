@@ -11,6 +11,7 @@ suppressPackageStartupMessages({
   library(patchwork)
   library(openxlsx)
   library(stringr)
+  library(janitor)
 })
 
 source("code/coloc-utils.R")
@@ -25,7 +26,20 @@ abf_bootstrap_scatter_plot_path <- snakemake@output[["abf_bootstrap_scatter_plot
 abf_prob_sig_scatter_plot_path <- snakemake@output[["abf_prob_sig_scatter_plot_path"]]
 abf_coloc_results_table_path <- snakemake@output[["abf_coloc_results_table_path"]]
 susie_coloc_results_table_path <- snakemake@output[["susie_coloc_results_table_path"]]
-susie_prior_effect_scatter_plot_path <- snakemake@output[["susie_prior_effect_scatter_plot_path"]]
+susie_prior_effect_plot_path <- snakemake@output[["susie_prior_effect_plot_path"]]
+
+# Debugging.
+#config <- yaml::read_yaml("config.yaml")
+#coloc_susie_paths <- glue(
+# "data/output/gwas-eqtl-coloc-susie-{gwas_id_eqtl_id}-{chr}.rds",
+#  gwas_id_eqtl_id = rep(config$gwas_eqtl_coloc_ids, 22),
+#  chr = rep(1:22, each = 6)
+#)
+#coloc_abf_paths <- glue(
+# "data/output/gwas-eqtl-coloc-abf-{gwas_id_eqtl_id}-{chr}.rds",
+#  gwas_id_eqtl_id = rep(config$gwas_eqtl_coloc_ids, 22),
+#  chr = rep(1:22, each = 6)
+#)
 
 gwas_eqtl_coloc_abf_data <- tibble(path = coloc_abf_paths) |>
   rowwise() |>
@@ -187,26 +201,29 @@ saveWorkbook(
 
 rm(wb)
 
-# Effect of priors on PPH4.
+# Effect of priors on Pr(H4).
 
-prior_effect_scatter_plot <- gwas_eqtl_coloc_susie_data |>
-  ggplot(aes(PP.H4.abf_unif, PP.H4.abf_eqtl_tss_eqtlgen)) +
-  geom_point() +
-  theme_jp() +
-gwas_eqtl_coloc_susie_data |>
-  ggplot(aes(PP.H4.abf_unif, PP.H4.abf_gnocchi_eqtl)) +
-  geom_point() +
-  theme_jp() +
-gwas_eqtl_coloc_susie_data |>
-  ggplot(aes(PP.H4.abf_unif, PP.H4.abf_polyfun_eqtl)) +
-  geom_point() +
-  theme_jp() +
-  plot_layout(axis_titles = "collect")
+susie_prior_effect_plot <- gwas_eqtl_coloc_susie_data |>
+  select(gene_name, gwas_id, starts_with("PP.H4.abf")) |>
+  pivot_longer(
+    -c(gene_name, gwas_id, PP.H4.abf_unif),
+    names_to = "prior_type",
+    values_to = "pp_h4"
+  ) |>
+  mutate(diff = pp_h4 - PP.H4.abf_unif) |>
+  mutate(prior_type = fct_reorder(factor(prior_type), diff, .fun = var)) |>
+  ggplot(aes(prior_type, diff)) +
+  geom_boxplot() +
+  labs(
+    y = "Difference in Pr(H4) values",
+    x = "Prior type"
+  ) +
+  coord_flip() +
+  theme_jp_vgrid()
 
 ggsave(
-  susie_prior_effect_scatter_plot_path,
-  prior_effect_scatter_plot,
-  width = 12,
+  susie_prior_effect_plot_path,
+  susie_prior_effect_plot,
+  width = 8,
   height = 8
 )
-
