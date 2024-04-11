@@ -426,5 +426,6 @@ rule plot_gwas_eqtl_colocalisatons:
     abf_coloc_results_table_path = "output/tables/gwas-eqtl-coloc-abf-results.xlsx",
     susie_coloc_results_table_path = "output/tables/gwas-eqtl-coloc-susie-results.xlsx",
     susie_prior_effect_plot_path = "output/figures/gwas-eqtl-coloc-susie-prior-effect-plot.pdf",
+    abf_prior_effect_plot_path = "output/figures/gwas-eqtl-coloc-abf-prior-effect-plot.pdf",
   localrule: True
   script: "code/plot-gwas-eqtl-colocs.R"

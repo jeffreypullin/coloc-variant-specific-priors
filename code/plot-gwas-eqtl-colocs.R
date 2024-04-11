@@ -27,6 +27,7 @@ abf_prob_sig_scatter_plot_path <- snakemake@output[["abf_prob_sig_scatter_plot_p
 abf_coloc_results_table_path <- snakemake@output[["abf_coloc_results_table_path"]]
 susie_coloc_results_table_path <- snakemake@output[["susie_coloc_results_table_path"]]
 susie_prior_effect_plot_path <- snakemake@output[["susie_prior_effect_plot_path"]]
+abf_prior_effect_plot_path <- snakemake@output[["abf_prior_effect_plot_path"]]
 
 # Debugging.
 #config <- yaml::read_yaml("config.yaml")
@@ -224,6 +225,31 @@ susie_prior_effect_plot <- gwas_eqtl_coloc_susie_data |>
 ggsave(
   susie_prior_effect_plot_path,
   susie_prior_effect_plot,
+  width = 8,
+  height = 8
+)
+
+abf_prior_effect_plot <- gwas_eqtl_coloc_abf_data |>
+  select(gene_name, gwas_id, starts_with("PP.H4.abf")) |>
+  pivot_longer(
+    -c(gene_name, gwas_id, PP.H4.abf_unif),
+    names_to = "prior_type",
+    values_to = "pp_h4"
+  ) |>
+  mutate(diff = pp_h4 - PP.H4.abf_unif) |>
+  mutate(prior_type = fct_reorder(factor(prior_type), diff, .fun = var)) |>
+  ggplot(aes(prior_type, diff)) +
+  geom_boxplot() +
+  labs(
+    y = "Difference in Pr(H4) values",
+    x = "Prior type"
+  ) +
+  coord_flip() +
+  theme_jp_vgrid()
+
+ggsave(
+  abf_prior_effect_plot_path,
+  abf_prior_effect_plot,
   width = 8,
   height = 8
 )
