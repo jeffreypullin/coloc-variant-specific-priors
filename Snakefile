@@ -379,6 +379,7 @@ rule plot_priors:
 rule plot_simulations: 
   input: expand("data/output/sim-result-{gene}.rds", gene = config["simulation_genes"])
   output: "output/figures/simulation-plot.pdf"
+  localrule: True
   script: "code/plot-simulations.R"
 
 rule plot_pqtl_eqtl_colocalisatons:

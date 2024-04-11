@@ -7,8 +7,11 @@ suppressPackageStartupMessages({
   library(dplyr)
   library(readr)
   library(simGWAS)
+  library(stringr)
   devtools::load_all("~/coloc")
 })
+
+source("code/prior-probabilities-funs.R")
 
 # Functions.
 
@@ -94,7 +97,8 @@ haps <- matrix(scan(haps_file, what = 0), ncol = nrow(legend))
 colnames(haps) <- legend$ID
 
 ld <- cor(haps)
-ind <- which(apply(ld, 2, function(x) sum(x >= 0.7)) >= 30)
+n <- nrow(legend)
+ind <- which(apply(ld, 2, function(x) sum(x >= 0.7)) >= n / 4)
 if (length(ind) > 0) {
   haps <- haps[, ind]
   legend <- legend[ind, ]
@@ -114,10 +118,13 @@ snps <- colnames(haps)
 maf <- pmin(colMeans(haps), 1 - colMeans(haps))
 pos <- vapply(strsplit(snps, "-"), \(x) as.numeric(x[[2]]), numeric(1))
 
+tss_data <- c("IL21" = 122621066, "PTPN22" = 113871759, "IFT172" = 27489805)
+gene <- str_split_i(basename(haps_file), "\\.", 1)
+
 n_sims <- 100
 prior_weights <- compute_eqtl_tss_dist_prior_weights(
   pos,
-  round(median(pos), 0),
+  tss_data[[gene]],
   read_rds("output/densities/eqtlgen.rds")
 )
 hyps <- sample(c("h3", "h4"), size = n_sims, replace = TRUE, prob = c(0.5, 0.5))
