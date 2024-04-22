@@ -63,7 +63,7 @@ simulate_dataset <- function(cv) {
     LD = ld,
     type = "cc",
     N = n_0 + n_1,
-    s = 0.5
+    s = n_1 / (n_0 + n_1)
   )
 }
 
@@ -77,7 +77,6 @@ simulate_dataset_pair <- function(hyp, snps, cv1) {
   } else if (hyp == "h4") {
     cv2 <- cv1
   }
-
   dataset_1 <- simulate_dataset(cv1)
   dataset_2 <- simulate_dataset(cv2)
 
@@ -96,13 +95,13 @@ legend <- read_delim(legend_file, show_col_types = FALSE)
 haps <- matrix(scan(haps_file, what = 0), ncol = nrow(legend))
 colnames(haps) <- legend$ID
 
-ld <- cor(haps)
-n <- nrow(legend)
-ind <- which(apply(ld, 2, function(x) sum(x >= 0.7)) >= n / 4)
-if (length(ind) > 0) {
-  haps <- haps[, ind]
-  legend <- legend[ind, ]
-}
+#ld <- cor(haps)
+#n <- nrow(legend)
+#ind <- which(apply(ld, 2, function(x) sum(x > 0.9) > n / 1.2))
+#if (length(ind) > 0) {
+#  haps <- haps[, ind]
+#  legend <- legend[ind, ]
+#}
 
 if (nrow(legend) > 500) {
   sample_ind <- sort(sample(seq_len(nrow(legend)), 500))
@@ -156,9 +155,15 @@ for (i in seq_len(n_sims)) {
   )
   prior <- c("unif", "non_unif")
 
-  sim_out[[i]] <- tibble(hyp = hyps[[i]], pp_h4 = pp_h4, prior)
-}
+  cv_pos <- as.numeric(str_split_i(cv1, "-", 2))
+  dist <- tss_data[[gene]] - cv_pos
 
+  sim_out[[i]] <- tibble(
+    hyp = hyps[[i]],
+    pp_h4 = pp_h4,
+    prior,
+    dist = dist)
+}
 sim_data <- bind_rows(!!!sim_out)
 
 saveRDS(sim_data, sim_data_file)
