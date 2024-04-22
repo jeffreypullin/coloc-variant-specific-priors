@@ -21,7 +21,8 @@ rule all:
     "output/figures/gwas-eqtl-coloc-abf-prob-sig-scatter-plot.pdf",
     "output/tables/gwas-eqtl-coloc-abf-results.xlsx",
     "output/tables/gwas-eqtl-coloc-susie-results.xlsx",
-    "output/figures/gwas-eqtl-coloc-susie-prior-effect-plot.pdf" 
+    "output/figures/gwas-eqtl-coloc-susie-prior-effect-plot.pdf",
+    "output/figures/pqtl-eqtl-coloc-abf-perf-max-curve-plot.pdf"
 
 # Download metadata.
 
@@ -405,6 +406,8 @@ rule plot_pqtl_eqtl_colocalisatons:
     susie_perf_median_plot_path = "output/figures/pqtl-eqtl-coloc-susie-perf-median-plot.pdf",
     susie_perf_max_plot_path = "output/figures/pqtl-eqtl-coloc-susie-perf-max-plot.pdf",
     susie_pph4_scatter_plot_path = "output/figures/pqtl-eqtl-coloc-susie-pph4-scatter-plot.pdf",
+    abf_perf_max_curve_plot_path = "output/figures/pqtl-eqtl-coloc-abf-perf-max-curve-plot.pdf"
+  localrule: True
   script: "code/plot-pqtl-eqtl-colocs.R"
 
 rule plot_gwas_eqtl_colocalisatons:

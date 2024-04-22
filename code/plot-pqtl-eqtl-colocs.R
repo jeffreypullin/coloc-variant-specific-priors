@@ -40,6 +40,7 @@ susie_perf_by_dataset_plot_path <- snakemake@output[["susie_perf_by_dataset_plot
 susie_perf_median_plot_path <- snakemake@output[["susie_perf_median_plot_path"]]
 susie_perf_max_plot_path <- snakemake@output[["susie_perf_max_plot_path"]]
 susie_pph4_scatter_plot_path <- snakemake@output[["susie_pph4_scatter_plot_path"]]
+abf_perf_max_curve_plot_path <- snakemake@output[["abf_perf_max_curve_plot_path"]]
 
 # Debugging.
 #config <- read_yaml("config.yaml")
@@ -284,6 +285,78 @@ ggsave(
 #  width = 8,
 #  height = 6
 #)
+
+sig_levels <- function(pp_h4) {
+  level <- c(
+    seq(0.01, 0.09, by = 0.01),
+    seq(0.1, 0.9, by = 0.1),
+    seq(0.9, 0.99, by = 0.01)
+  )
+  tibble(
+    level = level,
+    sig_coloc = pp_h4 > level
+  )
+}
+
+abf_perf_max_curve_data <- left_join(
+  pqtl_eqtl_coloc_abf_data |>
+    select(eqtl_data_id, starts_with("PP.H4.abf"), phenotype_id,
+           coloc_gene_id = gene_id, gene_name),
+  protein_metadata |>
+    select(coding_gene_id = gene_id, phenotype_id),
+  by = "phenotype_id"
+) |>
+  rename(protein_id = phenotype_id) |>
+  pivot_longer(-c(protein_id, coding_gene_id, eqtl_data_id,
+                  coloc_gene_id, gene_name),
+               values_to = "pp_h4",
+               names_to = c("junk", "prior_type"),
+               names_pattern = "(.*?)_(.*)") |>
+  select(-junk) |>
+  rowwise() |>
+  mutate(
+    sig_coloc = list(sig_levels(pp_h4)),
+    gene_match = coding_gene_id == coloc_gene_id
+  ) |>
+  ungroup() |>
+  select(-c(coding_gene_id, coloc_gene_id, pp_h4)) |>
+  unnest(sig_coloc) |>
+  summarise(
+    tp = any(sig_coloc) & all(gene_match),
+    fp = any(sig_coloc) & !all(gene_match),
+    fn = !any(sig_coloc) & all(gene_match),
+    tn = !any(sig_coloc) & !all(gene_match),
+    .by = c(prior_type, gene_name, protein_id, level)
+  ) |>
+  summarise(
+    n_tp = sum(tp),
+    n_fp = sum(fp),
+    n_fn = sum(fn),
+    n_tn = sum(tn),
+    .by = c(prior_type, level)
+  ) |>
+  mutate(
+    tpr = n_tp / (n_tp + n_fn),
+    fpr = n_fp / (n_fp + n_tn)
+  )
+
+abf_perf_max_curve_plot <- abf_perf_max_curve_data  |>
+  ggplot(aes(fpr, tpr, color = prior_type)) +
+  geom_point() +
+  geom_line() +
+  labs(
+    x = "False positive rate",
+    y = "True positive rate",
+  ) +
+  theme_jp() +
+  theme(legend.position = "right")
+
+ggsave(
+  abf_perf_max_curve_plot_path,
+  plot = abf_perf_max_curve_plot,
+  width = 12,
+  height = 10
+)
 
 # coloc.susie()
 
