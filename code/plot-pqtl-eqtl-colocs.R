@@ -41,6 +41,7 @@ susie_perf_median_plot_path <- snakemake@output[["susie_perf_median_plot_path"]]
 susie_perf_max_plot_path <- snakemake@output[["susie_perf_max_plot_path"]]
 susie_pph4_scatter_plot_path <- snakemake@output[["susie_pph4_scatter_plot_path"]]
 abf_perf_max_curve_plot_path <- snakemake@output[["abf_perf_max_curve_plot_path"]]
+pqtl_eqtl_perf_plot_path <- snakemake@output[["pqtl_eqtl_perf_plot_path"]]
 
 # Debugging.
 #config <- read_yaml("config.yaml")
@@ -512,4 +513,14 @@ ggsave(
   plot = susie_pph4_scatter_plot,
   width = 8,
   height = 6
+)
+
+pqtl_eqtl_perf_plot <- abf_perf_max_plot + abf_perf_max_curve_plot +
+  plot_layout(widths = c(2, 1))
+
+ggsave(
+  pqtl_eqtl_perf_plot_path,
+  plot = pqtl_eqtl_perf_plot,
+  width = 12,
+  height = 8
 )

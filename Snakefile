@@ -4,11 +4,15 @@ chrs = [x for x in range(1, 23)]
 
 rule all: 
   input: 
+    # Main figures.
+    "output/figures/prior-plot.pdf",
+    "output/figures/simulation-plot.pdf",
+    "output/figures/pqtl-eqtl-coloc-abf-perf-both-plot.pdf",
+    "output/figures/gwas-eqtl-coloc-abf-n-colocs-plot.pdf",
+    # Supplementargy figures.
     "output/figures/eqtl-dist-plot.pdf",
     "output/figures/onek1k-plot.pdf",
     "output/figures/dataset-plot.pdf",
-    "output/figures/prior-plot.pdf",
-    "output/figures/simulation-plot.pdf",
     "output/figures/pqtl-eqtl-coloc-abf-perf-by-dataset-plot.pdf",
     "output/figures/pqtl-eqtl-coloc-abf-perf-median-plot.pdf",
     "output/figures/pqtl-eqtl-coloc-abf-n-coloc-plot.pdf",
@@ -16,7 +20,6 @@ rule all:
     "output/figures/pqtl-eqtl-coloc-susie-perf-by-dataset-plot.pdf",
     "output/figures/pqtl-eqtl-coloc-susie-perf-median-plot.pdf",
     "output/figures/pqtl-eqtl-coloc-susie-pph4-scatter-plot.pdf",
-    "output/figures/gwas-eqtl-coloc-abf-n-colocs-plot.pdf",
     "output/figures/gwas-eqtl-coloc-abf-boostrap-scatter-plot.pdf",
     "output/figures/gwas-eqtl-coloc-abf-prob-sig-scatter-plot.pdf",
     "output/tables/gwas-eqtl-coloc-abf-results.xlsx",
@@ -406,7 +409,8 @@ rule plot_pqtl_eqtl_colocalisatons:
     susie_perf_median_plot_path = "output/figures/pqtl-eqtl-coloc-susie-perf-median-plot.pdf",
     susie_perf_max_plot_path = "output/figures/pqtl-eqtl-coloc-susie-perf-max-plot.pdf",
     susie_pph4_scatter_plot_path = "output/figures/pqtl-eqtl-coloc-susie-pph4-scatter-plot.pdf",
-    abf_perf_max_curve_plot_path = "output/figures/pqtl-eqtl-coloc-abf-perf-max-curve-plot.pdf"
+    abf_perf_max_curve_plot_path = "output/figures/pqtl-eqtl-coloc-abf-perf-max-curve-plot.pdf",
+    pqtl_eqtl_perf_plot_path = "output/figures/pqtl-eqtl-coloc-abf-perf-both-plot.pdf"
   localrule: True
   script: "code/plot-pqtl-eqtl-colocs.R"
 
