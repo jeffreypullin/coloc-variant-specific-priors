@@ -231,10 +231,6 @@ for (i in seq_len(nrow(coloc_metadata))) {
   abc_score_prior_weights <- compute_abc_prior_weights(
     eqtl_dataset$position, chr, coloc_metadata$gene_name[[i]], abc_score_data
   )
-  abc_score_primary_blood_prior_weights <- compute_abc_prior_weights(
-    eqtl_dataset$position, chr, coloc_metadata$gene_name[[i]], abc_score_data,
-    biosamples = "primary_blood"
-  )
   rand_prior_weights <- compute_rand_prior_weights(eqtl_dataset$position)
   permuted_eqtl_prior_weights <- sample(eqtl_prior_weights)
 
@@ -356,12 +352,6 @@ for (i in seq_len(nrow(coloc_metadata))) {
     prior_weights2 = abc_score_prior_weights
   )
 
-  coloc_abc_score_gwas_primary_blood <- coloc.abf(
-    dataset1 = eqtl_dataset,
-    dataset2 = gwas_dataset,
-    prior_weights2 = abc_score_primary_blood_prior_weights
-  )
-
   coloc_rand_eqtl <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = gwas_dataset,
@@ -450,7 +440,6 @@ for (i in seq_len(nrow(coloc_metadata))) {
     # ABC score.
     coloc_to_tibble(coloc_abc_score_eqtl, "abc_score_eqtl"),
     coloc_to_tibble(coloc_abc_score_gwas, "abc_score_gwas"),
-    coloc_to_tibble(coloc_abc_score_gwas_primary_blood, "abc_score_gwas_primary_blood"),
     # Polyfun.
     coloc_to_tibble(coloc_polyfun_eqtl, "polyfun_eqtl"),
     coloc_to_tibble(coloc_polyfun_gwas, "polyfun_gwas"),

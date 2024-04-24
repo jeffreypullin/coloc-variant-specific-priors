@@ -198,10 +198,6 @@ for (i in seq_len(nrow(coloc_metadata))) {
   abc_score_prior_weights <- compute_abc_prior_weights(
     position, chr, coloc_metadata$gene_name[[i]], abc_score_data
   )
-  abc_score_primary_blood_prior_weights <- compute_abc_prior_weights(
-    position, chr, coloc_metadata$gene_name[[i]], abc_score_data,
-    biosamples = "primary_blood"
-  )
 
   if (chr %in% 1:7) {
     polyfun_data <- snp_var_data_1_7
@@ -313,12 +309,6 @@ for (i in seq_len(nrow(coloc_metadata))) {
     prior_weights2 = abc_score_prior_weights
   )
 
-  coloc_abc_score_pqtl_primary_blood <- coloc.bf_bf(
-    eqtl_lbf_mat,
-    pqtl_lbf_mat,
-    prior_weights2 = abc_score_primary_blood_prior_weights
-  )
-
   coloc_results <- bind_cols(
     coloc_to_tibble(coloc_unif, "unif"),
     # OneK1K estimated.
@@ -337,7 +327,6 @@ for (i in seq_len(nrow(coloc_metadata))) {
     # ABC score.
     coloc_to_tibble(coloc_abc_score_eqtl, "abc_score_eqtl"),
     coloc_to_tibble(coloc_abc_score_pqtl, "abc_score_pqtl"),
-    coloc_to_tibble(coloc_abc_score_pqtl_primary_blood, "abc_score_pqtl_primary_blood"),
     # PolyFun.
     coloc_to_tibble(coloc_polyfun_eqtl, "polyfun_eqtl"),
     coloc_to_tibble(coloc_polyfun_pqtl, "polyfun_pqtl"),

@@ -49,9 +49,7 @@ compute_polyfun_prior_weights <- function(pos, chrom, data, build = "hg38") {
   weights
 }
 
-compute_abc_prior_weights <- function(pos, chrom, gene_name, abc_data, build = "hg38", biosamples = "all") {
-
-  stopifnot(biosamples %in% c("all", "primary_blood"))
+compute_abc_prior_weights <- function(pos, chrom, gene_name, abc_data, build = "hg38") {
 
   # FIXME: Could just save the abc_data with hg38 coordinates.
   if (build == "hg38") {
@@ -61,30 +59,6 @@ compute_abc_prior_weights <- function(pos, chrom, gene_name, abc_data, build = "
   abc_data <- abc_data |>
     filter(chr == paste0("chr", chrom)) |>
     filter(target_gene == gene_name)
-
-  primary_blood_biosamples <- c(
-    "T-cell-ENCODE", 
-    "CD14-positive_monocyte-ENCODE",
-    "CD56-positive_natural_killer_cells-Roadmap",
-    "CD8-positive_alpha-beta_T_cell-ENCODE",
-    "CD34-positive_mobilized-Roadmap",
-    "CD3-positive_T_cell-Roadmap",
-    "erythroblast-Corces2016",
-    "CD8-positive_alpha-beta_T_cell-Corces2016",
-    "CD14-positive_monocytes-Roadmap",
-    "CD19-positive_B_cell-Roadmap",
-    "CD4-positive_helper_T_cell-ENCODE",
-    "CD4-positive_helper_T_cell-Corces2016",
-    "B_cell-ENCODE",
-    "CD14-positive_monocyte-Novakovic2016",
-    "megakaryocyte-erythroid_progenitor-Corces2016",
-    "natural_killer_cell-Corces2016",
-    "GM12878-Roadmap"
-  )
-  if (biosamples == "primary_blood") {
-    abc_data <- abc_data |>
-      filter(cell_type %in% primary_blood_biosamples)
-  }
 
   pos_data <- tibble::tibble(pos) |>
     dplyr::left_join(
