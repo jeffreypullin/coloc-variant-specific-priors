@@ -35,14 +35,21 @@ compute_polyfun_prior_weights <- function(pos, chrom, data, build = "hg38") {
 
   stopifnot(chrom %in% data$CHR)
 
-  pos_data <- tibble::tibble(chr = chrom, pos) |> 
+  min_snpvar <- max(data$snpvar_bin) / 100
+  snpvar_sum1 <- sum(data$snpvar_bin)
+  data <- data |>
+    mutate(snpvar_bin = if_else(snpvar_bin < min_snpvar, min_snpvar, snpvar_bin))
+  snpvar_sum2 <- sum(data$snpvar_bin)
+  data$snpvar_bin <- data$snpvar_bin * (snpvar_sum1 / snpvar_sum2)
+
+  impute_value <- min(data$snpvar_bin)
+  pos_data <- tibble::tibble(chr = chrom, pos) |>
     left_join(
       data |>
-        filter(CHR == chrom), 
+        filter(CHR == chrom),
       by = join_by(pos == BP)
     ) |>
-    # TODO: How often does this occur?
-    mutate(snpvar_bin = if_else(is.na(snpvar_bin), 0, snpvar_bin)) |>
+    mutate(snpvar_bin = if_else(is.na(snpvar_bin), impute_value, snpvar_bin)) |>
     summarise(snpvar_bin = mean(snpvar_bin), .by = c(chr, pos))
 
   weights <- pos_data$snpvar_bin / sum(pos_data$snpvar_bin)

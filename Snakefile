@@ -378,6 +378,7 @@ rule plot_priors:
     eqtlgen_density_data_path = "output/densities/eqtlgen.rds",
     snp_var_data_1_7_path = "data/snpvar_meta.chr1_7.parquet"
   output: "output/figures/prior-plot.pdf"
+  localrule: True
   script: "code/plot-priors.R"
 
 rule plot_simulations: 
