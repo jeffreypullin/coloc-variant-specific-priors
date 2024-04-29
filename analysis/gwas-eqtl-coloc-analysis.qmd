@@ -24,14 +24,26 @@ devtools::load_all("~/coloc")
 ```{r load-data}
 config <- read_yaml(here::here("config.yaml"))
 gwas_ids_eqtl_ids <- config$gwas_eqtl_coloc_ids
-gwas_eqtl_colocs <- expand_grid(
+gwas_eqtl_coloc_abf_data <- expand_grid(
   chr = 1:22,
   gwas_id_eqtl_id = gwas_ids_eqtl_ids
   ) |>
   separate_wider_delim(gwas_id_eqtl_id, "-", names = c("gwas_id", "eqtl_id")) |>
   rowwise() |>
   mutate(file = here::here(
-    glue("output/data/gwas-eqtl-coloc-{gwas_id}-{eqtl_id}-{chr}.rds")
+    glue("data/output/gwas-eqtl-coloc-abf-{gwas_id}-{eqtl_id}-{chr}.rds")
+  )) |>
+  mutate(data = list(read_rds(file))) |>
+  unnest(data)
+
+gwas_eqtl_coloc_susie_data <- expand_grid(
+  chr = 1:22,
+  gwas_id_eqtl_id = gwas_ids_eqtl_ids
+  ) |>
+  separate_wider_delim(gwas_id_eqtl_id, "-", names = c("gwas_id", "eqtl_id")) |>
+  rowwise() |>
+  mutate(file = here::here(
+    glue("data/output/gwas-eqtl-coloc-susie-{gwas_id}-{eqtl_id}-{chr}.rds")
   )) |>
   mutate(data = list(read_rds(file))) |>
   unnest(data)
@@ -72,7 +84,7 @@ gwas_eqtl_colocs |>
 ```
 
 ```{r}
-gwas_eqtl_colocs |>
+gwas_eqtl_coloc_abf_data |>
   select(gene_name, gwas_id, starts_with("PP.H4.abf")) |>
   pivot_longer(
     -c(gene_name, gwas_id), 
@@ -100,7 +112,7 @@ CHP1 colocalises in eQTLGen
 PIGV colocalises in monocytes
 
 ```{r}
-gwas_eqtl_colocs |>
+gwas_eqtl_coloc_abf_data |>
   mutate(
     sig_abc_score_gwas = PP.H4.abf_abc_score_gwas > 0.8,
     sig_unif = PP.H4.abf_unif > 0.8
@@ -113,9 +125,50 @@ gwas_eqtl_colocs |>
 ```
 
 ```{r}
-gwas_eqtl_colocs |>
+gwas_eqtl_coloc_susie_data |>
   mutate(
     sig_abc_score_gwas = PP.H4.abf_abc_score_gwas > 0.8,
+    sig_unif = PP.H4.abf_unif > 0.8
+  ) |>
+  arrange(gwas_id) |>
+  filter(sig_abc_score_gwas != sig_unif) |>
+  select(gwas_id, eqtl_id, gene_name,
+         PP.H4.abf_unif, PP.H4.abf_abc_score_gwas)
+```
+
+```{r}
+gwas_eqtl_coloc_susie_data |>
+  mutate(
+    sig_abc_score_gwas = PP.H4.abf_eqtl_tss_eqtlgen > 0.8,
+    sig_unif = PP.H4.abf_unif > 0.8
+  ) |>
+  arrange(gwas_id) |>
+  filter(sig_abc_score_gwas != sig_unif) |>
+  select(gwas_id, eqtl_id, gene_name,
+         PP.H4.abf_unif, PP.H4.abf_eqtl_tss_eqtlgen)
+```
+
+```{r}
+gwas_eqtl_coloc_susie_data |>
+  mutate(
+    sig_abc_score_gwas = PP.H4.abf_eqtl_tss_eqtlgen > 0.8,
+    sig_unif = PP.H4.abf_unif > 0.8
+  ) |>
+  arrange(gwas_id) |>
+  filter(sig_abc_score_gwas != sig_unif) |>
+  select(gwas_id, eqtl_id, gene_name,
+         PP.H4.abf_unif, PP.H4.abf_eqtl_tss_eqtlgen) |>
+  print(n = 40)
+```
+
+VAV3 `PP.H4.abf_eqtl_tss_eqtlgen` success!!
+ACADVL `PP.H4.abf_eqtl_tss_eqtlgen` also a success!!
+PSMB7 `PP.H4.abf_eqtl_tss_eqtlgen` a success!!
+
+```{r}
+gwas_eqtl_coloc_abf_data |>
+  mutate(
+    sig_abc_score_gwas = PP.H4.abf_gwas_tss_eqtlgen > 0.8,
     sig_unif = PP.H4.abf_unif > 0.8
   ) |>
   rowwise() |>
@@ -125,14 +178,16 @@ gwas_eqtl_colocs |>
   ) |>
   ungroup() |>
   arrange(gwas_id) |>
+  print(n = 40) |>
   filter(sig_abc_score_gwas != sig_unif) |>
   select(eqtl_id, gene_name,
-         PP.H4.abf_unif, PP.H4.abf_abc_score_gwas, 
-         q25, q75)
+         PP.H4.abf_unif, PP.H4.abf_gwas_tss_eqtlgen, 
+         q25, q75) |>
+  print(n = 40)
 ```
 
 ```{r}
-gwas_eqtl_colocs |>
+gwas_eqtl_coloc_abf_data |>
   mutate(
     sig_gwas_tss_eqtlgen = PP.H4.abf_gwas_tss_eqtlgen > 0.8,
     sig_unif = PP.H4.abf_unif > 0.8

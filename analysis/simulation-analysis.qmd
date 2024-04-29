@@ -12,6 +12,9 @@ library(readr)
 library(ggplot2)
 library(glue)
 library(yaml)
+library(latex2exp)
+
+source("code/plot-utils.R")
 
 devtools::load_all("~/coloc")
 ```
@@ -20,7 +23,7 @@ devtools::load_all("~/coloc")
 config <- read_yaml(here::here("config.yaml"))
 simulation_genes <- config$simulation_genes
 simulation_data <- lapply(simulation_genes, function(x) {
-  here::here(glue("output/data/sim-result-{x}.rds")) |>
+  here::here(glue("data/output/sim-result-{x}.rds")) |>
   read_rds() |>
   mutate(locus = x)
 }) |>
@@ -67,10 +70,16 @@ simulation_data |>
   theme_bw() +
   labs(
     x = "True hypothesis",
-    y = "Pr(H4)",
+    y = TeX("$\\Pr(H_4)$"),
     fill = "Prior type"
   ) +
-  facet_wrap(~locus)
+  scale_fill_manual(
+    labels = c("Variant-specific prior", "Uniform prior"), 
+    values = c("#66CCEE", "#EE6677")
+  ) + 
+  scale_x_discrete(labels = c(TeX("$H_3$"), TeX("$H_4$"))) +
+  facet_wrap(~locus) + 
+  theme_jp()
 ```
 
 ```{r}

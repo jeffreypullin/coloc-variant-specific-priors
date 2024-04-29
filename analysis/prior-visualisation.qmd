@@ -14,17 +14,57 @@ library(dplyr)
 library(patchwork)
 library(tidyr)
 library(seqminer)
+library(janitor)
+library(purrr)
 
 source(here::here("code/coloc-utils.R"))
 devtools::load_all("~/coloc")
 ```
+
+```{r}
+eqtlgen <- read_tsv(
+  "data/eqtlgen.txt",
+  col_select = c(gene_symbol, snp_pos, gene_pos, pvalue),
+  name_repair = make_clean_names,
+  show_col_types = FALSE, progress = FALSE
+)
+abs_tss_distance <- eqtlgen |>
+  filter(pvalue < 5e-8) |>
+  group_by(gene_symbol) |>
+  arrange(pvalue) |>
+  filter(row_number() == 1) |>
+  mutate(abs_tss_distance = abs(snp_pos - gene_pos)) |>
+  ungroup() |>
+  pull(abs_tss_distance)
+
+dists <- seq(1, 1.2e6, by = 1e4)
+prop_lt <- map_dbl(dists, function(x) {
+  sum(abs_tss_distance < x) / length(abs_tss_distance)
+})
+
+tibble(
+  dists, 
+  prop_lt
+) |>
+  ggplot(aes(dists, prop_lt)) + 
+  geom_point() +  
+  geom_vline(xintercept = 1e5, linetype = "dotted") + 
+  geom_vline(xintercept = 5e5, linetype = "dotted") + 
+  geom_vline(xintercept = 1e6, linetype = "dotted") + 
+  labs(
+    y = "Proportion of eQTLs within +/- distance of TSS",
+    x = "Distance (bp)"
+  ) +  
+  theme_bw()
+```
+
 
 ```{r load-data}
 gnocchi_data <- read_tsv(here::here("data/gnocchi-windows.bed"),
                          col_names = FALSE, show_col_types = FALSE)
 colnames(gnocchi_data) <- c("chromosome", "start_pos", "end_pos", "score")
 
-abc_score_data <- read_tsv(here::here("data/abc-score-data.txt.gz"), show_col_types = FALSE)
+abc_score_data <- read_tsv(here::here("data/abc-data.txt.gz"), show_col_types = FALSE)
 
 density_data_round_1 <- read_rds(here::here("output/densities/onek1k_cd4nc_round_1.rds"))
 density_data_round_2 <- read_rds(here::here("output/densities/onek1k_cd4nc_round_2.rds"))
@@ -35,12 +75,12 @@ snp_var_data_1_7 <- read_parquet(here::here("data/snpvar_meta.chr1_7.parquet"))
 
 chr <- 1
 tss <- 113871759
-width <- 1e6
+width <- 5e5
 gene_name <- "PTPN22"
 region <- paste0(chr, ":", tss - width, "-",  tss + width)
 
 position <- tabix.read.table(
-  here::here("data/T1D_Chiou_34012112_1-hg38.tsv.gz"), 
+  here::here("data/finngen/AUTOIMMUNE.gz"), 
   region
 ) |> 
   as_tibble() |>
