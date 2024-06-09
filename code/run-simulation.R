@@ -48,7 +48,7 @@ simulate_dataset <- function(cv) {
     )
 
     beta <- z * sqrt(varbeta)
-    accept_ind <- which(abs(z[, match(cv, snps)]) > 4.417)
+    accept_ind <- which(abs(z[, match(cv, snps)]) > qnorm(5e-6, lower.tail = FALSE))
     accept <- length(accept_ind) > 0
   }
   ind <- accept_ind[[1]]

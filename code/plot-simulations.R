@@ -19,11 +19,11 @@ source("code/plot-utils.R")
 devtools::load_all("~/coloc")
 
 # Debugging.
-# config <- yaml::read_yaml("config.yaml")
-# simulation_paths <- glue(
+#config <- yaml::read_yaml("config.yaml")
+#simulation_paths <- glue(
 # "data/output/sim-result-{gene}.rds",
-#  gene = config$simulation_genes
-# )
+# gene = config$simulation_genes
+#)
 
 simulation_paths <- snakemake@input
 
@@ -51,7 +51,7 @@ dist_to_tss_plot <- simulation_data |>
   geom_point() +
   geom_vline(xintercept = 0, linetype = "dotted") +
   labs(
-    y = TeX("Variant-specific $\\ H_4$ $-$ uniform $\\ H_4$"),
+    y =  TeX("$H_4$ \\ difference"),
     x = "Distance to TSS (Kb)"
   ) +
   facet_wrap(~hyp, labeller = label_parsed) +
@@ -67,19 +67,19 @@ h4_unif_plot <- simulation_data |>
     values_from = "pp_h4",
     values_fn = list
   ) |>
+  mutate(hyp = if_else(hyp == "h3", "'H'[3]", "'H'[4]")) |>
   unnest(cols = c(unif, non_unif)) |>
   mutate(diff = non_unif - unif) |>
   ggplot(aes(unif, diff)) +
   labs(
-    y = TeX("Variant-specific $\\ H_4$ $-$ uniform $\\ H_4$"),
+    y = TeX("$H_4$ \\ difference"),
     x = TeX("Uniform prior$\\ H_4$ \\value")
   ) +
   geom_point() +
-  facet_wrap(~hyp) +
-  theme_jp() + 
+  facet_wrap(~hyp, labeller = label_parsed) +
+  theme_jp() +
   theme(
-    strip.background = element_blank(),
-    strip.text.x = element_blank(),
+     strip.text.x = element_text(size = 22),
     panel.spacing = unit(2, "lines")
   )
 
@@ -102,8 +102,7 @@ gene_plot <- simulation_data |>
   theme_jp()
 
 
-simulation_plot <- gene_plot + ((dist_to_tss_plot / h4_unif_plot) +
-  plot_layout(axis_title = "collect")) +
+simulation_plot <- gene_plot + (dist_to_tss_plot / h4_unif_plot) +
   plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 18))
 
