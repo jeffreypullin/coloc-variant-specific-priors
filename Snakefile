@@ -9,10 +9,9 @@ rule all:
     "output/figures/simulation-plot.pdf",
     "output/figures/pqtl-eqtl-coloc-abf-perf-both-plot.pdf",
     "output/figures/gwas-eqtl-coloc-abf-n-colocs-plot.pdf",
-    # Supplementargy figures.
+    # Supplementary figures.
     "output/figures/eqtl-dist-plot.pdf",
     "output/figures/onek1k-plot.pdf",
-    "output/figures/dataset-plot.pdf",
     "output/figures/pqtl-eqtl-coloc-abf-perf-by-dataset-plot.pdf",
     "output/figures/pqtl-eqtl-coloc-abf-perf-median-plot.pdf",
     "output/figures/pqtl-eqtl-coloc-abf-n-coloc-plot.pdf",
@@ -32,11 +31,14 @@ rule all:
 rule download_metadata:
   output: 
     eqtl_metadata_file = "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
-    pqtl_metadata_file = "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
+    pqtl_metadata_file = "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz",
+    eqtl_catalogue_metadata = "data/eqtl-catalogue/eqtl-catalogue-metadata.tsv"
+  localrule: True
   shell:
     """
     wget -O {output.eqtl_metadata_file} https://zenodo.org/record/7808390/files/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz
     wget -O {output.pqtl_metadata_file} https://zenodo.org/record/7808390/files/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz
+    wget -O {output.eqtl_catalogue_metadata} https://raw.githubusercontent.com/eQTL-Catalogue/eQTL-Catalogue-resources/master/tabix/tabix_ftp_paths.tsv
     """ 
 
 rule download_tss_data: 
@@ -59,33 +61,6 @@ rule process_eqtlgen_data:
   output: processed_data_path = "data/processed-data/eqtlgen.rds"
   script: "code/process-data/process-eqtlgen-data.R"
     
-rule download_gtex_tar: 
-  output: temporary("data/gtex-v8.tar")
-  shell:
-    """
-    wget -O {output} https://storage.googleapis.com/gtex_analysis_v8/single_tissue_qtl_data/GTEx_Analysis_v8_eQTL.tar
-    """
-
-rule extract_gtex_files: 
-  input: "data/gtex-v8.tar"
-  output: "data/gtex-v8/{tissue}.v8.signif_variant_gene_pairs.txt"
-  shell:
-    """
-    tar -Oxf {input} GTEx_Analysis_v8_eQTL/{wildcards.tissue}.v8.signif_variant_gene_pairs.txt.gz | gunzip -c > {output}
-    """
-    
-rule process_gtex_data: 
-  input: gtex_paths = expand("data/gtex-v8/{tissue}.v8.signif_variant_gene_pairs.txt", tissue = config["gtex_tissues"])
-  output: processed_data_path = "data/processed-data/gtex.rds"
-  script: "code/process-data/process-gtex-data.R"
-
-rule download_etl_catalogue_metadata: 
-  output: "data/eqtl-catalogue/eqtl-catalogue-metadata.tsv"
-  shell:
-    """
-    wget -O {output} https://raw.githubusercontent.com/eQTL-Catalogue/eQTL-Catalogue-resources/master/tabix/tabix_ftp_paths.tsv
-    """
-
 rule download_eqtl_catalogue_files: 
   input: metadata_file = "data/eqtl-catalogue/eqtl-catalogue-metadata.tsv"
   output: 
@@ -99,7 +74,6 @@ rule download_eqtl_catalogue_files:
 rule filter_eqtl_catalogue_files:
   input: "data/eqtl-catalogue/sumstats/{dataset_id}.cc.tsv.gz"
   output: "data/eqtl-catalogue/processed-sumstats/{dataset_id}.cc.tsv"
-  localrule: True
   shell:
     """
     zcat {input} | awk 'NR == 1 {{ print }} NR != 1 {{ if ($9 <= 5E-8) {{ print }} }} ' > {output}
@@ -109,12 +83,16 @@ rule run_tabix_susie_lbf_eqtl_catalogue_files:
   input: "data/eqtl-catalogue/susie/{dataset_id}.lbf_variable.txt.gz",
   output: "data/eqtl-catalogue/susie/{dataset_id}.lbf_variable.txt.gz.tbi",
   resources: 
+    mem_mb = 30000,
     time_min = 120 
   shell:
     """
-    cp {input} data/tmp-{wildcards.dataset_id}.gz
-    zcat data/tmp-{wildcards.dataset_id}.gz | awk -F'\\t' 'BEGIN{{OFS=FS}}NR==1{{print $0; next}}{{print $0 | "sort -T data -k4,4n -k5,5n"}}' | bgzip > {input}
-    tabix -s 4 -b 5 -e 5 -S 1 -f {input}
+    cp {input} data/tmp/{wildcards.dataset_id}.gz
+    zcat data/tmp/{wildcards.dataset_id}.gz | awk -F'\\t' 'NR==1 {{print $0; next}} {{print $0 | "sort -S20G -k4,4n -k5,5n"}}' | bgzip > data/tmp/{wildcards.dataset_id}-sorted.gz
+    tabix -s 4 -b 5 -e 5 -S 1 -f data/tmp/{wildcards.dataset_id}-sorted.gz
+    mv data/tmp/{wildcards.dataset_id}-sorted.gz {input}
+    mv data/tmp/{wildcards.dataset_id}-sorted.gz.tbi {output}
+    rm data/tmp/{wildcards.dataset_id}.*
     """
 
 rule process_eqtl_catalogue_data:
@@ -149,9 +127,8 @@ rule compute_eqtl_densitites:
     processed_onek1k_data_path = "data/processed-data/onek1k.rds"
   output: 
     eqtlgen_density_path = "output/densities/eqtlgen.rds",
-    onek1k_r1_density_path = "output/densities/onek1k_cd4nc_round_1.rds",
-    onek1k_r2_density_path = "output/densities/onek1k_cd4nc_round_2.rds",
-    onek1k_r3_density_path = "output/densities/onek1k_cd4nc_round_3.rds"
+    onek1k_r1_density_path = "output/densities/onek1k_round_1.rds",
+    onek1k_r2_density_path = "output/densities/onek1k_round_2.rds",
   script: "code/compute-eqtl-densities.R"
 
 rule download_gnochhi_data: 
@@ -243,9 +220,8 @@ rule run_pqtl_eqtl_coloc_abf_colocalisation:
     polyfun_data_8_22_path = "data/snpvar_meta.chr8_22.parquet",
     abc_score_data_path = "data/abc-data.txt.gz",
     eqtlgen_density_path = "output/densities/eqtlgen.rds",
-    onek1k_r1_density_path = "output/densities/onek1k_cd4nc_round_1.rds",
-    onek1k_r2_density_path = "output/densities/onek1k_cd4nc_round_2.rds",
-    onek1k_r3_density_path = "output/densities/onek1k_cd4nc_round_3.rds"
+    onek1k_r1_density_path = "output/densities/onek1k_round_1.rds",
+    onek1k_r2_density_path = "output/densities/onek1k_round_2.rds",
   output: 
     result_file = "data/output/pqtl-eqtl-coloc-abf-{eqtl_id}-{chr}.rds"
   retries: 1
@@ -272,9 +248,8 @@ rule run_pqtl_eqtl_coloc_susie_colocalisation:
     polyfun_data_8_22_path = "data/snpvar_meta.chr8_22.parquet",
     abc_score_data_path = "data/abc-data.txt.gz",
     eqtlgen_density_path = "output/densities/eqtlgen.rds",
-    onek1k_r1_density_path = "output/densities/onek1k_cd4nc_round_1.rds",
-    onek1k_r2_density_path = "output/densities/onek1k_cd4nc_round_2.rds",
-    onek1k_r3_density_path = "output/densities/onek1k_cd4nc_round_3.rds"
+    onek1k_r1_density_path = "output/densities/onek1k_round_1.rds",
+    onek1k_r2_density_path = "output/densities/onek1k_round_2.rds",
   output: 
     result_file = "data/output/pqtl-eqtl-coloc-susie-{eqtl_id}-{chr}.rds"
   retries: 1
@@ -299,9 +274,8 @@ rule run_gwas_eqtl_coloc_abf_colocalisation:
     polyfun_data_8_22_path = "data/snpvar_meta.chr8_22.parquet",
     abc_score_data_path = "data/abc-data.txt.gz",
     eqtlgen_density_path = "output/densities/eqtlgen.rds",
-    onek1k_r1_density_path = "output/densities/onek1k_cd4nc_round_1.rds",
-    onek1k_r2_density_path = "output/densities/onek1k_cd4nc_round_2.rds",
-    onek1k_r3_density_path = "output/densities/onek1k_cd4nc_round_3.rds"
+    onek1k_r1_density_path = "output/densities/onek1k_round_1.rds",
+    onek1k_r2_density_path = "output/densities/onek1k_round_2.rds",
   output: 
     coloc_results_file = "data/output/gwas-eqtl-coloc-abf-{gwas_id}-{eqtl_id}-{chr}.rds",
     finemapping_results_file = "data/output/gwas-eqtl-finemapping-{gwas_id}-{eqtl_id}-{chr}.rds"
@@ -328,9 +302,8 @@ rule run_gwas_eqtl_coloc_susie_colocalisation:
     polyfun_data_8_22_path = "data/snpvar_meta.chr8_22.parquet",
     abc_score_data_path = "data/abc-data.txt.gz",
     eqtlgen_density_path = "output/densities/eqtlgen.rds",
-    onek1k_r1_density_path = "output/densities/onek1k_cd4nc_round_1.rds",
-    onek1k_r2_density_path = "output/densities/onek1k_cd4nc_round_2.rds",
-    onek1k_r3_density_path = "output/densities/onek1k_cd4nc_round_3.rds",
+    onek1k_r1_density_path = "output/densities/onek1k_round_1.rds",
+    onek1k_r2_density_path = "output/densities/onek1k_round_2.rds",
   output: 
     result_file = "data/output/gwas-eqtl-coloc-susie-{gwas_id}-{eqtl_id}-{chr}.rds"
   retries: 1
@@ -359,13 +332,12 @@ rule run_simulations:
 rule plot_eqtl_tss_dist: 
   input: 
     eqtl_catalogue_data_file = "data/processed-data/eqtl-catalogue.rds",
-    gtex_data_file = "data/processed-data/gtex.rds",
     eqtlgen_data_file = "data/processed-data/eqtlgen.rds",
     onek1k_data_file = "data/processed-data/onek1k.rds",
   output: 
     dist_plot_file = "output/figures/eqtl-dist-plot.pdf",
     onek1k_plot_file = "output/figures/onek1k-plot.pdf",
-    dataset_plot_file = "output/figures/dataset-plot.pdf"
+  localrule: True
   script: "code/plot-eqtl-tss-dist.R"
 
 rule plot_priors:
@@ -373,8 +345,8 @@ rule plot_priors:
     autoimmune_gwas_path = "data/finngen/AUTOIMMUNE.gz",
     gnocchi_data_path = "data/gnocchi-windows.bed",
     abc_score_data_path = "data/abc-data.txt.gz",
-    density_data_r1_path = "output/densities/onek1k_cd4nc_round_1.rds",
-    density_data_r2_path = "output/densities/onek1k_cd4nc_round_2.rds",
+    density_data_r1_path = "output/densities/onek1k_round_1.rds",
+    density_data_r2_path = "output/densities/onek1k_round_2.rds",
     eqtlgen_density_data_path = "output/densities/eqtlgen.rds",
     snp_var_data_1_7_path = "data/snpvar_meta.chr1_7.parquet"
   output: "output/figures/prior-plot.pdf"

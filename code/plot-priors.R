@@ -76,7 +76,7 @@ polyfun_prior_weights <- compute_polyfun_prior_weights(
 prior_type_lookup <- c(
   eqtlgen = "eQTLGen",
   onek1k_round_1 = "OneK1K (R1)",
-  onek1k_round_2 = "OneK1K (R2)",
+  onek1k_round_2 = "OneK1K (R2+)",
   abc_score_all = "ABC Score",
   gnocchi = "Gnocchi",
   polyfun = "PolyFun"
@@ -100,7 +100,7 @@ priors_plot <- tibble(
   ) |>
   mutate(prior_type = prior_type_lookup[prior_type]) |>
   ggplot(aes(position, weight)) +
-  geom_point() +
+  geom_point(col = "darkgrey") +
   labs(
     x = "Position (Mb)",
     y = "Prior probability",

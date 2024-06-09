@@ -30,17 +30,17 @@ susie_prior_effect_plot_path <- snakemake@output[["susie_prior_effect_plot_path"
 abf_prior_effect_plot_path <- snakemake@output[["abf_prior_effect_plot_path"]]
 
 # Debugging.
-#config <- yaml::read_yaml("config.yaml")
-#coloc_susie_paths <- glue(
-# "data/output/gwas-eqtl-coloc-susie-{gwas_id_eqtl_id}-{chr}.rds",
-#  gwas_id_eqtl_id = rep(config$gwas_eqtl_coloc_ids, 22),
-#  chr = rep(1:22, each = 6)
-#)
-#coloc_abf_paths <- glue(
-# "data/output/gwas-eqtl-coloc-abf-{gwas_id_eqtl_id}-{chr}.rds",
-#  gwas_id_eqtl_id = rep(config$gwas_eqtl_coloc_ids, 22),
-#  chr = rep(1:22, each = 6)
-#)
+config <- yaml::read_yaml("config.yaml")
+coloc_susie_paths <- glue(
+ "data/output/gwas-eqtl-coloc-susie-{gwas_id_eqtl_id}-{chr}.rds",
+  gwas_id_eqtl_id = rep(config$gwas_eqtl_coloc_ids, 22),
+  chr = rep(1:22, each = 6)
+)
+coloc_abf_paths <- glue(
+ "data/output/gwas-eqtl-coloc-abf-{gwas_id_eqtl_id}-{chr}.rds",
+  gwas_id_eqtl_id = rep(config$gwas_eqtl_coloc_ids, 22),
+  chr = rep(1:22, each = 6)
+)
 
 gwas_eqtl_coloc_abf_data <- tibble(path = coloc_abf_paths) |>
   rowwise() |>
@@ -64,28 +64,76 @@ gwas_eqtl_coloc_susie_data <- tibble(path = coloc_susie_paths) |>
   mutate(data = list(read_rds(path))) |>
   unnest(data)
 
-abf_n_colocs_plot <- gwas_eqtl_coloc_abf_data |>
+gwas_id_lookup <- c(
+  "AUTOIMMUNE" = "Autoimmune",
+  "I9_HYPTENS" = "Hypertension",
+  "T2D_WIDE" = "Type 2 diabetes"
+)
+
+abf_change_coloc_data <- gwas_eqtl_coloc_abf_data |>
   select(gene_name, gwas_id, starts_with("PP.H4.abf")) |>
   pivot_longer(
-    -c(gene_name, gwas_id),
+    -c(gene_name, gwas_id, PP.H4.abf_unif),
     names_to = "prior",
     values_to = "pp_h4"
   ) |>
-  mutate(sig_coloc = pp_h4 > 0.8) |>
-  summarise(n_sig = sum(sig_coloc), .by = c(prior, gwas_id)) |>
-  mutate(is_unif = prior == "PP.H4.abf_unif") |>
-  mutate(prior = fct_reorder(factor(prior), n_sig, mean)) |>
-  ggplot(aes(prior, n_sig, fill = is_unif)) +
+  rename(pp_h4_unif = PP.H4.abf_unif) |>
+  separate_wider_delim(prior, "_", names = c("junk", "prior"), too_many = "merge") |>
+  select(-junk) |>
+  filter(prior %in% c("onek1k_r1", "eqtlgen")) |>
+  mutate(prior = prior_method_lookup[prior]) |>
+  mutate(type = case_when(
+    pp_h4_unif > 0.8 & pp_h4 > 0.8 ~ "no_change",
+    pp_h4_unif < 0.8 & pp_h4 < 0.8 ~ "no_change",
+    pp_h4_unif < 0.8 & pp_h4 > 0.8 ~ "Newly signifcant",
+    pp_h4_unif > 0.8 & pp_h4 < 0.8 ~ "Newly non-significant",
+  )) |>
+  filter(type != "no_change")
+
+susie_change_coloc_data <- gwas_eqtl_coloc_susie_data |>
+  select(gene_name, gwas_id, starts_with("PP.H4.abf")) |>
+  pivot_longer(
+    -c(gene_name, gwas_id, PP.H4.abf_unif),
+    names_to = "prior",
+    values_to = "pp_h4"
+  ) |>
+  rename(pp_h4_unif = PP.H4.abf_unif) |>
+  separate_wider_delim(prior, "_", names = c("junk", "prior"), too_many = "merge") |>
+  select(-junk) |>
+  filter(prior %in% c("onek1k_r1", "eqtlgen")) |>
+  mutate(prior = prior_method_lookup[prior]) |>
+  mutate(type = case_when(
+    pp_h4_unif > 0.8 & pp_h4 > 0.8 ~ "no_change",
+    pp_h4_unif < 0.8 & pp_h4 < 0.8 ~ "no_change",
+    pp_h4_unif < 0.8 & pp_h4 > 0.8 ~ "Newly signifcant",
+    pp_h4_unif > 0.8 & pp_h4 < 0.8 ~ "Newly non-significant",
+  )) |>
+  filter(type != "no_change")
+
+abf_n_colocs_plot <- bind_rows(
+  abf_change_coloc_data |>
+    count(prior, gwas_id, type) |>
+    mutate(method = "abf"),
+  susie_change_coloc_data |>
+    count(prior, gwas_id, type) |>
+    mutate(method = "susie")
+) |>
+  mutate(n = if_else(type == "Newly non-significant", -n, n)) |>
+  ggplot(aes(prior, n, fill = type)) +
   geom_col() +
   coord_flip() +
-  scale_fill_manual(values = c("#66CCEE", "#EE6677")) +
-  labs(
-    y = "Number of signifcant (Pr(H4) > 0.8) colocalisations",
-    x = "Prior type"
+  scale_y_continuous(limits = c(-5, 5), labels = abs) +
+  facet_grid(
+    vars(gwas_id),
+    vars(method),
+    labeller = labeller(gwas_id = gwas_id_lookup),
   ) +
-  facet_wrap(~gwas_id, scales = "free_x") +
+  labs(
+    x = "Prior specifcation method",
+    y = "Number of unique genes"
+  ) +
   theme_jp_vgrid() +
-  theme(legend.position = "none")
+  theme(panel.spacing = unit(1, "lines"))
 
 ggsave(
   abf_n_colocs_plot_path,
@@ -97,9 +145,9 @@ ggsave(
 boostrap_scatter_plot <- gwas_eqtl_coloc_abf_data |>
   rowwise() |>
   mutate(
-    q25 = q_pph4_rand_gwas[[3]],
-    q50 = q_pph4_rand_gwas[[4]],
-    q75 = q_pph4_rand_gwas[[5]],
+    q25 = q_pph4_rand_eqtl[[3]],
+    q50 = q_pph4_rand_eqtl[[4]],
+    q75 = q_pph4_rand_eqtl[[5]],
   ) |>
   ungroup() |>
   ggplot(aes(PP.H4.abf_unif, q50)) +
@@ -117,7 +165,7 @@ ggsave(
 )
 
 prob_sig_scatter_plot <- gwas_eqtl_coloc_abf_data |>
-  ggplot(aes(PP.H4.abf_unif, prop_sig_pph4_rand_gwas)) +
+  ggplot(aes(PP.H4.abf_unif, prop_sig_pph4_rand_eqtl)) +
   geom_point() +
   geom_vline(xintercept = 0.8) +
   theme_jp()
@@ -136,27 +184,14 @@ wb <- createWorkbook()
 addWorksheet(wb, sheetName = "eQTLGen dist (eQTL)")
 gwas_eqtl_coloc_abf_data |>
   mutate(
-    sig_eqtlgen_eqtl = PP.H4.abf_eqtl_tss_eqtlgen > 0.8,
+    sig_eqtlgen_eqtl = PP.H4.abf_eqtlgen > 0.8,
     sig_unif = PP.H4.abf_unif > 0.8
   ) |>
   arrange(gwas_id) |>
   filter(sig_eqtlgen_eqtl != sig_unif) |>
   select(gwas_id, eqtl_id, gene_name,
-         PP.H4.abf_unif, PP.H4.abf_eqtl_tss_eqtlgen) |>
+         PP.H4.abf_unif, PP.H4.abf_eqtlgen) |>
   writeDataTable(wb, sheet = 1, x = _)
-
-
-addWorksheet(wb, sheetName = "Gnocchi (GWAS)")
-gwas_eqtl_coloc_abf_data |>
-  mutate(
-    sig_gnocchi_gwas = PP.H4.abf_gnocchi_gwas > 0.8,
-    sig_unif = PP.H4.abf_unif > 0.8
-  ) |>
-  arrange(gwas_id) |>
-  filter(sig_gnocchi_gwas != sig_unif) |>
-  select(gwas_id, eqtl_id, gene_name,
-         PP.H4.abf_unif, PP.H4.abf_gnocchi_gwas) |>
-  writeDataTable(wb, sheet = 2, x = _)
 
 saveWorkbook(
   wb,
@@ -166,6 +201,7 @@ saveWorkbook(
 
 rm(wb)
 
+
 # coloc.susie()
 
 wb <- createWorkbook()
@@ -173,26 +209,14 @@ wb <- createWorkbook()
 addWorksheet(wb, sheetName = "eQTLGen dist (eQTL)")
 gwas_eqtl_coloc_susie_data |>
   mutate(
-    sig_eqtlgen_eqtl = PP.H4.abf_eqtl_tss_eqtlgen > 0.8,
+    sig_eqtlgen_eqtl = PP.H4.abf_eqtlgen > 0.8,
     sig_unif = PP.H4.abf_unif > 0.8
   ) |>
   arrange(gwas_id) |>
   filter(sig_eqtlgen_eqtl != sig_unif) |>
   select(gwas_id, eqtl_id, gene_name,
-         PP.H4.abf_unif, PP.H4.abf_eqtl_tss_eqtlgen) |>
+         PP.H4.abf_unif, PP.H4.abf_eqtlgen) |>
   writeDataTable(wb, sheet = 1, x = _)
-
-addWorksheet(wb, sheetName = "Gnocchi (GWAS)")
-gwas_eqtl_coloc_susie_data |>
-  mutate(
-    sig_gnocchi_gwas = PP.H4.abf_gnocchi_gwas > 0.8,
-    sig_unif = PP.H4.abf_unif > 0.8
-  ) |>
-  arrange(gwas_id) |>
-  filter(sig_gnocchi_gwas != sig_unif) |>
-  select(gwas_id, eqtl_id, gene_name,
-         PP.H4.abf_unif, PP.H4.abf_gnocchi_gwas) |>
-  writeDataTable(wb, sheet = 2, x = _)
 
 saveWorkbook(
   wb,

@@ -42,7 +42,6 @@ abc_score_data_path <- snakemake@input[["abc_score_data_path"]]
 eqtlgen_density_path <- snakemake@input[["eqtlgen_density_path"]]
 onek1k_r1_density_path <- snakemake@input[["onek1k_r1_density_path"]]
 onek1k_r2_density_path <- snakemake@input[["onek1k_r2_density_path"]]
-onek1k_r3_density_path <- snakemake@input[["onek1k_r3_density_path"]]
 
 permutations <- permutation_data |>
   mutate(FDR = p.adjust(p = p_beta, method = "fdr")) |>
@@ -93,12 +92,14 @@ pqtl_lbf_data <- tabix.read.table(pqtl_lbf_file, paste0(chr, ":1-2147483647")) |
 
 gnocchi_data <- read_tsv(gnocchi_data_path, show_col_types = FALSE)
 abc_score_data <- read_tsv(abc_score_data_path, show_col_types = FALSE)
-density_data_round_1 <- read_rds(onek1k_r1_density_path)
-density_data_round_2 <- read_rds(onek1k_r2_density_path)
-density_data_round_3 <- read_rds(onek1k_r3_density_path)
 eqtlgen_density_data <- read_rds(eqtlgen_density_path)
-snp_var_data_1_7 <- read_parquet(polyfun_data_1_7_path)
-snp_var_data_8_22 <- read_parquet(polyfun_data_8_22_path)
+onek1k_r1_density_data <- read_rds(onek1k_r1_density_path)
+onek1k_r2_density_data <- read_rds(onek1k_r2_density_path)
+if (chr %in% 1:7) {
+  polyfun_data <- read_parquet(polyfun_data_1_7_path)
+} else {
+  polyfun_data <- read_parquet(polyfun_data_8_22_path)
+}
 
 results <- list()
 for (i in seq_len(nrow(coloc_metadata))) {
@@ -166,45 +167,33 @@ for (i in seq_len(nrow(coloc_metadata))) {
     filter(molecular_trait_id %in% gene_ids) |>
     pull(position)
 
-  eqtl_prior_weights_eqtlgen <- compute_eqtl_tss_dist_prior_weights(
-    position, coloc_metadata$gene_tss[[i]], eqtlgen_density_data
-  )
-  eqtl_prior_weights <- compute_eqtl_tss_dist_prior_weights(
-    position, coloc_metadata$gene_tss[[i]], density_data_round_1
-  )
-  eqtl_prior_weights_round_2 <- compute_eqtl_tss_dist_prior_weights(
-    position, coloc_metadata$gene_tss[[i]], density_data_round_2
-  )
-  eqtl_prior_weights_round_3 <- compute_eqtl_tss_dist_prior_weights(
-    position, coloc_metadata$gene_tss[[i]], density_data_round_3
-  )
+  gene_tss <- coloc_metadata$gene_tss[[i]]
+  protein_tss <- coloc_metadata$protein_tss[[i]]
 
-  pqtl_prior_weights_eqtlgen <- compute_eqtl_tss_dist_prior_weights(
-    position, coloc_metadata$protein_tss[[i]], eqtlgen_density_data
+  eqtlgen_prior_weights_eqtl <- compute_eqtl_tss_dist_prior_weights(
+    position, gene_tss, eqtlgen_density_data
   )
-  pqtl_prior_weights <- compute_eqtl_tss_dist_prior_weights(
-    position, coloc_metadata$protein_tss[[i]], density_data_round_1
+  onek1k_r1_prior_weights_eqtl <- compute_eqtl_tss_dist_prior_weights(
+    position, gene_tss, onek1k_r1_density_data
   )
-  pqtl_prior_weights_round_2 <- compute_eqtl_tss_dist_prior_weights(
-    position, coloc_metadata$protein_tss[[i]], density_data_round_2
+  onek1k_r2_prior_weights_eqtl <- compute_eqtl_tss_dist_prior_weights(
+    position, gene_tss, onek1k_r2_density_data
   )
-  pqtl_prior_weights_round_3 <- compute_eqtl_tss_dist_prior_weights(
-    position, coloc_metadata$protein_tss[[i]], density_data_round_3
+  eqtlgen_prior_weights_pqtl <- compute_eqtl_tss_dist_prior_weights(
+    position, protein_tss, eqtlgen_density_data
   )
-
+  onek1k_r1_prior_weights_pqtl <- compute_eqtl_tss_dist_prior_weights(
+    position, protein_tss, onek1k_r1_density_data
+  )
+  onek1k_r2_prior_weights_pqtl <- compute_eqtl_tss_dist_prior_weights(
+    position, protein_tss, onek1k_r2_density_data
+  )
   gnocchi_prior_weights <- compute_gnocchi_prior_weights(
     position, chr, gnocchi_data
   )
   abc_score_prior_weights <- compute_abc_prior_weights(
     position, chr, coloc_metadata$gene_name[[i]], abc_score_data
   )
-
-  if (chr %in% 1:7) {
-    polyfun_data <- snp_var_data_1_7
-  } else {
-    polyfun_data <- snp_var_data_8_22
-  }
-
   polyfun_prior_weights <- compute_polyfun_prior_weights(
     position, chr, polyfun_data
   )
@@ -213,58 +202,67 @@ for (i in seq_len(nrow(coloc_metadata))) {
 
   coloc_unif <- coloc.bf_bf(eqtl_lbf_mat, pqtl_lbf_mat)
 
-  # eQTLGen estimated density priors.
+  # eQTLGen.
 
-  coloc_eqtl_tss_eqtlgen <- coloc.bf_bf(
+  coloc_eqtlgen_eqtl <- coloc.bf_bf(
     eqtl_lbf_mat,
     pqtl_lbf_mat,
-    prior_weights1 = eqtl_prior_weights_eqtlgen
+    prior_weights1 = eqtlgen_prior_weights_eqtl
   )
 
-  coloc_pqtl_tss_eqtlgen <- coloc.bf_bf(
+  coloc_eqtlgen_pqtl <- coloc.bf_bf(
     eqtl_lbf_mat,
     pqtl_lbf_mat,
-    prior_weights2 = pqtl_prior_weights_eqtlgen
+    prior_weights2 = eqtlgen_prior_weights_pqtl
   )
 
-  coloc_eqtl_tss_pqtl_tss_eqtlgen <- coloc.bf_bf(
+  coloc_eqtlgen_pqtl_eqtl <- coloc.bf_bf(
     eqtl_lbf_mat,
     pqtl_lbf_mat,
-    prior_weights1 = eqtl_prior_weights_eqtlgen,
-    prior_weights2 = pqtl_prior_weights_eqtlgen
+    prior_weights1 = eqtlgen_prior_weights_eqtl,
+    prior_weights2 = eqtlgen_prior_weights_pqtl
   )
 
-  # OneK1K estimated density priors.
+  # OneK1K round 1.
 
-  coloc_eqtl_tss_onek1k_round_1 <- coloc.bf_bf(
+  coloc_onek1k_r1_eqtl <- coloc.bf_bf(
     eqtl_lbf_mat,
     pqtl_lbf_mat,
-    prior_weights1 = eqtl_prior_weights
+    prior_weights1 = onek1k_r1_prior_weights_eqtl
   )
 
-  coloc_eqtl_tss_onek1k_round_2 <- coloc.bf_bf(
+  coloc_onek1k_r1_pqtl <- coloc.bf_bf(
     eqtl_lbf_mat,
     pqtl_lbf_mat,
-    prior_weights1 = eqtl_prior_weights_round_2
+    prior_weights2 = onek1k_r1_prior_weights_pqtl
   )
 
-  coloc_eqtl_tss_onek1k_round_3 <- coloc.bf_bf(
+  coloc_onek1k_r1_pqtl_eqtl <- coloc.bf_bf(
     eqtl_lbf_mat,
     pqtl_lbf_mat,
-    prior_weights1 = eqtl_prior_weights_round_3
+    prior_weights1 = onek1k_r1_prior_weights_eqtl,
+    prior_weights2 = onek1k_r1_prior_weights_pqtl
   )
 
-  coloc_pqtl_tss_onek1k_round_1 <- coloc.bf_bf(
+  # OneK1K round 2.
+
+  coloc_onek1k_r2_eqtl <- coloc.bf_bf(
     eqtl_lbf_mat,
     pqtl_lbf_mat,
-    prior_weights2 = pqtl_prior_weights
+    prior_weights1 = onek1k_r2_prior_weights_eqtl
   )
 
-  coloc_eqtl_tss_pqtl_tss_onek1k_round_1 <- coloc.bf_bf(
+  coloc_onek1k_r2_pqtl <- coloc.bf_bf(
     eqtl_lbf_mat,
     pqtl_lbf_mat,
-    prior_weights1 = eqtl_prior_weights,
-    prior_weights2 = pqtl_prior_weights
+    prior_weights2 = onek1k_r2_prior_weights_pqtl
+  )
+
+  coloc_onek1k_r2_pqtl_eqtl <- coloc.bf_bf(
+    eqtl_lbf_mat,
+    pqtl_lbf_mat,
+    prior_weights1 = onek1k_r2_prior_weights_eqtl,
+    prior_weights2 = onek1k_r2_prior_weights_pqtl
   )
 
   # Polyfun priors.
@@ -311,25 +309,27 @@ for (i in seq_len(nrow(coloc_metadata))) {
 
   coloc_results <- bind_cols(
     coloc_to_tibble(coloc_unif, "unif"),
-    # OneK1K estimated.
-    coloc_to_tibble(coloc_eqtl_tss_onek1k_round_1, "eqtl_tss_onek1k_round_1"),
-    coloc_to_tibble(coloc_eqtl_tss_onek1k_round_2, "eqtl_tss_onek1k_round_2"),
-    coloc_to_tibble(coloc_eqtl_tss_onek1k_round_3, "eqtl_tss_onek1k_round_3"),
-    coloc_to_tibble(coloc_pqtl_tss_onek1k_round_1, "pqtl_tss_onek1k_round_1"),
-    coloc_to_tibble(coloc_eqtl_tss_pqtl_tss_onek1k_round_1, "eqtl_tss_pqtl_tss_onek1k_round_1"),
-    # eQTLGen estimated.
-    coloc_to_tibble(coloc_eqtl_tss_eqtlgen, "eqtl_tss_eqtlgen"),
-    coloc_to_tibble(coloc_pqtl_tss_eqtlgen, "pqtl_tss_eqtlgen"),
-    coloc_to_tibble(coloc_eqtl_tss_pqtl_tss_eqtlgen, "eqtl_tss_pqtl_tss_eqtlgen"),
+    # eQTLGen.
+    coloc_to_tibble(coloc_eqtlgen_eqtl, "eqtlgen-eqtl"),
+    coloc_to_tibble(coloc_eqtlgen_pqtl, "eqtlgen-pqtl"),
+    coloc_to_tibble(coloc_eqtlgen_pqtl_eqtl, "eqtlgen-pqtl_eqtl"),
+    # OneK1K round 1.
+    coloc_to_tibble(coloc_onek1k_r1_eqtl, "onek1k_r1-eqtl"),
+    coloc_to_tibble(coloc_onek1k_r1_pqtl, "onek1k_r1-pqtl"),
+    coloc_to_tibble(coloc_onek1k_r1_pqtl_eqtl, "onek1k_r1-pqtl_eqtl"),
+    # OneK1K round 2+
+    coloc_to_tibble(coloc_onek1k_r2_eqtl, "onek1k_r2-eqtl"),
+    coloc_to_tibble(coloc_onek1k_r2_pqtl, "onek1k_r2-pqtl"),
+    coloc_to_tibble(coloc_onek1k_r2_pqtl_eqtl, "onek1k_r2-pqtl_eqtl"),
     # Gnocchi.
-    coloc_to_tibble(coloc_gnocchi_eqtl, "gnocchi_eqtl"),
-    coloc_to_tibble(coloc_gnocchi_pqtl, "gnocchi_pqtl"),
+    coloc_to_tibble(coloc_gnocchi_eqtl, "gnocchi-eqtl"),
+    coloc_to_tibble(coloc_gnocchi_pqtl, "gnocchi-pqtl"),
     # ABC score.
-    coloc_to_tibble(coloc_abc_score_eqtl, "abc_score_eqtl"),
-    coloc_to_tibble(coloc_abc_score_pqtl, "abc_score_pqtl"),
+    coloc_to_tibble(coloc_abc_score_eqtl, "abc_score-eqtl"),
+    coloc_to_tibble(coloc_abc_score_pqtl, "abc_score-pqtl"),
     # PolyFun.
-    coloc_to_tibble(coloc_polyfun_eqtl, "polyfun_eqtl"),
-    coloc_to_tibble(coloc_polyfun_pqtl, "polyfun_pqtl"),
+    coloc_to_tibble(coloc_polyfun_eqtl, "polyfun-eqtl"),
+    coloc_to_tibble(coloc_polyfun_pqtl, "polyfun-pqtl"),
     tibble(
       phenotype_id = coloc_metadata$phenotype_id[[i]],
       chromosome = coloc_metadata$chromosome[[i]],

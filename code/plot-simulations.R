@@ -37,20 +37,31 @@ simulation_data <- lapply(simulation_paths, function(x) {
 }) |>
   bind_rows()
 
-p1 <- simulation_data |>
+dist_to_tss_plot <- simulation_data |>
   pivot_wider(
     names_from = "prior",
     values_from = "pp_h4",
     values_fn = list
   ) |>
+  mutate(hyp = if_else(hyp == "h3", "'H'[3]", "'H'[4]")) |>
+  mutate(dist = dist / 1000) |>
   unnest(cols = c(unif, non_unif)) |>
   mutate(diff = non_unif - unif) |>
   ggplot(aes(dist, diff)) +
   geom_point() +
-  facet_wrap(~hyp) +
-  theme_jp()
+  geom_vline(xintercept = 0, linetype = "dotted") +
+  labs(
+    y = TeX("Variant-specific $\\ H_4$ $-$ uniform $\\ H_4$"),
+    x = "Distance to TSS (Kb)"
+  ) +
+  facet_wrap(~hyp, labeller = label_parsed) +
+  theme_jp() +
+  theme(
+    strip.text.x = element_text(size = 22),
+    panel.spacing = unit(2, "lines")
+  )
 
-p2 <- simulation_data |>
+h4_unif_plot <- simulation_data |>
   pivot_wider(
     names_from = "prior",
     values_from = "pp_h4",
@@ -59,9 +70,18 @@ p2 <- simulation_data |>
   unnest(cols = c(unif, non_unif)) |>
   mutate(diff = non_unif - unif) |>
   ggplot(aes(unif, diff)) +
+  labs(
+    y = TeX("Variant-specific $\\ H_4$ $-$ uniform $\\ H_4$"),
+    x = TeX("Uniform prior$\\ H_4$ \\value")
+  ) +
   geom_point() +
   facet_wrap(~hyp) +
-  theme_jp()
+  theme_jp() + 
+  theme(
+    strip.background = element_blank(),
+    strip.text.x = element_blank(),
+    panel.spacing = unit(2, "lines")
+  )
 
 gene_plot <- simulation_data |>
   ggplot(aes(hyp, pp_h4, fill = prior)) +
@@ -81,7 +101,11 @@ gene_plot <- simulation_data |>
   facet_wrap(~gene) +
   theme_jp()
 
-simulation_plot <- gene_plot + (p1 / p2)
+
+simulation_plot <- gene_plot + ((dist_to_tss_plot / h4_unif_plot) +
+  plot_layout(axis_title = "collect")) +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 18))
 
 ggsave(
   snakemake@output[[1]],

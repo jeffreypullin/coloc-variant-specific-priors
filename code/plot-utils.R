@@ -42,3 +42,13 @@ theme_jp_vgrid <- function() {
       panel.grid.minor.y = ggplot2::element_blank(),
     )
 }
+
+prior_method_lookup <- c(
+  "abc_score" = "ABC score",
+  "eqtlgen" = "eQTLGen",
+  "gnocchi" = "Gnocchi",
+  "onek1k_r1" = "OneK1K (R1)",
+  "onek1k_r2" = "OneK1k (R2+)",
+  "polyfun" = "PolyFun",
+  "unif" = "Uniform"
+)

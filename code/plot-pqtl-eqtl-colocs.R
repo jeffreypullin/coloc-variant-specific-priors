@@ -50,6 +50,11 @@ pqtl_eqtl_perf_plot_path <- snakemake@output[["pqtl_eqtl_perf_plot_path"]]
 #  eqtl_id = rep(config$pqtl_eqtl_coloc_dataset_ids, 22),
 #  chr = rep(1:22, each = 5)
 #)
+#coloc_susie_paths <- glue(
+#  "data/output/pqtl-eqtl-coloc-susie-{eqtl_id}-{chr}.rds",
+#  eqtl_id = rep(config$pqtl_eqtl_coloc_dataset_ids, 22),
+#  chr = rep(1:22, each = 5)
+#)
 #protein_metadata <- read_tsv(
 #  "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz", 
 #  show_col_types = FALSE
@@ -218,21 +223,41 @@ coloc_abf_perf_data_max <- left_join(
   mutate(
     recall = n_tp / (n_tp + n_fn),
     precision = n_tp / (n_tp + n_fp)
-  )
+  ) |>
+  separate_wider_delim(
+    prior_type,
+    delim = "-",
+    names = c("method", "dataset"),
+    too_few = "align_start"
+  ) |>
+  mutate(dataset = if_else(is.na(dataset), "pqtl_eqtl", dataset))
+
+dataset_lookup <- c(
+  "eqtl" = "eQTL",
+  "pqtl" = "pQTL",
+  "pqtl_eqtl" = "Both"
+)
 
 abf_perf_max_plot <- coloc_abf_perf_data_max |>
-  mutate(is_unif = prior_type == "unif") |>
-  ggplot(aes(recall, precision, col = is_unif, label = prior_type)) +
-  geom_point() +
-  geom_text_repel() +
-  scale_colour_manual(values = c("#66CCEE", "#EE6677")) +
+  mutate(
+    method = prior_method_lookup[method],
+    dataset = dataset_lookup[dataset]
+  ) |>
+  ggplot(aes(recall, precision, col = method, shape = dataset)) +
+  geom_point(size = 5, alpha = 0.7, position = position_jitter(h = 3e-04, w = 3e-04)) +
   labs(
     x = "Recall",
     y = "Precision",
-    title = "coloc.abf(), max over eQTL datasets"
   ) +
   theme_jp() +
-  theme(legend.position = "none")
+  labs(
+    col = "Method",
+    shape = "Dataset"
+  ) +
+  theme(
+    legend.title = element_text(family = "Helvetica", size = 14, color = "#222222"),
+    legend.position = "none"
+  )
 
 ggsave(
   abf_perf_max_plot_path,
@@ -240,52 +265,6 @@ ggsave(
   width = 8,
   height = 6
 )
-
-pph4_scatter_plot <- pqtl_eqtl_coloc_abf_data |>
-  ggplot(aes(PP.H4.abf_unif, PP.H4.abf_eqtl_tss_eqtlgen)) +
-  geom_point() +
-  geom_vline(xintercept = 0.8, colour = "red") +
-  geom_hline(yintercept = 0.8, colour = "red") +
-  theme_jp()
-
-ggsave(
-  abf_pph4_scatter_plot_path,
-  plot = pph4_scatter_plot,
-  width = 8,
-  height = 6
-)
-
-# FIXME: Should these be made with the GWAS-eQTL colocs instead?
-#pqtl_eqtl_diff_trend_plot <- pqtl_eqtl_coloc_abf_data |>
-#  mutate(diff = PP.H4.abf_unif - PP.H4.abf_eqtl_tss_eqtlgen) |>
-#  ggplot(aes(PP.H4.abf_unif, diff)) +
-#  geom_point() +
-#  coord_cartesian(ylim = c(-0.75, 0.75)) +
-#  theme_jp()
-
-#ggsave(
-#  "output/figures/pqtl-eqtl-abf-diff-trend-plot.pdf",
-#  plot = pqtl_eqtl_diff_trend_plot,
-#  width = 8,
-#  height = 6
-#)
-
-#pqtl_eqtl_diff_mag_plot <- pqtl_eqtl_coloc_abf_data |>
-#  mutate(diff = abs(PP.H4.abf_unif - PP.H4.abf_eqtl_tss_eqtlgen)) |>
-#  ggplot(aes(diff)) +
-#  geom_histogram(binwidth = 0.05) +
-#  labs(
-#    x = "Magnitudie of difference",
-#    y = "Count"
-#  ) +
-#  theme_jp()
-
-#ggsave(
-#  "output/figures/pqtl-eqtl-abf-diff-mag-plot.pdf",
-#  plot = pqtl_eqtl_diff_mag_plot,
-#  width = 8,
-#  height = 6
-#)
 
 sig_levels <- function(pp_h4) {
   level <- c(
@@ -341,16 +320,32 @@ abf_perf_max_curve_data <- left_join(
     fpr = n_fp / (n_fp + n_tn)
   )
 
-abf_perf_max_curve_plot <- abf_perf_max_curve_data  |>
-  ggplot(aes(fpr, tpr, color = prior_type)) +
-  geom_point() +
+abf_perf_max_curve_plot <- abf_perf_max_curve_data |>
+  separate_wider_delim(
+    prior_type,
+    delim = "-",
+    names = c("method", "dataset"),
+    too_few = "align_start"
+  ) |>
+  mutate(dataset = if_else(is.na(dataset), "pqtl_eqtl", dataset)) |>
+  mutate(
+    method = prior_method_lookup[method],
+    dataset = dataset_lookup[dataset]
+  ) |>
+  ggplot(aes(fpr, tpr, color = method, shape = dataset)) +
+  geom_point(size = 2) +
   geom_line() +
   labs(
     x = "False positive rate",
     y = "True positive rate",
+    col = "Method",
+    shape = "Dataset"
   ) +
   theme_jp() +
-  theme(legend.position = "right")
+  theme(
+    legend.title = element_text(family = "Helvetica", size = 14, color = "#222222"),
+    legend.position = "right"
+  )
 
 ggsave(
   abf_perf_max_curve_plot_path,
@@ -358,6 +353,64 @@ ggsave(
   width = 12,
   height = 10
 )
+
+pqtl_eqtl_perf_plot <- abf_perf_max_plot + abf_perf_max_curve_plot +
+  plot_layout(guides = "collect") +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 18))
+
+ggsave(
+  pqtl_eqtl_perf_plot_path,
+  plot = pqtl_eqtl_perf_plot,
+  width = 14,
+  height = 8
+)
+
+pph4_scatter_plot <- pqtl_eqtl_coloc_abf_data |>
+  ggplot(aes(PP.H4.abf_unif, `PP.H4.abf_eqtlgen-eqtl`)) +
+  geom_point() +
+  geom_vline(xintercept = 0.8, colour = "red") +
+  geom_hline(yintercept = 0.8, colour = "red") +
+  theme_jp()
+
+ggsave(
+  abf_pph4_scatter_plot_path,
+  plot = pph4_scatter_plot,
+  width = 8,
+  height = 6
+)
+
+# FIXME: Should these be made with the GWAS-eQTL colocs instead?
+#pqtl_eqtl_diff_trend_plot <- pqtl_eqtl_coloc_abf_data |>
+#  mutate(diff = PP.H4.abf_unif - PP.H4.abf_eqtl_tss_eqtlgen) |>
+#  ggplot(aes(PP.H4.abf_unif, diff)) +
+#  geom_point() +
+#  coord_cartesian(ylim = c(-0.75, 0.75)) +
+#  theme_jp()
+
+#ggsave(
+#  "output/figures/pqtl-eqtl-abf-diff-trend-plot.pdf",
+#  plot = pqtl_eqtl_diff_trend_plot,
+#  width = 8,
+#  height = 6
+#)
+
+#pqtl_eqtl_diff_mag_plot <- pqtl_eqtl_coloc_abf_data |>
+#  mutate(diff = abs(PP.H4.abf_unif - PP.H4.abf_eqtl_tss_eqtlgen)) |>
+#  ggplot(aes(diff)) +
+#  geom_histogram(binwidth = 0.05) +
+#  labs(
+#    x = "Magnitudie of difference",
+#    y = "Count"
+#  ) +
+#  theme_jp()
+
+#ggsave(
+#  "output/figures/pqtl-eqtl-abf-diff-mag-plot.pdf",
+#  plot = pqtl_eqtl_diff_mag_plot,
+#  width = 8,
+#  height = 6
+#)
 
 # coloc.susie()
 
@@ -443,6 +496,9 @@ ggsave(
   height = 6
 )
 
+pqtl_eqtl_coloc_susie_data |>
+  select(eqtl_data_id, phenotype_id, gene_name, hit1_unif, hit2_unif)
+
 coloc_susie_perf_data_max <- left_join(
   pqtl_eqtl_coloc_susie_data |>
     select(eqtl_data_id, starts_with("PP.H4.abf"), phenotype_id,
@@ -502,7 +558,7 @@ ggsave(
 )
 
 susie_pph4_scatter_plot <- pqtl_eqtl_coloc_susie_data |>
-  ggplot(aes(PP.H4.abf_unif, PP.H4.abf_eqtl_tss_pqtl_tss_eqtlgen)) + 
+  ggplot(aes(PP.H4.abf_unif, `PP.H4.abf_eqtlgen-pqtl_eqtl`)) +
   geom_point() +
   geom_vline(xintercept = 0.8, colour = "red") +
   geom_hline(yintercept = 0.8, colour = "red") +
@@ -513,14 +569,4 @@ ggsave(
   plot = susie_pph4_scatter_plot,
   width = 8,
   height = 6
-)
-
-pqtl_eqtl_perf_plot <- abf_perf_max_plot + abf_perf_max_curve_plot +
-  plot_layout(widths = c(2, 1))
-
-ggsave(
-  pqtl_eqtl_perf_plot_path,
-  plot = pqtl_eqtl_perf_plot,
-  width = 12,
-  height = 8
 )
