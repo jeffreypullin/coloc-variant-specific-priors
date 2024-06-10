@@ -156,7 +156,7 @@ for (i in seq_len(nrow(coloc_metadata))) {
     next
   }
 
-  if (min(eqtl_data$pvalue) > 5e-8) {
+  if (min(eqtl_data$pvalue) > 5e-6) {
     next
   }
 

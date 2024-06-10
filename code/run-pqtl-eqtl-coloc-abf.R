@@ -11,6 +11,7 @@ suppressPackageStartupMessages({
   library(dplyr)
   library(janitor)
   library(arrow)
+  library(qvalue)
   devtools::load_all("~/coloc")
 })
 
@@ -37,8 +38,8 @@ onek1k_r1_density_path <- snakemake@input[["onek1k_r1_density_path"]]
 onek1k_r2_density_path <- snakemake@input[["onek1k_r2_density_path"]]
 
 permutations <- permutation_data |>
-  mutate(FDR = p.adjust(p = p_beta, method = "fdr")) |>
-  filter(FDR < 0.01) |>
+  mutate(qvalue = qvalue(p = p_beta)$qvalue) |>
+  filter(qvalue < 0.05) |>
   select(molecular_trait_object_id, molecular_trait_id) |>
   distinct()
 
@@ -126,7 +127,7 @@ for (i in seq_len(nrow(coloc_metadata))) {
     next
   }
 
-  if (min(eqtl_data$pvalue) > 5e-8) {
+  if (min(eqtl_data$pvalue) > 5e-6) {
     next
   }
   if (min(pqtl_data$pvalue) > 5e-8) {
