@@ -18,17 +18,6 @@ source("code/coloc-utils.R")
 source("code/plot-utils.R")
 devtools::load_all("~/coloc")
 
-coloc_abf_paths <- snakemake@input[["coloc_abf_paths"]]
-coloc_susie_paths <- snakemake@input[["coloc_susie_paths"]]
-
-abf_n_colocs_plot_path <- snakemake@output[["abf_n_colocs_plot_path"]]
-abf_bootstrap_scatter_plot_path <- snakemake@output[["abf_bootstrap_scatter_plot_path"]]
-abf_prob_sig_scatter_plot_path <- snakemake@output[["abf_prob_sig_scatter_plot_path"]]
-abf_coloc_results_table_path <- snakemake@output[["abf_coloc_results_table_path"]]
-susie_coloc_results_table_path <- snakemake@output[["susie_coloc_results_table_path"]]
-susie_prior_effect_plot_path <- snakemake@output[["susie_prior_effect_plot_path"]]
-abf_prior_effect_plot_path <- snakemake@output[["abf_prior_effect_plot_path"]]
-
 # Debugging.
 config <- yaml::read_yaml("config.yaml")
 coloc_susie_paths <- glue(
@@ -41,6 +30,17 @@ coloc_abf_paths <- glue(
   gwas_id_eqtl_id = rep(config$gwas_eqtl_coloc_ids, 22),
   chr = rep(1:22, each = 6)
 )
+
+coloc_abf_paths <- snakemake@input[["coloc_abf_paths"]]
+coloc_susie_paths <- snakemake@input[["coloc_susie_paths"]]
+
+abf_n_colocs_plot_path <- snakemake@output[["abf_n_colocs_plot_path"]]
+abf_bootstrap_scatter_plot_path <- snakemake@output[["abf_bootstrap_scatter_plot_path"]]
+abf_prob_sig_scatter_plot_path <- snakemake@output[["abf_prob_sig_scatter_plot_path"]]
+abf_coloc_results_table_path <- snakemake@output[["abf_coloc_results_table_path"]]
+susie_coloc_results_table_path <- snakemake@output[["susie_coloc_results_table_path"]]
+susie_prior_effect_plot_path <- snakemake@output[["susie_prior_effect_plot_path"]]
+abf_prior_effect_plot_path <- snakemake@output[["abf_prior_effect_plot_path"]]
 
 gwas_eqtl_coloc_abf_data <- tibble(path = coloc_abf_paths) |>
   rowwise() |>
@@ -83,12 +83,12 @@ abf_change_coloc_data <- gwas_eqtl_coloc_abf_data |>
   filter(prior %in% c("onek1k_r1", "eqtlgen")) |>
   mutate(prior = prior_method_lookup[prior]) |>
   mutate(type = case_when(
-    pp_h4_unif > 0.8 & pp_h4 > 0.8 ~ "no_change",
-    pp_h4_unif < 0.8 & pp_h4 < 0.8 ~ "no_change",
+    pp_h4_unif > 0.8 & pp_h4 > 0.8 ~ "No change",
+    pp_h4_unif < 0.8 & pp_h4 < 0.8 ~ "No change",
     pp_h4_unif < 0.8 & pp_h4 > 0.8 ~ "Newly signifcant",
     pp_h4_unif > 0.8 & pp_h4 < 0.8 ~ "Newly non-significant",
   )) |>
-  filter(type != "no_change")
+  filter(pp_h4_unif > 0.7)
 
 susie_change_coloc_data <- gwas_eqtl_coloc_susie_data |>
   select(gene_name, gwas_id, starts_with("PP.H4.abf")) |>
@@ -103,37 +103,35 @@ susie_change_coloc_data <- gwas_eqtl_coloc_susie_data |>
   filter(prior %in% c("onek1k_r1", "eqtlgen")) |>
   mutate(prior = prior_method_lookup[prior]) |>
   mutate(type = case_when(
-    pp_h4_unif > 0.8 & pp_h4 > 0.8 ~ "no_change",
-    pp_h4_unif < 0.8 & pp_h4 < 0.8 ~ "no_change",
+    pp_h4_unif > 0.8 & pp_h4 > 0.8 ~ "No change",
+    pp_h4_unif < 0.8 & pp_h4 < 0.8 ~ "No change",
     pp_h4_unif < 0.8 & pp_h4 > 0.8 ~ "Newly signifcant",
     pp_h4_unif > 0.8 & pp_h4 < 0.8 ~ "Newly non-significant",
   )) |>
-  filter(type != "no_change")
+  filter(pp_h4_unif > 0.7)
 
 abf_n_colocs_plot <- bind_rows(
   abf_change_coloc_data |>
     count(prior, gwas_id, type) |>
-    mutate(method = "abf"),
+    mutate(method = "coloc-single"),
   susie_change_coloc_data |>
     count(prior, gwas_id, type) |>
-    mutate(method = "susie")
+    mutate(method = "coloc-susie")
 ) |>
-  mutate(n = if_else(type == "Newly non-significant", -n, n)) |>
-  ggplot(aes(prior, n, fill = type)) +
+  mutate(gwas_id = gwas_id_lookup[gwas_id]) |>
+  ggplot(aes(x = gwas_id, y = n, fill = type)) +
   geom_col() +
-  coord_flip() +
-  scale_y_continuous(limits = c(-5, 5), labels = abs) +
   facet_grid(
-    vars(gwas_id),
     vars(method),
-    labeller = labeller(gwas_id = gwas_id_lookup),
+    vars(prior), 
+    scales = "free"
   ) +
   labs(
-    x = "Prior specifcation method",
-    y = "Number of unique genes"
+    x = "Trait",
+    y = "Number of loci",
+    fill = "Effect"
   ) +
-  theme_jp_vgrid() +
-  theme(panel.spacing = unit(1, "lines"))
+  theme_jp()
 
 ggsave(
   abf_n_colocs_plot_path,
