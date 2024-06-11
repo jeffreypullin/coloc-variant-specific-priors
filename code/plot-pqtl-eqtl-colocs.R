@@ -268,9 +268,7 @@ ggsave(
 
 sig_levels <- function(pp_h4) {
   level <- c(
-    seq(0.01, 0.09, by = 0.01),
-    seq(0.1, 0.9, by = 0.1),
-    seq(0.9, 0.99, by = 0.01)
+    seq(0.5, 0.95, by = 0.05)
   )
   tibble(
     level = level,
