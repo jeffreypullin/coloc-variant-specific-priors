@@ -51,7 +51,7 @@ dist_to_tss_plot <- simulation_data |>
   geom_point() +
   geom_vline(xintercept = 0, linetype = "dotted") +
   labs(
-    y =  TeX("$H_4$ \\ difference"),
+    y =  TeX("$\\Pr(H_4)$ \\ difference"),
     x = "Distance to TSS (Kb)"
   ) +
   facet_wrap(~hyp, labeller = label_parsed) +
@@ -72,7 +72,7 @@ h4_unif_plot <- simulation_data |>
   mutate(diff = non_unif - unif) |>
   ggplot(aes(unif, diff)) +
   labs(
-    y = TeX("$H_4$ \\ difference"),
+    y = TeX("$\\Pr(H_4)$ \\ difference"),
     x = TeX("Uniform prior$\\ H_4$ \\value")
   ) +
   geom_point() +
