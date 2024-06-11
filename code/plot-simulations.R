@@ -69,17 +69,17 @@ h4_unif_plot <- simulation_data |>
   ) |>
   mutate(hyp = if_else(hyp == "h3", "'H'[3]", "'H'[4]")) |>
   unnest(cols = c(unif, non_unif)) |>
-  mutate(diff = non_unif - unif) |>
-  ggplot(aes(unif, diff)) +
+  ggplot(aes(unif, non_unif)) +
   labs(
-    y = TeX("$\\Pr(H_4)$ \\ difference"),
-    x = TeX("Uniform prior$\\ H_4$ \\value")
+    y = TeX("Variant-specific $\\ \\Pr(H_4)$"),
+    x = TeX("Uniform $\\ \\Pr(H_4)$")
   ) +
   geom_point() +
+  geom_abline() +
   facet_wrap(~hyp, labeller = label_parsed) +
   theme_jp() +
   theme(
-     strip.text.x = element_text(size = 22),
+    strip.text.x = element_text(size = 22),
     panel.spacing = unit(2, "lines")
   )
 
