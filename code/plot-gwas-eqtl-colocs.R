@@ -83,12 +83,12 @@ abf_change_coloc_data <- gwas_eqtl_coloc_abf_data |>
   filter(prior %in% c("onek1k_r1", "eqtlgen")) |>
   mutate(prior = prior_method_lookup[prior]) |>
   mutate(type = case_when(
-    pp_h4_unif > 0.8 & pp_h4 > 0.8 ~ "No change",
-    pp_h4_unif < 0.8 & pp_h4 < 0.8 ~ "No change",
+    pp_h4_unif > 0.8 & pp_h4 > 0.8 ~ "Unchanged significant",
+    pp_h4_unif < 0.8 & pp_h4 < 0.8 ~ "Unchanged not significant",
     pp_h4_unif < 0.8 & pp_h4 > 0.8 ~ "Newly signifcant",
     pp_h4_unif > 0.8 & pp_h4 < 0.8 ~ "Newly non-significant",
   )) |>
-  filter(pp_h4_unif > 0.7)
+  filter(pp_h4_unif > 0.5)
 
 susie_change_coloc_data <- gwas_eqtl_coloc_susie_data |>
   select(gene_name, gwas_id, starts_with("PP.H4.abf")) |>
@@ -103,12 +103,12 @@ susie_change_coloc_data <- gwas_eqtl_coloc_susie_data |>
   filter(prior %in% c("onek1k_r1", "eqtlgen")) |>
   mutate(prior = prior_method_lookup[prior]) |>
   mutate(type = case_when(
-    pp_h4_unif > 0.8 & pp_h4 > 0.8 ~ "No change",
-    pp_h4_unif < 0.8 & pp_h4 < 0.8 ~ "No change",
+    pp_h4_unif > 0.8 & pp_h4 > 0.8 ~ "Unchanged significant",
+    pp_h4_unif < 0.8 & pp_h4 < 0.8 ~ "Unchanged not significant",
     pp_h4_unif < 0.8 & pp_h4 > 0.8 ~ "Newly signifcant",
     pp_h4_unif > 0.8 & pp_h4 < 0.8 ~ "Newly non-significant",
   )) |>
-  filter(pp_h4_unif > 0.7)
+  filter(pp_h4_unif > 0.5)
 
 abf_n_colocs_plot <- bind_rows(
   abf_change_coloc_data |>
