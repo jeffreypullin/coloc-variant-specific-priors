@@ -14,6 +14,7 @@ suppressPackageStartupMessages({
   library(seqminer)
   library(stringr)
   library(yaml)
+  library(latex2exp)
 })
 
 source(here::here("code/coloc-utils.R"))
@@ -25,6 +26,23 @@ eqtl_data_ids_lookup <- c(
   "QTD000116" = "GTEx adipose (subcutaneous)",
   "QTD000021" = "BLUEPRINT Monocytes",
   "QTD000539" = "TwinsUK LCL"
+)
+
+# Debugging.
+config <- read_yaml("config.yaml")
+coloc_abf_paths <- glue(
+  "data/output/pqtl-eqtl-coloc-abf-{eqtl_id}-{chr}.rds",
+  eqtl_id = rep(config$pqtl_eqtl_coloc_dataset_ids, 22),
+  chr = rep(1:22, each = 5)
+)
+coloc_susie_paths <- glue(
+  "data/output/pqtl-eqtl-coloc-susie-{eqtl_id}-{chr}.rds",
+  eqtl_id = rep(config$pqtl_eqtl_coloc_dataset_ids, 22),
+  chr = rep(1:22, each = 5)
+)
+protein_metadata <- read_tsv(
+  "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz", 
+  show_col_types = FALSE
 )
 
 coloc_abf_paths <- snakemake@input[["coloc_abf_paths"]]
@@ -42,23 +60,6 @@ susie_perf_max_plot_path <- snakemake@output[["susie_perf_max_plot_path"]]
 susie_pph4_scatter_plot_path <- snakemake@output[["susie_pph4_scatter_plot_path"]]
 abf_perf_max_curve_plot_path <- snakemake@output[["abf_perf_max_curve_plot_path"]]
 pqtl_eqtl_perf_plot_path <- snakemake@output[["pqtl_eqtl_perf_plot_path"]]
-
-# Debugging.
-#config <- read_yaml("config.yaml")
-#coloc_abf_paths <- glue(
-#  "data/output/pqtl-eqtl-coloc-abf-{eqtl_id}-{chr}.rds",
-#  eqtl_id = rep(config$pqtl_eqtl_coloc_dataset_ids, 22),
-#  chr = rep(1:22, each = 5)
-#)
-#coloc_susie_paths <- glue(
-#  "data/output/pqtl-eqtl-coloc-susie-{eqtl_id}-{chr}.rds",
-#  eqtl_id = rep(config$pqtl_eqtl_coloc_dataset_ids, 22),
-#  chr = rep(1:22, each = 5)
-#)
-#protein_metadata <- read_tsv(
-#  "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz", 
-#  show_col_types = FALSE
-#)
 
 pqtl_eqtl_coloc_abf_data <- tibble(path = coloc_abf_paths) |>
   mutate(eqtl_data_id = str_extract(path, "QTD[0-9]{6}")) |>
@@ -232,12 +233,6 @@ coloc_abf_perf_data_max <- left_join(
   ) |>
   mutate(dataset = if_else(is.na(dataset), "pqtl_eqtl", dataset))
 
-dataset_lookup <- c(
-  "eqtl" = "eQTL",
-  "pqtl" = "pQTL",
-  "pqtl_eqtl" = "Both"
-)
-
 abf_perf_max_plot <- coloc_abf_perf_data_max |>
   mutate(
     method = prior_method_lookup[method],
@@ -364,51 +359,81 @@ ggsave(
   height = 8
 )
 
-pph4_scatter_plot <- pqtl_eqtl_coloc_abf_data |>
+# Supplementary figure.
+
+scatter_plot <- pqtl_eqtl_coloc_abf_data |>
   ggplot(aes(PP.H4.abf_unif, `PP.H4.abf_eqtlgen-eqtl`)) +
   geom_point() +
   geom_vline(xintercept = 0.8, colour = "red") +
   geom_hline(yintercept = 0.8, colour = "red") +
+  labs(
+    x = TeX("Uniform $\\ \\Pr(H_4)$"),
+    y = TeX("eQTLGen density $\\ \\Pr(H_4)$")
+  ) +
   theme_jp()
+
+diff_scatter_plot <- pqtl_eqtl_coloc_abf_data |>
+  mutate(diff = `PP.H4.abf_eqtlgen-eqtl` - PP.H4.abf_unif ) |>
+  ggplot(aes(PP.H4.abf_unif, diff)) +
+  geom_point() +
+  geom_abline(slope = -1, linetype = "dotted") +
+  geom_abline(slope = -1, intercept = 1, linetype = "dotted") +
+  coord_cartesian(ylim = c(-0.75, 0.75)) +
+  labs(
+    y = TeX("eQTLGen density $\\ \\Pr(H_4) \\ $ - uniform $\\ \\Pr(H_4)$"),
+    x = TeX("Uniform $\\ \\Pr(H_4)$")
+  ) +
+  theme_jp()
+
+prop_small_diff_plot <- pqtl_eqtl_coloc_abf_data |>
+  select(gene_name, starts_with("PP.H4.abf")) |>
+  pivot_longer(
+    -c(gene_name, PP.H4.abf_unif),
+    names_to = "prior_type",
+    values_to = "pp_h4"
+  ) |>
+  separate_wider_delim(
+    prior_type,
+    delim = "-",
+    names = c("method", "dataset"),
+    too_few = "align_start"
+  ) |>
+  separate_wider_delim(
+    method,
+    delim = "_",
+    names = c("junk", "method"),
+    too_many = "merge"
+  ) |>
+  select(-junk) |>
+  mutate(dataset = if_else(is.na(dataset), "pqtl_eqtl", dataset)) |>
+  mutate(
+    method = prior_method_lookup[method],
+    dataset = dataset_lookup[dataset]
+  ) |>
+  mutate(prior_type = paste0(method, "-", dataset)) |>
+  mutate(diff = abs(pp_h4 - PP.H4.abf_unif)) |>
+  summarise(
+    prop_small_diff = sum(diff < 0.01) / n(),
+    .by = prior_type
+  ) |>
+  mutate(prior_type = fct_reorder(factor(prior_type), prop_small_diff)) |>
+  ggplot(aes(prior_type, prop_small_diff)) +
+  geom_col(fill = "steelblue") +
+  labs(
+    y = TeX("Proportion of $\\ \\Pr(H_4)\\ $ difference <0.01"),
+    x = "Prior type"
+  ) +
+  coord_flip() +
+  theme_jp_vgrid()
+
+pph4_scatter_plot <- prop_small_diff_plot | (scatter_plot / diff_scatter_plot)
 
 ggsave(
   abf_pph4_scatter_plot_path,
   plot = pph4_scatter_plot,
-  width = 8,
-  height = 6
+  width = 12,
+  height = 10
 )
-
-# FIXME: Should these be made with the GWAS-eQTL colocs instead?
-#pqtl_eqtl_diff_trend_plot <- pqtl_eqtl_coloc_abf_data |>
-#  mutate(diff = PP.H4.abf_unif - PP.H4.abf_eqtl_tss_eqtlgen) |>
-#  ggplot(aes(PP.H4.abf_unif, diff)) +
-#  geom_point() +
-#  coord_cartesian(ylim = c(-0.75, 0.75)) +
-#  theme_jp()
-
-#ggsave(
-#  "output/figures/pqtl-eqtl-abf-diff-trend-plot.pdf",
-#  plot = pqtl_eqtl_diff_trend_plot,
-#  width = 8,
-#  height = 6
-#)
-
-#pqtl_eqtl_diff_mag_plot <- pqtl_eqtl_coloc_abf_data |>
-#  mutate(diff = abs(PP.H4.abf_unif - PP.H4.abf_eqtl_tss_eqtlgen)) |>
-#  ggplot(aes(diff)) +
-#  geom_histogram(binwidth = 0.05) +
-#  labs(
-#    x = "Magnitudie of difference",
-#    y = "Count"
-#  ) +
-#  theme_jp()
-
-#ggsave(
-#  "output/figures/pqtl-eqtl-abf-diff-mag-plot.pdf",
-#  plot = pqtl_eqtl_diff_mag_plot,
-#  width = 8,
-#  height = 6
-#)
 
 # coloc.susie()
 

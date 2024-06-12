@@ -52,3 +52,9 @@ prior_method_lookup <- c(
   "polyfun" = "PolyFun",
   "unif" = "Uniform"
 )
+
+dataset_lookup <- c(
+  "eqtl" = "eQTL",
+  "pqtl" = "pQTL",
+  "pqtl_eqtl" = "Both"
+)
