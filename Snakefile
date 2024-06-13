@@ -24,7 +24,8 @@ rule all:
     "output/tables/gwas-eqtl-coloc-abf-results.xlsx",
     "output/tables/gwas-eqtl-coloc-susie-results.xlsx",
     "output/figures/gwas-eqtl-coloc-susie-prior-effect-plot.pdf",
-    "output/figures/pqtl-eqtl-coloc-abf-perf-max-curve-plot.pdf"
+    "output/figures/pqtl-eqtl-coloc-abf-perf-max-curve-plot.pdf",
+    "output/figures/nek6-psmb7-example-plot.pdf"
 
 # Download metadata.
 
@@ -409,3 +410,17 @@ rule plot_gwas_eqtl_colocalisatons:
     abf_prior_effect_plot_path = "output/figures/gwas-eqtl-coloc-abf-prior-effect-plot.pdf",
   localrule: True
   script: "code/plot-gwas-eqtl-colocs.R"
+
+rule plot_locus_example: 
+  input:
+    coloc_abf_paths = expand(
+      "data/output/gwas-eqtl-coloc-abf-{gwas_id_eqtl_id}-{chr}.rds", 
+      gwas_id_eqtl_id = config["gwas_eqtl_coloc_ids"],
+      chr = chrs 
+    ),
+    autoimmune_gwas_path = "data/finngen/AUTOIMMUNE.gz",
+    gtex_thyroid_path = "data/eqtl-catalogue/sumstats/QTD000341.cc.tsv.gz"
+  output: 
+    nek6_psmb7_plot_path = "output/figures/nek6-psmb7-example-plot.pdf",
+  localrule: True
+  script: "code/plot-locus.R"
