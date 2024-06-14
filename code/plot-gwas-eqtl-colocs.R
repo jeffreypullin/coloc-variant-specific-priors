@@ -12,6 +12,7 @@ suppressPackageStartupMessages({
   library(openxlsx)
   library(stringr)
   library(janitor)
+  library(latex2exp)
 })
 
 source("code/coloc-utils.R")
@@ -21,12 +22,12 @@ devtools::load_all("~/coloc")
 # Debugging.
 config <- yaml::read_yaml("config.yaml")
 coloc_susie_paths <- glue(
- "data/output/gwas-eqtl-coloc-susie-{gwas_id_eqtl_id}-{chr}.rds",
+  "data/output/gwas-eqtl-coloc-susie-{gwas_id_eqtl_id}-{chr}.rds",
   gwas_id_eqtl_id = rep(config$gwas_eqtl_coloc_ids, 22),
   chr = rep(1:22, each = 6)
 )
 coloc_abf_paths <- glue(
- "data/output/gwas-eqtl-coloc-abf-{gwas_id_eqtl_id}-{chr}.rds",
+  "data/output/gwas-eqtl-coloc-abf-{gwas_id_eqtl_id}-{chr}.rds",
   gwas_id_eqtl_id = rep(config$gwas_eqtl_coloc_ids, 22),
   chr = rep(1:22, each = 6)
 )
@@ -34,13 +35,13 @@ coloc_abf_paths <- glue(
 coloc_abf_paths <- snakemake@input[["coloc_abf_paths"]]
 coloc_susie_paths <- snakemake@input[["coloc_susie_paths"]]
 
-abf_n_colocs_plot_path <- snakemake@output[["abf_n_colocs_plot_path"]]
+overall_impact_plot_path <- snakemake@output[["overall_impact_plot_path"]]
+
 abf_bootstrap_scatter_plot_path <- snakemake@output[["abf_bootstrap_scatter_plot_path"]]
 abf_prob_sig_scatter_plot_path <- snakemake@output[["abf_prob_sig_scatter_plot_path"]]
+
 abf_coloc_results_table_path <- snakemake@output[["abf_coloc_results_table_path"]]
 susie_coloc_results_table_path <- snakemake@output[["susie_coloc_results_table_path"]]
-susie_prior_effect_plot_path <- snakemake@output[["susie_prior_effect_plot_path"]]
-abf_prior_effect_plot_path <- snakemake@output[["abf_prior_effect_plot_path"]]
 
 gwas_eqtl_coloc_abf_data <- tibble(path = coloc_abf_paths) |>
   rowwise() |>
@@ -110,7 +111,7 @@ susie_change_coloc_data <- gwas_eqtl_coloc_susie_data |>
   )) |>
   filter(pp_h4_unif > 0.5)
 
-abf_n_colocs_plot <- bind_rows(
+n_colocs_plot <- bind_rows(
   abf_change_coloc_data |>
     count(prior, gwas_id, type) |>
     mutate(method = "coloc-single"),
@@ -123,7 +124,7 @@ abf_n_colocs_plot <- bind_rows(
   geom_col() +
   facet_grid(
     vars(method),
-    vars(prior), 
+    vars(prior),
     scales = "free"
   ) +
   labs(
@@ -131,13 +132,56 @@ abf_n_colocs_plot <- bind_rows(
     y = "Number of loci",
     fill = "Effect"
   ) +
+  theme_jp() +
+  guides(fill = guide_legend(nrow = 2, byrow = TRUE))
+
+abf_eqtlgen_scatter_plot <- gwas_eqtl_coloc_abf_data |>
+  select(gene_name, gwas_id, starts_with("PP.H4.abf")) |>
+  pivot_longer(
+    -c(gene_name, gwas_id, PP.H4.abf_unif),
+    names_to = "prior_type",
+    values_to = "pp_h4"
+  ) |>
+  filter(gwas_id == "AUTOIMMUNE", prior_type == "PP.H4.abf_eqtlgen") |>
+  rename(pp_h4_unif = PP.H4.abf_unif) |>
+  ggplot(aes(pp_h4_unif, pp_h4)) +
+  geom_point() +
+  geom_vline(xintercept = 0.8, linetype = "dashed", col = "red") +
+  geom_hline(yintercept = 0.8, linetype = "dashed", col = "red") +
+  labs(
+    x = TeX("Uniform prior $\\  \\Pr(H_4)$"),
+    y = TeX("eQTLGen prior $\\  \\Pr(H_4)$")
+  ) +
   theme_jp()
 
+susie_eqtlgen_scatter_plot <- gwas_eqtl_coloc_susie_data |>
+  select(gene_name, gwas_id, starts_with("PP.H4.abf")) |>
+  pivot_longer(
+    -c(gene_name, gwas_id, PP.H4.abf_unif),
+    names_to = "prior_type",
+    values_to = "pp_h4"
+  ) |>
+  filter(gwas_id == "AUTOIMMUNE", prior_type == "PP.H4.abf_eqtlgen") |>
+  rename(pp_h4_unif = PP.H4.abf_unif) |>
+  ggplot(aes(pp_h4_unif, pp_h4)) +
+  geom_point() +
+  geom_vline(xintercept = 0.8, linetype = "dashed", col = "red") +
+  geom_hline(yintercept = 0.8, linetype = "dashed", col = "red") +
+  labs(
+    x = TeX("Uniform prior $\\  \\Pr(H_4)$"),
+    y = TeX("eQTLGen prior $\\  \\Pr(H_4)$")
+  ) +
+  theme_jp()
+
+overall_impact_plot <- (abf_eqtlgen_scatter_plot + susie_eqtlgen_scatter_plot) / n_colocs_plot +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 18))
+
 ggsave(
-  abf_n_colocs_plot_path,
-  abf_n_colocs_plot,
+  overall_impact_plot_path,
+  overall_impact_plot,
   width = 12,
-  height = 8
+  height = 10
 )
 
 boostrap_scatter_plot <- gwas_eqtl_coloc_abf_data |>
@@ -223,55 +267,3 @@ saveWorkbook(
 )
 
 rm(wb)
-
-# Effect of priors on Pr(H4).
-
-susie_prior_effect_plot <- gwas_eqtl_coloc_susie_data |>
-  select(gene_name, gwas_id, starts_with("PP.H4.abf")) |>
-  pivot_longer(
-    -c(gene_name, gwas_id, PP.H4.abf_unif),
-    names_to = "prior_type",
-    values_to = "pp_h4"
-  ) |>
-  mutate(diff = pp_h4 - PP.H4.abf_unif) |>
-  mutate(prior_type = fct_reorder(factor(prior_type), diff, .fun = var)) |>
-  ggplot(aes(prior_type, diff)) +
-  geom_boxplot() +
-  labs(
-    y = "Difference in Pr(H4) values",
-    x = "Prior type"
-  ) +
-  coord_flip() +
-  theme_jp_vgrid()
-
-ggsave(
-  susie_prior_effect_plot_path,
-  susie_prior_effect_plot,
-  width = 8,
-  height = 8
-)
-
-abf_prior_effect_plot <- gwas_eqtl_coloc_abf_data |>
-  select(gene_name, gwas_id, starts_with("PP.H4.abf")) |>
-  pivot_longer(
-    -c(gene_name, gwas_id, PP.H4.abf_unif),
-    names_to = "prior_type",
-    values_to = "pp_h4"
-  ) |>
-  mutate(diff = pp_h4 - PP.H4.abf_unif) |>
-  mutate(prior_type = fct_reorder(factor(prior_type), diff, .fun = var)) |>
-  ggplot(aes(prior_type, diff)) +
-  geom_boxplot() +
-  labs(
-    y = "Difference in Pr(H4) values",
-    x = "Prior type"
-  ) +
-  coord_flip() +
-  theme_jp_vgrid()
-
-ggsave(
-  abf_prior_effect_plot_path,
-  abf_prior_effect_plot,
-  width = 8,
-  height = 8
-)

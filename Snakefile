@@ -8,13 +8,12 @@ rule all:
     "output/figures/prior-plot.pdf",
     "output/figures/simulation-plot.pdf",
     "output/figures/pqtl-eqtl-coloc-abf-perf-both-plot.pdf",
-    "output/figures/gwas-eqtl-coloc-abf-n-colocs-plot.pdf",
     # Supplementary figures.
     "output/figures/eqtl-dist-plot.pdf",
     "output/figures/onek1k-plot.pdf",
     "output/figures/pqtl-eqtl-coloc-abf-perf-by-dataset-plot.pdf",
     "output/figures/pqtl-eqtl-coloc-abf-perf-median-plot.pdf",
-    "output/figures/pqtl-eqtl-coloc-abf-n-coloc-plot.pdf",
+    "output/figures/gwas-eqtl-overall-impact-plot.pdf",
     "output/figures/pqtl-eqtl-coloc-abf-pph4-scatter-plot.pdf",
     "output/figures/pqtl-eqtl-coloc-susie-perf-by-dataset-plot.pdf",
     "output/figures/pqtl-eqtl-coloc-susie-perf-median-plot.pdf",
@@ -23,7 +22,6 @@ rule all:
     "output/figures/gwas-eqtl-coloc-abf-prob-sig-scatter-plot.pdf",
     "output/tables/gwas-eqtl-coloc-abf-results.xlsx",
     "output/tables/gwas-eqtl-coloc-susie-results.xlsx",
-    "output/figures/gwas-eqtl-coloc-susie-prior-effect-plot.pdf",
     "output/figures/pqtl-eqtl-coloc-abf-perf-max-curve-plot.pdf",
     "output/figures/nek6-psmb7-example-plot.pdf"
 
@@ -401,13 +399,11 @@ rule plot_gwas_eqtl_colocalisatons:
       chr = chrs
     ), 
   output: 
-    abf_n_colocs_plot_path = "output/figures/gwas-eqtl-coloc-abf-n-colocs-plot.pdf",
+    overall_impact_plot_path = "output/figures/gwas-eqtl-overall-impact-plot.pdf",
     abf_bootstrap_scatter_plot_path = "output/figures/gwas-eqtl-coloc-abf-boostrap-scatter-plot.pdf",
     abf_prob_sig_scatter_plot_path = "output/figures/gwas-eqtl-coloc-abf-prob-sig-scatter-plot.pdf",
     abf_coloc_results_table_path = "output/tables/gwas-eqtl-coloc-abf-results.xlsx",
     susie_coloc_results_table_path = "output/tables/gwas-eqtl-coloc-susie-results.xlsx",
-    susie_prior_effect_plot_path = "output/figures/gwas-eqtl-coloc-susie-prior-effect-plot.pdf",
-    abf_prior_effect_plot_path = "output/figures/gwas-eqtl-coloc-abf-prior-effect-plot.pdf",
   localrule: True
   script: "code/plot-gwas-eqtl-colocs.R"
 
