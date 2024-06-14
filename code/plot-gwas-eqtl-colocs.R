@@ -66,7 +66,7 @@ gwas_eqtl_coloc_susie_data <- tibble(path = coloc_susie_paths) |>
   unnest(data)
 
 gwas_id_lookup <- c(
-  "AUTOIMMUNE" = "Autoimmune",
+  "AUTOIMMUNE" = "Autoimmune\ndisease",
   "I9_HYPTENS" = "Hypertension",
   "T2D_WIDE" = "Type 2 diabetes"
 )
@@ -173,7 +173,8 @@ susie_eqtlgen_scatter_plot <- gwas_eqtl_coloc_susie_data |>
   ) +
   theme_jp()
 
-overall_impact_plot <- (abf_eqtlgen_scatter_plot + susie_eqtlgen_scatter_plot) / n_colocs_plot +
+overall_impact_plot <- n_colocs_plot / (abf_eqtlgen_scatter_plot + susie_eqtlgen_scatter_plot) +
+  plot_layout(heights = c(1.4, 1)) +
   plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 18))
 
