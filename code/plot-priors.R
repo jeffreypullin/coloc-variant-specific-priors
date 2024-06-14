@@ -27,9 +27,9 @@ snp_var_data_1_7 <- read_parquet(sn@input[["snp_var_data_1_7_path"]])
 plot_path <- snakemake@output[[1]]
 
 chr <- 1
-tss <- 113871759
+tss <- 107965180
 width <- 5e5
-gene_name <- "PTPN22"
+gene_name <- "VAV3"
 region <- paste0(chr, ":", tss - width, "-",  tss + width)
 
 position <- tabix.read.table(
@@ -105,7 +105,7 @@ priors_plot <- tibble(
     x = "Position (Mb)",
     y = "Prior probability",
   ) +
-  scale_x_continuous(breaks = seq(113.4, 114.3, by = 0.4)) +
+  scale_x_continuous(breaks = seq(107.5, 108.3, by = 0.4)) +
   facet_wrap(~prior_type) +
   theme_jp() +
   theme(axis.text = element_text(size = 14))
