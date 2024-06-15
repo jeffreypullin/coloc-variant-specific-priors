@@ -8,22 +8,18 @@ rule all:
     "output/figures/prior-plot.pdf",
     "output/figures/simulation-plot.pdf",
     "output/figures/pqtl-eqtl-coloc-abf-perf-both-plot.pdf",
-    # Supplementary figures.
+    "output/figures/gwas-eqtl-overall-impact-plot.pdf",
+    "output/figures/nek6-psmb7-example-plot.pdf",
+    # Supplementary figures/tables.
     "output/figures/eqtl-dist-plot.pdf",
     "output/figures/onek1k-plot.pdf",
     "output/figures/pqtl-eqtl-coloc-abf-perf-by-dataset-plot.pdf",
-    "output/figures/pqtl-eqtl-coloc-abf-perf-median-plot.pdf",
-    "output/figures/gwas-eqtl-overall-impact-plot.pdf",
-    "output/figures/pqtl-eqtl-coloc-abf-pph4-scatter-plot.pdf",
     "output/figures/pqtl-eqtl-coloc-susie-perf-by-dataset-plot.pdf",
-    "output/figures/pqtl-eqtl-coloc-susie-perf-median-plot.pdf",
-    "output/figures/pqtl-eqtl-coloc-susie-pph4-scatter-plot.pdf",
     "output/figures/gwas-eqtl-coloc-abf-boostrap-scatter-plot.pdf",
     "output/figures/gwas-eqtl-coloc-abf-prob-sig-scatter-plot.pdf",
     "output/tables/gwas-eqtl-coloc-abf-results.xlsx",
     "output/tables/gwas-eqtl-coloc-susie-results.xlsx",
-    "output/figures/pqtl-eqtl-coloc-abf-perf-max-curve-plot.pdf",
-    "output/figures/nek6-psmb7-example-plot.pdf"
+    "output/figures/pqtl-eqtl-coloc-abf-perf-max-curve-plot.pdf"
 
 # Download metadata.
 
@@ -373,16 +369,13 @@ rule plot_pqtl_eqtl_colocalisatons:
     protein_metadata_path = "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
   output: 
     abf_perf_by_dataset_plot_path = "output/figures/pqtl-eqtl-coloc-abf-perf-by-dataset-plot.pdf",
-    abf_perf_median_plot_path = "output/figures/pqtl-eqtl-coloc-abf-perf-median-plot.pdf",
     abf_perf_max_plot_path = "output/figures/pqtl-eqtl-coloc-abf-perf-max-plot.pdf",
     abf_n_colocs_plot_path = "output/figures/pqtl-eqtl-coloc-abf-n-coloc-plot.pdf",
-    abf_pph4_scatter_plot_path = "output/figures/pqtl-eqtl-coloc-abf-pph4-scatter-plot.pdf",
     susie_perf_by_dataset_plot_path = "output/figures/pqtl-eqtl-coloc-susie-perf-by-dataset-plot.pdf",
-    susie_perf_median_plot_path = "output/figures/pqtl-eqtl-coloc-susie-perf-median-plot.pdf",
     susie_perf_max_plot_path = "output/figures/pqtl-eqtl-coloc-susie-perf-max-plot.pdf",
-    susie_pph4_scatter_plot_path = "output/figures/pqtl-eqtl-coloc-susie-pph4-scatter-plot.pdf",
     abf_perf_max_curve_plot_path = "output/figures/pqtl-eqtl-coloc-abf-perf-max-curve-plot.pdf",
-    pqtl_eqtl_perf_plot_path = "output/figures/pqtl-eqtl-coloc-abf-perf-both-plot.pdf"
+    pqtl_eqtl_perf_plot_path = "output/figures/pqtl-eqtl-coloc-abf-perf-both-plot.pdf",
+    prior_effect_plot_path = "output/figures/pqtl-eqtl-prior-effect-plot.pdf"
   localrule: True
   script: "code/plot-pqtl-eqtl-colocs.R"
 

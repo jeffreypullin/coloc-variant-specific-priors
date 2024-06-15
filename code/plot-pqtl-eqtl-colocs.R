@@ -15,6 +15,7 @@ suppressPackageStartupMessages({
   library(stringr)
   library(yaml)
   library(latex2exp)
+  library(ggrepel)
 })
 
 source(here::here("code/coloc-utils.R"))
@@ -50,16 +51,15 @@ coloc_susie_paths <- snakemake@input[["coloc_susie_paths"]]
 protein_metadata_path <- snakemake@input[["protein_metadata_path"]]
 
 abf_perf_by_dataset_plot_path <- snakemake@output[["abf_perf_by_dataset_plot_path"]]
-abf_perf_median_plot_path <- snakemake@output[["abf_perf_median_plot_path"]]
 abf_perf_max_plot_path <- snakemake@output[["abf_perf_max_plot_path"]]
 abf_n_colocs_plot_path <- snakemake@output[["abf_n_colocs_plot_path"]]
-abf_pph4_scatter_plot_path <- snakemake@output[["abf_pph4_scatter_plot_path"]]
-susie_perf_by_dataset_plot_path <- snakemake@output[["susie_perf_by_dataset_plot_path"]]
-susie_perf_median_plot_path <- snakemake@output[["susie_perf_median_plot_path"]]
-susie_perf_max_plot_path <- snakemake@output[["susie_perf_max_plot_path"]]
-susie_pph4_scatter_plot_path <- snakemake@output[["susie_pph4_scatter_plot_path"]]
 abf_perf_max_curve_plot_path <- snakemake@output[["abf_perf_max_curve_plot_path"]]
+
+susie_perf_by_dataset_plot_path <- snakemake@output[["susie_perf_by_dataset_plot_path"]]
+susie_perf_max_plot_path <- snakemake@output[["susie_perf_max_plot_path"]]
+
 pqtl_eqtl_perf_plot_path <- snakemake@output[["pqtl_eqtl_perf_plot_path"]]
+prior_effect_plot_path <- snakemake@output[["prior_effect_plot_path"]]
 
 pqtl_eqtl_coloc_abf_data <- tibble(path = coloc_abf_paths) |>
   mutate(eqtl_data_id = str_extract(path, "QTD[0-9]{6}")) |>
@@ -135,32 +135,6 @@ ggsave(
   height = 10
 )
 
-abf_perf_median_plot <- coloc_abf_perf_data |>
-  summarise(
-    recall = median(recall),
-    precision = median(precision),
-    .by = prior_type
-  ) |>
-  mutate(is_unif = prior_type == "unif") |>
-  ggplot(aes(recall, precision, col = is_unif, label = prior_type)) +
-  geom_point() +
-  geom_text_repel() +
-  scale_colour_manual(values = c("#66CCEE", "#EE6677")) +
-  labs(
-    x = "Recall",
-    y = "Precision",
-    title = "coloc.abf(), median over eQTL datasets"
-  ) +
-  theme_jp() +
-  theme(legend.position = "none")
-
-ggsave(
-  abf_perf_median_plot_path,
-  plot = abf_perf_median_plot,
-  width = 8,
-  height = 6
-)
-
 abf_n_colocs_plot <- coloc_abf_perf_data |>
   mutate(eqtl_data_name = eqtl_data_ids_lookup[eqtl_data_id]) |>
   mutate(n_colocalised = n_tp + n_fp) |>
@@ -233,13 +207,28 @@ coloc_abf_perf_data_max <- left_join(
   ) |>
   mutate(dataset = if_else(is.na(dataset), "pqtl_eqtl", dataset))
 
+to_label <- c(
+  "Uniform-Both",
+  "eQTLGen-Both",
+  "eQTLGen-eQTL",
+  "eQTLGen-pQTL",
+  "OneK1K (R1)-Both",
+  "OneK1K (R1)-eQTL",
+  "Gnocchi-eQTL",
+  "ABC score-eQTL",
+  "ABC score-pQTL"
+)
+
 abf_perf_max_plot <- coloc_abf_perf_data_max |>
   mutate(
     method = prior_method_lookup[method],
     dataset = dataset_lookup[dataset]
   ) |>
-  ggplot(aes(recall, precision, col = method, shape = dataset)) +
-  geom_point(size = 5, alpha = 0.7, position = position_jitter(h = 3e-04, w = 3e-04)) +
+  mutate(label = paste0(method, "-", dataset)) |>
+  mutate(label = if_else(label %in% to_label, label, "")) |>
+  ggplot(aes(recall, precision, col = method, shape = dataset, label = label)) +
+  geom_point(size = 5, alpha = 0.7, position = position_jitter(h = 2e-04, w = 2e-04)) +
+  geom_label_repel(box.padding = 0.4) +
   labs(
     x = "Recall",
     y = "Precision",
@@ -426,11 +415,11 @@ prop_small_diff_plot <- pqtl_eqtl_coloc_abf_data |>
   coord_flip() +
   theme_jp_vgrid()
 
-pph4_scatter_plot <- prop_small_diff_plot | (scatter_plot / diff_scatter_plot)
+prior_effect_plot <- prop_small_diff_plot | (scatter_plot / diff_scatter_plot)
 
 ggsave(
-  abf_pph4_scatter_plot_path,
-  plot = pph4_scatter_plot,
+  prior_effect_plot_path,
+  plot = prior_effect_plot,
   width = 12,
   height = 10
 )
@@ -493,35 +482,6 @@ ggsave(
   height = 10
 )
 
-susie_perf_median_plot <- coloc_susie_perf_data |>
-  summarise(
-    recall = median(recall),
-    precision = median(precision),
-    .by = prior_type
-  ) |>
-  mutate(is_unif = prior_type == "unif") |>
-  ggplot(aes(recall, precision, col = is_unif, label = prior_type)) +
-  geom_point() +
-  geom_text_repel() +
-  scale_colour_manual(values = c("#66CCEE", "#EE6677")) +
-  labs(
-    x = "Recall",
-    y = "Precision",
-    title = "coloc.susie(), median over eQTL datasets"
-  ) +
-  theme_jp() +
-  theme(legend.position = "none")
-
-ggsave(
-  susie_perf_median_plot_path,
-  plot = susie_perf_median_plot,
-  width = 8,
-  height = 6
-)
-
-pqtl_eqtl_coloc_susie_data |>
-  select(eqtl_data_id, phenotype_id, gene_name, hit1_unif, hit2_unif)
-
 coloc_susie_perf_data_max <- left_join(
   pqtl_eqtl_coloc_susie_data |>
     select(eqtl_data_id, starts_with("PP.H4.abf"), phenotype_id,
@@ -576,20 +536,6 @@ susie_perf_max_plot <- coloc_susie_perf_data_max |>
 ggsave(
   susie_perf_max_plot_path,
   plot = susie_perf_max_plot,
-  width = 8,
-  height = 6
-)
-
-susie_pph4_scatter_plot <- pqtl_eqtl_coloc_susie_data |>
-  ggplot(aes(PP.H4.abf_unif, `PP.H4.abf_eqtlgen-pqtl_eqtl`)) +
-  geom_point() +
-  geom_vline(xintercept = 0.8, colour = "red") +
-  geom_hline(yintercept = 0.8, colour = "red") +
-  theme_jp()
-
-ggsave(
-  susie_pph4_scatter_plot_path,
-  plot = susie_pph4_scatter_plot,
   width = 8,
   height = 6
 )
