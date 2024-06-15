@@ -402,8 +402,8 @@ rule plot_gwas_eqtl_colocalisatons:
     overall_impact_plot_path = "output/figures/gwas-eqtl-overall-impact-plot.pdf",
     abf_bootstrap_scatter_plot_path = "output/figures/gwas-eqtl-coloc-abf-boostrap-scatter-plot.pdf",
     abf_prob_sig_scatter_plot_path = "output/figures/gwas-eqtl-coloc-abf-prob-sig-scatter-plot.pdf",
-    abf_coloc_results_table_path = "output/tables/gwas-eqtl-coloc-abf-results.xlsx",
-    susie_coloc_results_table_path = "output/tables/gwas-eqtl-coloc-susie-results.xlsx",
+    abf_coloc_results_table_path = "output/tables/gwas-eqtl-coloc-abf-results.tex",
+    susie_coloc_results_table_path = "output/tables/gwas-eqtl-coloc-susie-results.tex",
   localrule: True
   script: "code/plot-gwas-eqtl-colocs.R"
 

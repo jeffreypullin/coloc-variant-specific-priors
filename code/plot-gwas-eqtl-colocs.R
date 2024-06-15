@@ -9,9 +9,9 @@ suppressPackageStartupMessages({
   library(forcats)
   library(glue)
   library(patchwork)
-  library(openxlsx)
   library(stringr)
   library(janitor)
+  library(xtable)
   library(latex2exp)
 })
 
@@ -110,6 +110,8 @@ susie_change_coloc_data <- gwas_eqtl_coloc_susie_data |>
     pp_h4_unif > 0.8 & pp_h4 < 0.8 ~ "Newly non-significant",
   )) |>
   filter(pp_h4_unif > 0.5)
+
+
 
 n_colocs_plot <- bind_rows(
   abf_change_coloc_data |>
@@ -222,49 +224,68 @@ ggsave(
 
 # GWAS-eQTL coloc results
 
-wb <- createWorkbook()
-
-addWorksheet(wb, sheetName = "eQTLGen dist (eQTL)")
 gwas_eqtl_coloc_abf_data |>
   mutate(
-    sig_eqtlgen_eqtl = PP.H4.abf_eqtlgen > 0.8,
+    sig_eqtlgen = PP.H4.abf_eqtlgen > 0.8,
+    sig_onek1k = PP.H4.abf_onek1k_r1 > 0.8,
     sig_unif = PP.H4.abf_unif > 0.8
   ) |>
+  mutate(gwas_id = gwas_id_lookup[gwas_id]) |>
   arrange(gwas_id) |>
-  filter(sig_eqtlgen_eqtl != sig_unif) |>
+  filter(sig_eqtlgen != sig_unif | sig_onek1k != sig_unif) |>
   select(gwas_id, eqtl_id, gene_name,
-         PP.H4.abf_unif, PP.H4.abf_eqtlgen) |>
-  writeDataTable(wb, sheet = 1, x = _)
-
-saveWorkbook(
-  wb,
-  abf_coloc_results_table_path,
-  overwrite = TRUE
-)
-
-rm(wb)
-
+         PP.H4.abf_unif, PP.H4.abf_eqtlgen, PP.H4.abf_onek1k_r1) |>
+  setNames(c("GWAS trait", "eQTL ID", "Gene",
+             "\\makecell{Uniform \\\\ $\\Pr(H_4)$}",
+             "\\makecell{eQTLGen \\\\ $\\Pr(H_4)$}",
+             "\\makecell{OneK1K R1 \\\\ $\\Pr(H_4)$}")) |>
+  xtable(type = "latex", align = rep("c", 7)) |>
+  print(
+    file = abf_coloc_results_table_path,
+    include.rownames = FALSE,
+    sanitize.text.function = function(x) x
+  )
 
 # coloc.susie()
 
-wb <- createWorkbook()
-
-addWorksheet(wb, sheetName = "eQTLGen dist (eQTL)")
 gwas_eqtl_coloc_susie_data |>
   mutate(
-    sig_eqtlgen_eqtl = PP.H4.abf_eqtlgen > 0.8,
+    sig_eqtlgen = PP.H4.abf_eqtlgen > 0.8,
+    sig_onek1k = PP.H4.abf_onek1k_r1 > 0.8,
     sig_unif = PP.H4.abf_unif > 0.8
   ) |>
+  mutate(gwas_id = gwas_id_lookup[gwas_id]) |>
   arrange(gwas_id) |>
-  filter(sig_eqtlgen_eqtl != sig_unif) |>
+  filter(sig_eqtlgen != sig_unif | sig_onek1k != sig_unif) |>
   select(gwas_id, eqtl_id, gene_name,
-         PP.H4.abf_unif, PP.H4.abf_eqtlgen) |>
-  writeDataTable(wb, sheet = 1, x = _)
+         PP.H4.abf_unif, PP.H4.abf_eqtlgen, PP.H4.abf_onek1k_r1) |>
+  setNames(c("GWAS trait", "eQTL ID", "Gene",
+             "\\makecell{Uniform \\\\ $\\Pr(H_4)$}",
+             "\\makecell{eQTLGen \\\\ $\\Pr(H_4)$}",
+             "\\makecell{OneK1K R1 \\\\ $\\Pr(H_4)$}")) |>
+  xtable(type = "latex", align = rep("c", 7)) |>
+  print(
+    file = susie_coloc_results_table_path,
+    include.rownames = FALSE,
+    sanitize.text.function = function(x) x
+  )
 
-saveWorkbook(
-  wb,
-  susie_coloc_results_table_path,
-  overwrite = TRUE
-)
-
-rm(wb)
+# For numbers in text.
+bind_rows(
+  abf_change_coloc_data |>
+    count(prior, gwas_id, type) |>
+    mutate(method = "coloc-single"),
+  susie_change_coloc_data |>
+    count(prior, gwas_id, type) |>
+    mutate(method = "coloc-susie")
+) |>
+  mutate(gwas_id = gwas_id_lookup[gwas_id]) |>
+  mutate(unchanged = if_else(substr(type, 1, 9) == "Unchanged", "unchanged", "changed")) |>
+  summarise(n = sum(n), .by = c(gwas_id, prior, unchanged)) |>
+  mutate(prop = 100 * n / sum(n), .by = c(gwas_id, prior)) |>
+  xtable(type = "latex", align = rep("c", 6)) |>
+  print(
+    file = "output/tables/gwas-eqtl-overall-results.tex",
+    include.rownames = FALSE,
+    sanitize.text.function = function(x) x
+  )
