@@ -19,9 +19,12 @@ rule all:
     "output/figures/gwas-eqtl-coloc-abf-prob-sig-scatter-plot.pdf",
     "output/tables/gwas-eqtl-coloc-abf-results.xlsx",
     "output/tables/gwas-eqtl-coloc-susie-results.xlsx",
-    "output/figures/pqtl-eqtl-coloc-abf-perf-max-curve-plot.pdf"
+    "output/figures/pqtl-eqtl-coloc-abf-perf-max-curve-plot.pdf",
+    "output/figures/otg-probs-plot.pdf"
 
 # Download metadata.
+
+
 
 rule download_metadata:
   output: 
@@ -335,6 +338,11 @@ rule plot_eqtl_tss_dist:
   localrule: True
   script: "code/plot-eqtl-tss-dist.R"
 
+rule plot_otg_data: 
+  output: otg_plot_path = "output/figures/otg-probs-plot.pdf",
+  localrule: True
+  script: "code/plot-otg-data.R"
+
 rule plot_priors:
   input: 
     autoimmune_gwas_path = "data/finngen/AUTOIMMUNE.gz",
@@ -413,3 +421,5 @@ rule plot_locus_example:
     nek6_psmb7_plot_path = "output/figures/nek6-psmb7-example-plot.pdf",
   localrule: True
   script: "code/plot-locus.R"
+
+
