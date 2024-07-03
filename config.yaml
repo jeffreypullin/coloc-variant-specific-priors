@@ -123,22 +123,19 @@ finngen_gwas_ids:
 gwas_eqtl_coloc_ids:
  - "AUTOIMMUNE-QTD000373" # Lepik blood
  - "AUTOIMMUNE-QTD000341" # GTEx thyroid
- #- "AUTOIMMUNE-QTD000095" # GENCORD LCL
- #- "AUTOIMMUNE-QTD000021" # BlUEPRINT monocytes
- #- "AUTOIMMUNE-QTD000031" # BLUEPRINT T cells
- #- "AUTOIMMUNE-QTD000090" # FUSION adipose
+ - "AUTOIMMUNE-QTD000095" # GENCORD LCL
+ - "AUTOIMMUNE-QTD000021" # BlUEPRINT monocytes
+ - "AUTOIMMUNE-QTD000031" # BLUEPRINT T cells
  - "T2D_WIDE-QTD000373" # Lepik blood
  - "T2D_WIDE-QTD000090" # FUSION adipose
- #- "T2D_WIDE-QTD000266" # GTEx liver
- #- "T2D_WIDE-QTD000321" # GTEx small intestine
- #- "T2D_WIDE-QTD000296" # GTEx pancreas
- #- "T2D_WIDE-QTD000261" # GENCORD kidney
+ - "T2D_WIDE-QTD000266" # GTEx liver
+ - "T2D_WIDE-QTD000321" # GTEx small intestine
+ - "T2D_WIDE-QTD000296" # GTEx pancreas
  - "I9_HYPTENS-QTD000373" # Lepik blood
  - "I9_HYPTENS-QTD000549" # TwinsUK blood
- #- "I9_HYPTENS-QTD000256" # GTEx left heart ventricle
- #- "I9_HYPTENS-QTD000136" # GTEx artery coronary
- #- "I9_HYPTENS-QTD000261" # GTEx kidney
- #- "I9_HYPTENS-QTD000296" # GTEx pancreas
+ - "I9_HYPTENS-QTD000256" # GTEx left heart ventricle
+ - "I9_HYPTENS-QTD000136" # GTEx artery coronary
+ - "I9_HYPTENS-QTD000261" # GTEx kidney
 simulation_genes:
   - "PTPN22"
   - "IL21"
