@@ -2,6 +2,6 @@
 
 This repository contains code accompanying the paper:
 
->> TODO
+> TODO
 
 For a high level overview of the computational workflow see the `Snakefile`. 
