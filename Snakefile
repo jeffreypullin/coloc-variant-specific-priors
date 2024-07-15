@@ -4,22 +4,20 @@ chrs = [x for x in range(1, 23)]
 
 rule all: 
   input: 
-    # Main figures.
+    # Main text figures.
     "output/figures/prior-plot.pdf",
     "output/figures/simulation-plot.pdf",
     "output/figures/pqtl-eqtl-coloc-abf-perf-both-plot.pdf",
     "output/figures/gwas-eqtl-overall-impact-plot.pdf",
     "output/figures/nek6-psmb7-example-plot.pdf",
-    # Supplementary figures/tables.
+    # Supplementary figures.
     "output/figures/eqtl-dist-plot.pdf",
     "output/figures/onek1k-plot.pdf",
     "output/figures/otg-probs-plot.pdf",
+    "output/figures/pqtl-eqtl-coloc-susie-curve-plot.pdf",
     "output/figures/pqtl-eqtl-prior-effect-plot.pdf",
-    "output/figures/gwas-eqtl-coloc-abf-boostrap-scatter-plot.pdf",
-    "output/figures/gwas-eqtl-coloc-abf-prob-sig-scatter-plot.pdf",
-    # Supplementary table spreadsheet.
-    "output/tables/gwas-eqtl-coloc-abf-results.tex",
-    "output/tables/gwas-eqtl-coloc-susie-results.tex"
+    # Supplementary spreadsheet.
+    "output/tables/gwas-eqtl-results.xlsx"
 
 # Download metadata.
 
@@ -249,7 +247,7 @@ rule run_pqtl_eqtl_coloc_susie_colocalisation:
     result_file = "data/output/pqtl-eqtl-coloc-susie-{eqtl_id}-{chr}.rds"
   retries: 1
   resources: 
-    mem_mb = lambda wildcards, attempt: 8000 * attempt,
+    mem_mb = lambda wildcards, attempt: 7000 * attempt,
     time_min = lambda wildcards, attempt: 20 * attempt ** 3
   script: "code/run-pqtl-eqtl-coloc-susie.R"
 
@@ -373,7 +371,8 @@ rule plot_pqtl_eqtl_colocalisatons:
     ), 
     protein_metadata_path = "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
   output: 
-    pqtl_eqtl_perf_plot_path = "output/figures/pqtl-eqtl-coloc-abf-perf-both-plot.pdf",
+    pqtl_eqtl_abf_perf_both_plot_path = "output/figures/pqtl-eqtl-coloc-abf-perf-both-plot.pdf",
+    pqtl_eqtl_susie_perf_curve_plot_path = "output/figures/pqtl-eqtl-coloc-susie-curve-plot.pdf",
     prior_effect_plot_path = "output/figures/pqtl-eqtl-prior-effect-plot.pdf"
   localrule: True
   script: "code/plot-pqtl-eqtl-colocs.R"
@@ -392,10 +391,7 @@ rule plot_gwas_eqtl_colocalisatons:
     ), 
   output: 
     overall_impact_plot_path = "output/figures/gwas-eqtl-overall-impact-plot.pdf",
-    abf_bootstrap_scatter_plot_path = "output/figures/gwas-eqtl-coloc-abf-boostrap-scatter-plot.pdf",
-    abf_prob_sig_scatter_plot_path = "output/figures/gwas-eqtl-coloc-abf-prob-sig-scatter-plot.pdf",
-    abf_coloc_results_table_path = "output/tables/gwas-eqtl-coloc-abf-results.tex",
-    susie_coloc_results_table_path = "output/tables/gwas-eqtl-coloc-susie-results.tex",
+    coloc_results_excel_path = "output/tables/gwas-eqtl-results.xlsx"
   localrule: True
   script: "code/plot-gwas-eqtl-colocs.R"
 

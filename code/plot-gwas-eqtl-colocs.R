@@ -13,6 +13,7 @@ suppressPackageStartupMessages({
   library(janitor)
   library(xtable)
   library(latex2exp)
+  library(openxlsx)
 })
 
 source("code/coloc-utils.R")
@@ -36,12 +37,7 @@ coloc_abf_paths <- snakemake@input[["coloc_abf_paths"]]
 coloc_susie_paths <- snakemake@input[["coloc_susie_paths"]]
 
 overall_impact_plot_path <- snakemake@output[["overall_impact_plot_path"]]
-
-abf_bootstrap_scatter_plot_path <- snakemake@output[["abf_bootstrap_scatter_plot_path"]]
-abf_prob_sig_scatter_plot_path <- snakemake@output[["abf_prob_sig_scatter_plot_path"]]
-
-abf_coloc_results_table_path <- snakemake@output[["abf_coloc_results_table_path"]]
-susie_coloc_results_table_path <- snakemake@output[["susie_coloc_results_table_path"]]
+coloc_results_excel_path <- snakemake@output[["coloc_results_excel_path"]]
 
 gwas_eqtl_coloc_abf_data <- tibble(path = coloc_abf_paths) |>
   rowwise() |>
@@ -110,8 +106,6 @@ susie_change_coloc_data <- gwas_eqtl_coloc_susie_data |>
     pp_h4_unif > 0.8 & pp_h4 < 0.8 ~ "Newly non-significant",
   )) |>
   filter(pp_h4_unif > 0.5)
-
-
 
 n_colocs_plot <- bind_rows(
   abf_change_coloc_data |>
@@ -187,42 +181,11 @@ ggsave(
   height = 10
 )
 
-boostrap_scatter_plot <- gwas_eqtl_coloc_abf_data |>
-  rowwise() |>
-  mutate(
-    q25 = q_pph4_rand_eqtl[[3]],
-    q50 = q_pph4_rand_eqtl[[4]],
-    q75 = q_pph4_rand_eqtl[[5]],
-  ) |>
-  ungroup() |>
-  ggplot(aes(PP.H4.abf_unif, q50)) +
-  geom_point() +
-  facet_wrap(~gwas_id) +
-  geom_errorbar(aes(ymin = q25, ymax = q75), width = 0.005) +
-  geom_vline(xintercept = 0.8, linetype = "dotted") +
-  theme_jp()
-
-ggsave(
-  abf_bootstrap_scatter_plot_path,
-  boostrap_scatter_plot,
-  width = 12,
-  height = 8
-)
-
-prob_sig_scatter_plot <- gwas_eqtl_coloc_abf_data |>
-  ggplot(aes(PP.H4.abf_unif, prop_sig_pph4_rand_eqtl)) +
-  geom_point() +
-  geom_vline(xintercept = 0.8) +
-  theme_jp()
-
-ggsave(
-  abf_prob_sig_scatter_plot_path,
-  prob_sig_scatter_plot,
-  width = 12,
-  height = 8
-)
-
 # GWAS-eQTL coloc results
+
+wb <- createWorkbook()
+addWorksheet(wb, sheetName = "coloc-single")
+addWorksheet(wb, sheetName = "coloc-susie")
 
 gwas_eqtl_coloc_abf_data |>
   mutate(
@@ -235,18 +198,7 @@ gwas_eqtl_coloc_abf_data |>
   filter(sig_eqtlgen != sig_unif | sig_onek1k != sig_unif) |>
   select(gwas_id, eqtl_id, gene_name,
          PP.H4.abf_unif, PP.H4.abf_eqtlgen, PP.H4.abf_onek1k_r1) |>
-  setNames(c("GWAS trait", "eQTL ID", "Gene",
-             "\\makecell{Uniform \\\\ $\\Pr(H_4)$}",
-             "\\makecell{eQTLGen \\\\ $\\Pr(H_4)$}",
-             "\\makecell{OneK1K R1 \\\\ $\\Pr(H_4)$}")) |>
-  xtable(type = "latex", align = rep("c", 7)) |>
-  print(
-    file = abf_coloc_results_table_path,
-    include.rownames = FALSE,
-    sanitize.text.function = function(x) x
-  )
-
-# coloc.susie()
+  writeDataTable(wb, sheet = 1, x = _)
 
 gwas_eqtl_coloc_susie_data |>
   mutate(
@@ -259,18 +211,14 @@ gwas_eqtl_coloc_susie_data |>
   filter(sig_eqtlgen != sig_unif | sig_onek1k != sig_unif) |>
   select(gwas_id, eqtl_id, gene_name,
          PP.H4.abf_unif, PP.H4.abf_eqtlgen, PP.H4.abf_onek1k_r1) |>
-  setNames(c("GWAS trait", "eQTL ID", "Gene",
-             "\\makecell{Uniform \\\\ $\\Pr(H_4)$}",
-             "\\makecell{eQTLGen \\\\ $\\Pr(H_4)$}",
-             "\\makecell{OneK1K R1 \\\\ $\\Pr(H_4)$}")) |>
-  xtable(type = "latex", align = rep("c", 7)) |>
-  print(
-    file = susie_coloc_results_table_path,
-    include.rownames = FALSE,
-    sanitize.text.function = function(x) x
-  )
+  writeDataTable(wb, sheet = 2, x = _)
 
-# For numbers in text.
+saveWorkbook(
+  wb,
+  coloc_results_excel_path,
+  overwrite = TRUE
+)
+
 bind_rows(
   abf_change_coloc_data |>
     count(prior, gwas_id, type) |>
@@ -283,9 +231,4 @@ bind_rows(
   mutate(unchanged = if_else(substr(type, 1, 9) == "Unchanged", "unchanged", "changed")) |>
   summarise(n = sum(n), .by = c(gwas_id, prior, unchanged)) |>
   mutate(prop = 100 * n / sum(n), .by = c(gwas_id, prior)) |>
-  xtable(type = "latex", align = rep("c", 6)) |>
-  print(
-    file = "output/tables/gwas-eqtl-overall-results.tex",
-    include.rownames = FALSE,
-    sanitize.text.function = function(x) x
-  )
+  write_csv("output/tables/gwas-eqtl-overall-results.csv")

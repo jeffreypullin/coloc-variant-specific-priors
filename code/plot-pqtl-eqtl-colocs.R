@@ -42,7 +42,7 @@ coloc_susie_paths <- glue(
   chr = rep(1:22, each = 5)
 )
 protein_metadata <- read_tsv(
-  "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz", 
+  "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz",
   show_col_types = FALSE
 )
 
@@ -50,15 +50,8 @@ coloc_abf_paths <- snakemake@input[["coloc_abf_paths"]]
 coloc_susie_paths <- snakemake@input[["coloc_susie_paths"]]
 protein_metadata_path <- snakemake@input[["protein_metadata_path"]]
 
-abf_perf_by_dataset_plot_path <- snakemake@output[["abf_perf_by_dataset_plot_path"]]
-abf_perf_max_plot_path <- snakemake@output[["abf_perf_max_plot_path"]]
-abf_n_colocs_plot_path <- snakemake@output[["abf_n_colocs_plot_path"]]
-abf_perf_max_curve_plot_path <- snakemake@output[["abf_perf_max_curve_plot_path"]]
-
-susie_perf_by_dataset_plot_path <- snakemake@output[["susie_perf_by_dataset_plot_path"]]
-susie_perf_max_plot_path <- snakemake@output[["susie_perf_max_plot_path"]]
-
-pqtl_eqtl_perf_plot_path <- snakemake@output[["pqtl_eqtl_perf_plot_path"]]
+pqtl_eqtl_abf_perf_both_plot_path <- snakemake@output[["pqtl_eqtl_abf_perf_both_plot_path"]]
+pqtl_eqtl_susie_perf_curve_plot_path <- snakemake@output[["pqtl_eqtl_susie_perf_curve_plot_path"]]
 prior_effect_plot_path <- snakemake@output[["prior_effect_plot_path"]]
 
 pqtl_eqtl_coloc_abf_data <- tibble(path = coloc_abf_paths) |>
@@ -76,92 +69,6 @@ pqtl_eqtl_coloc_susie_data <- tibble(path = coloc_susie_paths) |>
 protein_metadata <- read_tsv(protein_metadata_path, show_col_types = FALSE)
 
 # coloc.abf()
-
-coloc_abf_perf_data <- left_join(
-  pqtl_eqtl_coloc_abf_data |>
-    select(eqtl_data_id, starts_with("PP.H4.abf"), phenotype_id,
-           coloc_gene_id = gene_id, gene_name),
-  protein_metadata |>
-    select(coding_gene_id = gene_id, phenotype_id),
-  by = "phenotype_id"
-) |>
-  rename(protein_id = phenotype_id) |>
-  pivot_longer(-c(protein_id, coding_gene_id, eqtl_data_id,
-                  coloc_gene_id, gene_name),
-               values_to = "pp_h4",
-               names_to = c("junk", "prior_type"),
-               names_pattern = "(.*?)_(.*)") |>
-  select(-junk) |>
-  mutate(
-    sig_coloc = pp_h4 >= 0.8,
-    gene_match = coding_gene_id == coloc_gene_id
-  ) |>
-  select(-c(coding_gene_id, coloc_gene_id, pp_h4)) |>
-  mutate(
-    tp = sig_coloc & gene_match,
-    fp = sig_coloc & !gene_match,
-    fn = !sig_coloc & gene_match,
-  ) |>
-  summarise(
-    n_tp = sum(tp),
-    n_fp = sum(fp),
-    n_fn = sum(fn),
-    .by = c(eqtl_data_id, prior_type)
-  ) |>
-  mutate(
-    recall = n_tp / (n_tp + n_fn),
-    precision = n_tp / (n_tp + n_fp)
-  )
-
-abf_perf_by_dataset_plot <- coloc_abf_perf_data |>
-  mutate(is_unif = prior_type == "unif") |>
-  mutate(eqtl_data_name = eqtl_data_ids_lookup[eqtl_data_id]) |>
-  ggplot(aes(recall, precision, col = is_unif, label = prior_type)) +
-  geom_point() +
-  scale_colour_manual(values = c("#66CCEE", "#EE6677")) +
-  geom_text_repel() +
-  labs(
-    x = "Recall",
-    y = "Precision",
-  ) +
-  facet_wrap(~eqtl_data_name, scales = "free") +
-  theme_jp() +
-  theme(legend.position = "none")
-
-ggsave(
-  abf_perf_by_dataset_plot_path,
-  plot = abf_perf_by_dataset_plot,
-  width = 12,
-  height = 10
-)
-
-abf_n_colocs_plot <- coloc_abf_perf_data |>
-  mutate(eqtl_data_name = eqtl_data_ids_lookup[eqtl_data_id]) |>
-  mutate(n_colocalised = n_tp + n_fp) |>
-  mutate(prior_type = fct_reorder(
-    factor(prior_type),
-    n_colocalised
-  )) |>
-  mutate(eqtl_data_name = fct_reorder(
-    factor(eqtl_data_name),
-    n_colocalised
-  )) |>
-  ggplot(aes(prior_type, n_colocalised, fill = eqtl_data_name)) +
-  geom_col(position = "dodge") +
-  coord_flip() +
-  labs(
-    y = "Number of signigicantly colocalised pQTL-eQTL pairs",
-    x = "Prior"
-  ) +
-  theme_jp_vgrid() +
-  theme(legend.position = "right")
-
-ggsave(
-  abf_n_colocs_plot_path,
-  plot = abf_n_colocs_plot,
-  width = 8,
-  height = 6
-)
 
 coloc_abf_perf_data_max <- left_join(
   pqtl_eqtl_coloc_abf_data |>
@@ -243,13 +150,6 @@ abf_perf_max_plot <- coloc_abf_perf_data_max |>
     legend.position = "none"
   )
 
-ggsave(
-  abf_perf_max_plot_path,
-  plot = abf_perf_max_plot,
-  width = 8,
-  height = 6
-)
-
 sig_levels <- function(pp_h4) {
   level <- c(
     seq(0.5, 0.95, by = 0.05)
@@ -329,26 +229,101 @@ abf_perf_max_curve_plot <- abf_perf_max_curve_data |>
     legend.position = "right"
   )
 
-ggsave(
-  abf_perf_max_curve_plot_path,
-  plot = abf_perf_max_curve_plot,
-  width = 12,
-  height = 10
-)
-
 pqtl_eqtl_perf_plot <- abf_perf_max_plot + abf_perf_max_curve_plot +
   plot_layout(guides = "collect") +
   plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 18))
 
 ggsave(
-  pqtl_eqtl_perf_plot_path,
+  pqtl_eqtl_abf_perf_both_plot_path,
   plot = pqtl_eqtl_perf_plot,
   width = 14,
   height = 8
 )
 
-# Supplementary figure.
+# coloc.susie()
+
+susie_perf_max_curve_data <- left_join(
+  pqtl_eqtl_coloc_susie_data |>
+    select(eqtl_data_id, starts_with("PP.H4.abf"), phenotype_id,
+           coloc_gene_id = gene_id, gene_name, idx1_unif, idx2_unif),
+  protein_metadata |>
+    select(coding_gene_id = gene_id, phenotype_id),
+  by = "phenotype_id"
+) |>
+  rename(
+    protein_id = phenotype_id,
+    cs_ind1 = idx1_unif,
+    cs_ind2 = idx2_unif
+  ) |>
+  pivot_longer(-c(protein_id, coding_gene_id, eqtl_data_id,
+                  coloc_gene_id, gene_name, cs_ind1, cs_ind2),
+               values_to = "pp_h4",
+               names_to = c("junk", "prior_type"),
+               names_pattern = "(.*?)_(.*)") |>
+  select(-junk) |>
+  rowwise() |>
+  mutate(
+    sig_coloc = list(sig_levels(pp_h4)),
+    gene_match = coding_gene_id == coloc_gene_id
+  ) |>
+  ungroup() |>
+  select(-c(coding_gene_id, coloc_gene_id, pp_h4)) |>
+  unnest(sig_coloc) |>
+  summarise(
+    tp = any(sig_coloc) & all(gene_match),
+    fp = any(sig_coloc) & !all(gene_match),
+    fn = !any(sig_coloc) & all(gene_match),
+    tn = !any(sig_coloc) & !all(gene_match),
+    .by = c(prior_type, gene_name, protein_id, level, cs_ind1, cs_ind2)
+  ) |>
+  summarise(
+    n_tp = sum(tp),
+    n_fp = sum(fp),
+    n_fn = sum(fn),
+    n_tn = sum(tn),
+    .by = c(prior_type, level)
+  ) |>
+  mutate(
+    tpr = n_tp / (n_tp + n_fn),
+    fpr = n_fp / (n_fp + n_tn)
+  )
+
+susie_perf_max_curve_plot <- susie_perf_max_curve_data  |>
+  separate_wider_delim(
+    prior_type,
+    delim = "-",
+    names = c("method", "dataset"),
+    too_few = "align_start"
+  ) |>
+  mutate(dataset = if_else(is.na(dataset), "pqtl_eqtl", dataset)) |>
+  mutate(
+    method = prior_method_lookup[method],
+    dataset = dataset_lookup[dataset]
+  ) |>
+  ggplot(aes(fpr, tpr, color = method, shape = dataset)) +
+  geom_point(size = 2) +
+  geom_line() +
+  labs(
+    x = "False positive rate",
+    y = "True positive rate",
+    col = "Method",
+    shape = "Dataset"
+  ) +
+  theme_jp() +
+  theme(
+    legend.title = element_text(family = "Helvetica", size = 14, color = "#222222"),
+    legend.position = "right"
+  )
+
+ggsave(
+  pqtl_eqtl_susie_perf_curve_plot_path,
+  plot = susie_perf_max_curve_plot,
+  width = 10,
+  height = 8
+)
+
+# Prior impact figure (supplementary).
 
 scatter_plot <- pqtl_eqtl_coloc_abf_data |>
   ggplot(aes(PP.H4.abf_unif, `PP.H4.abf_eqtlgen-eqtl`)) +
@@ -374,7 +349,7 @@ diff_scatter_plot <- pqtl_eqtl_coloc_abf_data |>
   ) +
   theme_jp()
 
-prop_small_diff_plot <- pqtl_eqtl_coloc_abf_data |>
+coloc_abf_diff_data <- pqtl_eqtl_coloc_abf_data |>
   select(gene_name, starts_with("PP.H4.abf")) |>
   pivot_longer(
     -c(gene_name, PP.H4.abf_unif),
@@ -401,13 +376,48 @@ prop_small_diff_plot <- pqtl_eqtl_coloc_abf_data |>
   ) |>
   mutate(prior_type = paste0(method, "-", dataset)) |>
   mutate(diff = abs(pp_h4 - PP.H4.abf_unif)) |>
+  mutate(method = "coloc-single")
+
+coloc_susie_diff_data <- pqtl_eqtl_coloc_susie_data |>
+  select(gene_name, starts_with("PP.H4.abf")) |>
+  pivot_longer(
+    -c(gene_name, PP.H4.abf_unif),
+    names_to = "prior_type",
+    values_to = "pp_h4"
+  ) |>
+  separate_wider_delim(
+    prior_type,
+    delim = "-",
+    names = c("method", "dataset"),
+    too_few = "align_start"
+  ) |>
+  separate_wider_delim(
+    method,
+    delim = "_",
+    names = c("junk", "method"),
+    too_many = "merge"
+  ) |>
+  select(-junk) |>
+  mutate(dataset = if_else(is.na(dataset), "pqtl_eqtl", dataset)) |>
+  mutate(
+    method = prior_method_lookup[method],
+    dataset = dataset_lookup[dataset]
+  ) |>
+  mutate(prior_type = paste0(method, "-", dataset)) |>
+  mutate(diff = abs(pp_h4 - PP.H4.abf_unif)) |>
+  mutate(method = "coloc-susie")
+
+prop_small_diff_plot <- bind_rows(
+  coloc_abf_diff_data,
+  coloc_susie_diff_data
+) |>
   summarise(
     prop_small_diff = sum(diff < 0.01) / n(),
-    .by = prior_type
+    .by = c(prior_type, method)
   ) |>
   mutate(prior_type = fct_reorder(factor(prior_type), prop_small_diff)) |>
-  ggplot(aes(prior_type, prop_small_diff)) +
-  geom_col(fill = "steelblue") +
+  ggplot(aes(prior_type, prop_small_diff, fill = method)) +
+  geom_col(position = "dodge") +
   labs(
     y = TeX("Proportion of $\\ \\Pr(H_4)\\ $ difference <0.01"),
     x = "Prior type"
@@ -422,120 +432,4 @@ ggsave(
   plot = prior_effect_plot,
   width = 12,
   height = 10
-)
-
-# coloc.susie()
-
-coloc_susie_perf_data <- left_join(
-  pqtl_eqtl_coloc_susie_data |>
-    select(eqtl_data_id, starts_with("PP.H4.abf"), phenotype_id, 
-           coloc_gene_id = gene_id, gene_name), 
-  protein_metadata |>
-    select(coding_gene_id = gene_id, phenotype_id),
-  by = "phenotype_id"
-) |>
-  rename(protein_id = phenotype_id) |>
-  pivot_longer(-c(protein_id, coding_gene_id, eqtl_data_id, 
-                  coloc_gene_id, gene_name),
-               values_to = "pp_h4", 
-               names_to = c("junk", "prior_type"),
-               names_pattern = "(.*?)_(.*)") |>
-  select(-junk) |>
-  mutate(sig_coloc = pp_h4 >= 0.8) |>
-  mutate(gene_match = coding_gene_id == coloc_gene_id) |>
-  select(-c(coding_gene_id, coloc_gene_id, pp_h4)) |>
-  mutate(
-    tp = sig_coloc & gene_match,
-    fp = sig_coloc & !gene_match,
-    fn = !sig_coloc & gene_match,
-  ) |>
-  summarise(
-    n_tp = sum(tp),
-    n_fp = sum(fp),
-    n_fn = sum(fn),
-    .by = c(eqtl_data_id, prior_type)
-  ) |>
-  mutate(
-    recall = n_tp / (n_tp + n_fn),
-    precision = n_tp / (n_tp + n_fp)
-  )
-
-susie_perf_by_dataset_plot <- coloc_susie_perf_data |>
-  mutate(is_unif = prior_type == "unif") |>
-  mutate(eqtl_data_name = eqtl_data_ids_lookup[eqtl_data_id]) |>
-  ggplot(aes(recall, precision, col = is_unif, label = prior_type)) +
-  geom_point() +
-  scale_colour_manual(values = c("#66CCEE", "#EE6677")) +
-  geom_text_repel() +
-  labs(
-    x = "Recall",
-    y = "Precision",
-  ) +
-  facet_wrap(~eqtl_data_name, scales = "free") +
-  theme_jp() +
-  theme(legend.position = "none")
-
-ggsave(
-  susie_perf_by_dataset_plot_path,
-  plot = susie_perf_by_dataset_plot,
-  width = 12,
-  height = 10
-)
-
-coloc_susie_perf_data_max <- left_join(
-  pqtl_eqtl_coloc_susie_data |>
-    select(eqtl_data_id, starts_with("PP.H4.abf"), phenotype_id,
-           coloc_gene_id = gene_id, gene_name),
-  protein_metadata |>
-    select(coding_gene_id = gene_id, phenotype_id),
-  by = "phenotype_id"
-) |>
-  rename(protein_id = phenotype_id) |>
-  pivot_longer(-c(protein_id, coding_gene_id, eqtl_data_id,
-                  coloc_gene_id, gene_name),
-               values_to = "pp_h4",
-               names_to = c("junk", "prior_type"),
-               names_pattern = "(.*?)_(.*)") |>
-  select(-junk) |>
-  mutate(
-    sig_coloc = pp_h4 >= 0.8,
-    gene_match = coding_gene_id == coloc_gene_id
-  ) |>
-  select(-c(coding_gene_id, coloc_gene_id, pp_h4)) |>
-  summarise(
-    tp = any(sig_coloc) & all(gene_match),
-    fp = any(sig_coloc) & !all(gene_match),
-    fn = !any(sig_coloc) & all(gene_match),
-    .by = c(prior_type, gene_name, protein_id)
-  ) |>
-  summarise(
-    n_tp = sum(tp),
-    n_fp = sum(fp),
-    n_fn = sum(fn),
-    .by = c(prior_type)
-  ) |>
-  mutate(
-    recall = n_tp / (n_tp + n_fn),
-    precision = n_tp / (n_tp + n_fp)
-  )
-
-susie_perf_max_plot <- coloc_susie_perf_data_max |>
-  mutate(is_unif = prior_type == "unif") |>
-  ggplot(aes(recall, precision, col = is_unif, label = prior_type)) +
-  geom_point() +
-  geom_text_repel() +
-  scale_colour_manual(values = c("#66CCEE", "#EE6677")) +
-  labs(
-    x = "Recall",
-    y = "Precision",
-    title = "coloc.susie(), max over eQTL datasets"
-  ) +
-  theme_jp() +
-  theme(legend.position = "none")
-
-ggsave(
-  susie_perf_max_plot_path,
-  plot = susie_perf_max_plot,
-  width = 8,
-  height = 6
 )
