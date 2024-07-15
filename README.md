@@ -1,5 +1,7 @@
-# estimated-eqtl-priors
+# Code accompanying "Variant-specific priors in colocalisation analysis"
 
-A [workflowr][] project.
+This repository contains code accompanying the paper:
 
-[workflowr]: https://github.com/workflowr/workflowr
+>> TODO
+
+For a high level overview of the computational workflow see the `Snakefile`. 
