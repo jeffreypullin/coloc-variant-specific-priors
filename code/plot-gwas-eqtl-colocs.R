@@ -118,6 +118,7 @@ n_colocs_plot <- bind_rows(
   mutate(gwas_id = gwas_id_lookup[gwas_id]) |>
   ggplot(aes(x = gwas_id, y = n, fill = type)) +
   geom_col() +
+  scale_fill_manual(values = c("#CC3311", "#009988", "#EE7733", "#33BBEE")) +
   facet_grid(
     vars(method),
     vars(prior),

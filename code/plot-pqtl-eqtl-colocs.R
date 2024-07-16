@@ -134,8 +134,9 @@ abf_perf_max_plot <- coloc_abf_perf_data_max |>
   mutate(label = paste0(method, "-", dataset)) |>
   mutate(label = if_else(label %in% to_label, label, "")) |>
   ggplot(aes(recall, precision, col = method, shape = dataset, label = label)) +
-  geom_point(size = 5, alpha = 0.7, position = position_jitter(h = 2e-04, w = 2e-04)) +
+  geom_point(size = 5, position = position_jitter(h = 2e-04, w = 2e-04)) +
   geom_label_repel(box.padding = 0.4) +
+  scale_colour_manual(values = prior_cols) +
   labs(
     x = "Recall",
     y = "Precision",
@@ -217,6 +218,7 @@ abf_perf_max_curve_plot <- abf_perf_max_curve_data |>
   ggplot(aes(fpr, tpr, color = method, shape = dataset)) +
   geom_point(size = 2) +
   geom_line() +
+  scale_colour_manual(values = prior_cols) +
   labs(
     x = "False positive rate",
     y = "True positive rate",
@@ -303,7 +305,8 @@ susie_perf_max_curve_plot <- susie_perf_max_curve_data  |>
   ) |>
   ggplot(aes(fpr, tpr, color = method, shape = dataset)) +
   geom_point(size = 2) +
-  geom_line() +
+  geom_line() + 
+  scale_colour_manual(values = prior_cols) +
   labs(
     x = "False positive rate",
     y = "True positive rate",

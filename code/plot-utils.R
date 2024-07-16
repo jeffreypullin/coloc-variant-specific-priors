@@ -48,7 +48,7 @@ prior_method_lookup <- c(
   "eqtlgen" = "eQTLGen",
   "gnocchi" = "Gnocchi",
   "onek1k_r1" = "OneK1K (R1)",
-  "onek1k_r2" = "OneK1k (R2+)",
+  "onek1k_r2" = "OneK1K (R2+)",
   "polyfun" = "PolyFun",
   "unif" = "Uniform"
 )
@@ -57,4 +57,14 @@ dataset_lookup <- c(
   "eqtl" = "eQTL",
   "pqtl" = "pQTL",
   "pqtl_eqtl" = "Both"
+)
+
+prior_cols <- c(
+  "Uniform" = "#BBBBBB",
+  "eQTLGen" = "#33BBEE",
+  "OneK1K (R1)" = "#0077BB",
+  "OneK1K (R2+)" = "#009988",
+  "ABC score" = "#EE7733",
+  "PolyFun" = "#CC3311",
+  "Gnocchi" = "#EE3377"
 )

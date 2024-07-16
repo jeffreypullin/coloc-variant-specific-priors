@@ -95,7 +95,7 @@ gene_plot <- simulation_data |>
   ) +
   scale_fill_manual(
     labels = c("Variant-specific prior", "Uniform prior"),
-    values = c("#66CCEE", "#EE6677")
+    values = c("#0077BB", "#CC3311")
   ) +
   scale_x_discrete(labels = c(TeX("$H_3$"), TeX("$H_4$"))) +
   facet_wrap(~gene) +
