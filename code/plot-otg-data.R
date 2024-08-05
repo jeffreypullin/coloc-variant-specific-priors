@@ -17,8 +17,9 @@ otg_plot_path <- snakemake@output[["otg_plot_path"]]
 
 cs_data <- open_dataset("/home/jp2045/otg-coloc-analysis/data/v2d_credset") |>
   slice_sample(n = 1e6) |>
-  select(postprob, is95_credset) |>
+  select(postprob, lead_variant_id) |>
   filter(postprob > 0.5) |>
+  distinct(postprob, lead_variant_id) |>
   collect()
 
 coloc_data <- open_dataset("/home/jp2045/otg-coloc-analysis/data/v2d_coloc") |>
@@ -32,7 +33,7 @@ otg_plot <- cs_data |>
   geom_histogram(binwidth = 0.05) +
   labs(
     x = "Posterior causal probability",
-    y = "N. variants"
+    y = "Number of variants"
   ) +
   theme_jp() +
   coloc_data |>
@@ -40,7 +41,7 @@ otg_plot <- cs_data |>
   geom_histogram(binwidth = 0.05) +
   labs(
     x = TeX("$\\Pr(H_4)$"),
-    y = "N. loci"
+    y = "Number of loci"
   ) +
   theme_jp() +
   plot_annotation(tag_levels = "a")  &
