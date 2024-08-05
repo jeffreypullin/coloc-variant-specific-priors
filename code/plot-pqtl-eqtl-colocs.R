@@ -340,7 +340,7 @@ scatter_plot <- pqtl_eqtl_coloc_abf_data |>
   theme_jp()
 
 diff_scatter_plot <- pqtl_eqtl_coloc_abf_data |>
-  mutate(diff = `PP.H4.abf_eqtlgen-eqtl` - PP.H4.abf_unif ) |>
+  mutate(diff = `PP.H4.abf_eqtlgen-eqtl` - PP.H4.abf_unif) |>
   ggplot(aes(PP.H4.abf_unif, diff)) +
   geom_point() +
   geom_abline(slope = -1, linetype = "dotted") +
@@ -422,13 +422,15 @@ prop_small_diff_plot <- bind_rows(
   ggplot(aes(prior_type, prop_small_diff, fill = method)) +
   geom_col(position = "dodge") +
   labs(
-    y = TeX("Proportion of $\\ \\Pr(H_4)\\ $ difference <0.01"),
+    y = TeX("Proportion of $\\ \\Pr(H_4)\\ $ difference < 0.01"),
     x = "Prior type"
   ) +
   coord_flip() +
   theme_jp_vgrid()
 
-prior_effect_plot <- prop_small_diff_plot | (scatter_plot / diff_scatter_plot)
+prior_effect_plot <- (prop_small_diff_plot | (scatter_plot / diff_scatter_plot)) +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 18))
 
 ggsave(
   prior_effect_plot_path,
