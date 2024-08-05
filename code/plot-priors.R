@@ -101,6 +101,7 @@ priors_plot <- tibble(
   mutate(prior_type = prior_type_lookup[prior_type]) |>
   ggplot(aes(position, weight)) +
   geom_point(col = "darkgrey") +
+  geom_vline(xintercept = tss / 1e6, linetype = "dashed", color = "black") +
   labs(
     x = "Position (Mb)",
     y = "Prior probability",
