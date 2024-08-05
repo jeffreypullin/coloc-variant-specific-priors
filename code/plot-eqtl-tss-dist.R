@@ -63,7 +63,7 @@ dist_plot <- all_studies_data |>
   labs(
     x = "Dataset",
     y = "Distance to TSS (bp)",
-    fill = "Study",
+    fill = "Study type",
   ) +
   theme_jp_vgrid() +
   theme(
