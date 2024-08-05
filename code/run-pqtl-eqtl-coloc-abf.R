@@ -222,6 +222,7 @@ for (i in seq_len(nrow(coloc_metadata))) {
   coloc_unif <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
+    p12 = 5e-6
   )
 
   # eQTLGen.
@@ -229,20 +230,23 @@ for (i in seq_len(nrow(coloc_metadata))) {
   coloc_eqtlgen_eqtl <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
-    prior_weights1 = eqtlgen_prior_weights_eqtl
+    prior_weights1 = eqtlgen_prior_weights_eqtl,
+    p12 = 5e-6
   )
 
   coloc_eqtlgen_pqtl <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
-    prior_weights2 = eqtlgen_prior_weights_pqtl
+    prior_weights2 = eqtlgen_prior_weights_pqtl,
+    p12 = 5e-6
   )
 
   coloc_eqtlgen_pqtl_eqtl <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
     prior_weights1 = eqtlgen_prior_weights_eqtl,
-    prior_weights2 = eqtlgen_prior_weights_pqtl
+    prior_weights2 = eqtlgen_prior_weights_pqtl,
+    p12 = 5e-6
   )
 
   # OneK1K round 1.
@@ -250,20 +254,23 @@ for (i in seq_len(nrow(coloc_metadata))) {
   coloc_onek1k_r1_eqtl <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
-    prior_weights1 = onek1k_r1_prior_weights_eqtl
+    prior_weights1 = onek1k_r1_prior_weights_eqtl,
+    p12 = 5e-6
   )
 
   coloc_onek1k_r1_pqtl <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
-    prior_weights2 = onek1k_r1_prior_weights_pqtl
+    prior_weights2 = onek1k_r1_prior_weights_pqtl,
+    p12 = 5e-6
   )
 
   coloc_onek1k_r1_pqtl_eqtl <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
     prior_weights1 = onek1k_r1_prior_weights_eqtl,
-    prior_weights2 = onek1k_r1_prior_weights_pqtl
+    prior_weights2 = onek1k_r1_prior_weights_pqtl,
+    p12 = 5e-6
   )
 
   # OneK1k round 2.
@@ -271,20 +278,23 @@ for (i in seq_len(nrow(coloc_metadata))) {
   coloc_onek1k_r2_eqtl <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
-    prior_weights1 = onek1k_r2_prior_weights_eqtl
+    prior_weights1 = onek1k_r2_prior_weights_eqtl,
+    p12 = 5e-6
   )
 
   coloc_onek1k_r2_pqtl <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
-    prior_weights2 = onek1k_r2_prior_weights_pqtl
+    prior_weights2 = onek1k_r2_prior_weights_pqtl,
+    p12 = 5e-6
   )
 
   coloc_onek1k_r2_pqtl_eqtl <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
     prior_weights1 = onek1k_r2_prior_weights_eqtl,
-    prior_weights2 = onek1k_r2_prior_weights_pqtl
+    prior_weights2 = onek1k_r2_prior_weights_pqtl,
+    p12 = 5e-6
   )
 
   # Polyfun priors.
@@ -292,13 +302,15 @@ for (i in seq_len(nrow(coloc_metadata))) {
   coloc_polyfun_eqtl <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
-    prior_weights1 = polyfun_prior_weights
+    prior_weights1 = polyfun_prior_weights,
+    p12 = 5e-6
   )
 
   coloc_polyfun_pqtl <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
-    prior_weights2 = polyfun_prior_weights
+    prior_weights2 = polyfun_prior_weights,
+    p12 = 5e-6
   )
 
   # Gnocchi priors.
@@ -306,13 +318,15 @@ for (i in seq_len(nrow(coloc_metadata))) {
   coloc_gnocchi_eqtl <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
-    prior_weights1 = gnocchi_prior_weights
+    prior_weights1 = gnocchi_prior_weights,
+    p12 = 5e-6
   )
 
   coloc_gnocchi_pqtl <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
-    prior_weights2 = gnocchi_prior_weights
+    prior_weights2 = gnocchi_prior_weights,
+    p12 = 5e-6
   )
 
   # ABC score priors.
@@ -320,13 +334,15 @@ for (i in seq_len(nrow(coloc_metadata))) {
   coloc_abc_score_eqtl <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
-    prior_weights1 = abc_score_prior_weights
+    prior_weights1 = abc_score_prior_weights,
+    p12 = 5e-6
   )
 
   coloc_abc_score_pqtl <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = pqtl_dataset,
-    prior_weights2 = abc_score_prior_weights
+    prior_weights2 = abc_score_prior_weights,
+    p12 = 5e-6
   )
 
   coloc_results <- bind_cols(

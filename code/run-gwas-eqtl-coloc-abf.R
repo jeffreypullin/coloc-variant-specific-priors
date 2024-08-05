@@ -246,6 +246,7 @@ for (i in seq_len(nrow(coloc_metadata))) {
   coloc_unif <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = gwas_dataset,
+    p12 = 5e-6
   )
 
   # eQTLGen.
@@ -253,7 +254,8 @@ for (i in seq_len(nrow(coloc_metadata))) {
   coloc_eqtl_tss_eqtlgen <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = gwas_dataset,
-    prior_weights1 = eqtlgen_prior_weights
+    prior_weights1 = eqtlgen_prior_weights,
+    p12 = 5e-6
   )
 
   # OneK1K round 1.
@@ -261,7 +263,8 @@ for (i in seq_len(nrow(coloc_metadata))) {
   coloc_eqtl_tss_onek1k_round_1 <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = gwas_dataset,
-    prior_weights1 = onek1k_r1_prior_weights
+    prior_weights1 = onek1k_r1_prior_weights,
+    p12 = 5e-6
   )
 
   # Random and permutaton.
@@ -269,13 +272,15 @@ for (i in seq_len(nrow(coloc_metadata))) {
   coloc_rand_eqtl <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = gwas_dataset,
-    prior_weights1 = rand_prior_weights
+    prior_weights1 = rand_prior_weights,
+    p12 = 5e-6
   )
 
   coloc_perm_eqtlgen_eqtl <- coloc.abf(
     dataset1 = eqtl_dataset,
     dataset2 = gwas_dataset,
-    prior_weights1 = permuted_eqtlgen_prior_weights
+    prior_weights1 = permuted_eqtlgen_prior_weights,
+    p12 = 5e-6
   )
 
   # Uncertainty estimation.
