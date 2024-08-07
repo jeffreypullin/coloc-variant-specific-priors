@@ -170,27 +170,40 @@ for (i in seq_len(nrow(coloc_metadata))) {
 
   gwas_cs_col_names <- paste0("lbf_variable", gwas_cs_ids)
 
-  eqtl_lbf_mat <- eqtl_lbf_data |>
+  eqtl_lbf_df <- eqtl_lbf_data |>
     filter(
       region == coloc_metadata$eqtl_region[[i]],
       molecular_trait_id == coloc_metadata$gene_id[[i]]
     ) |>
-    select(variant, !!eqtl_cs_col_names) |>
+    select(variant, !!eqtl_cs_col_names)
+
+  # NOTE: rsid really holds variant IDs.
+  gwas_lbf_df <- gwas_lbf_data |>
+    filter(region == coloc_metadata$gwas_region[[i]]) |>
+    select(rsid, !!gwas_cs_col_names)
+
+  eqtl_lbf_df <- eqtl_lbf_df |>
+    filter(variant %in% gwas_lbf_df$rsid)
+
+  gwas_lbf_df <- gwas_lbf_df |>
+    filter(rsid %in% eqtl_lbf_df$variant)
+
+  eqtl_lbf_mat <- eqtl_lbf_df |>
     column_to_rownames("variant") |>
     as.matrix() |>
     t()
 
-  gwas_lbf_mat <- gwas_lbf_data |>
-    filter(region == coloc_metadata$gwas_region[[i]]) |>
-    select(rsid, !!gwas_cs_col_names) |>
+  gwas_lbf_mat <- gwas_lbf_df |>
     column_to_rownames("rsid") |>
     as.matrix() |>
     t()
 
-  # FIXME: Which position should be used?
   position <- eqtl_lbf_data |>
+    filter(variant %in% eqtl_lbf_df$variant) |>
+    filter(variant %in% gwas_lbf_df$rsid) |>
     filter(molecular_trait_id %in% gene_ids) |>
     pull(position)
+
   tss <- coloc_metadata$tss[[i]]
 
   eqtlgen_prior_weights <- compute_eqtl_tss_dist_prior_weights(

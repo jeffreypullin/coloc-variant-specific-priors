@@ -148,22 +148,33 @@ for (i in seq_len(nrow(coloc_metadata))) {
     order(decreasing = TRUE)
   eqtl_cs_col_names <- paste0("lbf_variable", eqtl_cs_inds)
 
-  pqtl_lbf_mat <- pqtl_lbf_data |>
+  pqtl_lbf_df <- pqtl_lbf_data |>
     filter(molecular_trait_id %in% protein_ids) |>
-    select(variant, !!pqtl_cs_col_names) |>
-    column_to_rownames("variant") |>
-    as.matrix() |>
-    t()
+    select(variant, !!pqtl_cs_col_names)
 
-  eqtl_lbf_mat <- eqtl_lbf_data |>
+  eqtl_lbf_df <- eqtl_lbf_data |>
     filter(molecular_trait_id %in% gene_ids) |>
-    select(variant, !!eqtl_cs_col_names) |>
+    select(variant, !!eqtl_cs_col_names)
+
+  pqtl_lbf_df <- pqtl_lbf_df |>
+    filter(variant %in% eqtl_lbf_df$variant)
+
+  eqtl_lbf_df <- eqtl_lbf_df |>
+    filter(variant %in% pqtl_lbf_df$variant)
+
+  eqtl_lbf_mat <- eqtl_lbf_df |>
     column_to_rownames("variant") |>
     as.matrix() |>
     t()
 
-  # FIXME: Which position should be used?
+  pqtl_lbf_mat <- pqtl_lbf_df |>
+    column_to_rownames("variant") |>
+    as.matrix() |>
+    t()
+
   position <- eqtl_lbf_data |>
+    filter(variant %in% eqtl_lbf_df$variant) |>
+    filter(variant %in% pqtl_lbf_df$variant) |>
     filter(molecular_trait_id %in% gene_ids) |>
     pull(position)
 
