@@ -51,7 +51,7 @@ coloc_susie_paths <- snakemake@input[["coloc_susie_paths"]]
 protein_metadata_path <- snakemake@input[["protein_metadata_path"]]
 
 pqtl_eqtl_abf_perf_both_plot_path <- snakemake@output[["pqtl_eqtl_abf_perf_both_plot_path"]]
-pqtl_eqtl_susie_perf_curve_plot_path <- snakemake@output[["pqtl_eqtl_susie_perf_curve_plot_path"]]
+pqtl_eqtl_susie_perf_both_plot_path <- snakemake@output[["pqtl_eqtl_susie_perf_both_plot_path"]]
 prior_effect_plot_path <- snakemake@output[["prior_effect_plot_path"]]
 
 pqtl_eqtl_coloc_abf_data <- tibble(path = coloc_abf_paths) |>
@@ -245,7 +245,7 @@ ggsave(
 
 # coloc.susie()
 
-susie_perf_max_curve_data <- left_join(
+coloc_susie_perf_data_max <- left_join(
   pqtl_eqtl_coloc_susie_data |>
     select(eqtl_data_id, starts_with("PP.H4.abf"), phenotype_id,
            coloc_gene_id = gene_id, gene_name, idx1_unif, idx2_unif),
@@ -253,6 +253,78 @@ susie_perf_max_curve_data <- left_join(
     select(coding_gene_id = gene_id, phenotype_id),
   by = "phenotype_id"
 ) |>
+  rename(
+    protein_id = phenotype_id,
+    cs_ind1 = idx1_unif,
+    cs_ind2 = idx2_unif
+  ) |>
+  pivot_longer(-c(protein_id, coding_gene_id, eqtl_data_id,
+                  coloc_gene_id, gene_name, cs_ind1, cs_ind2),
+               values_to = "pp_h4",
+               names_to = c("junk", "prior_type"),
+               names_pattern = "(.*?)_(.*)") |>
+  select(-junk) |>
+  mutate(
+    sig_coloc = pp_h4 >= 0.8,
+    gene_match = coding_gene_id == coloc_gene_id
+  ) |>
+  select(-c(coding_gene_id, coloc_gene_id, pp_h4)) |>
+  summarise(
+    tp = any(sig_coloc) & all(gene_match),
+    fp = any(sig_coloc) & !all(gene_match),
+    fn = !any(sig_coloc) & all(gene_match),
+    .by = c(prior_type, gene_name, protein_id)
+  ) |>
+  summarise(
+    n_tp = sum(tp),
+    n_fp = sum(fp),
+    n_fn = sum(fn),
+    .by = c(prior_type)
+  ) |>
+  mutate(
+    recall = n_tp / (n_tp + n_fn),
+    precision = n_tp / (n_tp + n_fp)
+  ) |>
+  separate_wider_delim(
+    prior_type,
+    delim = "-",
+    names = c("method", "dataset"),
+    too_few = "align_start"
+  ) |>
+  mutate(dataset = if_else(is.na(dataset), "pqtl_eqtl", dataset))
+
+susie_perf_max_plot <- coloc_susie_perf_data_max |>
+  mutate(
+    method = prior_method_lookup[method],
+    dataset = dataset_lookup[dataset]
+  ) |>
+  mutate(label = paste0(method, "-", dataset)) |>
+  mutate(label = if_else(label %in% to_label, label, "")) |>
+  ggplot(aes(recall, precision, col = method, shape = dataset, label = label)) +
+  geom_point(size = 5, position = position_jitter(h = 2e-04, w = 2e-04)) +
+  geom_label_repel(box.padding = 0.4) +
+  scale_colour_manual(values = prior_cols) +
+  labs(
+    x = "Recall",
+    y = "Precision",
+  ) +
+  theme_jp() +
+  labs(
+    col = "Method",
+    shape = "Dataset"
+  ) +
+  theme(
+    legend.title = element_text(family = "Helvetica", size = 14, color = "#222222"),
+    legend.position = "none"
+  )
+
+susie_perf_max_curve_data <- left_join(
+  pqtl_eqtl_coloc_susie_data |>
+    select(eqtl_data_id, starts_with("PP.H4.abf"), phenotype_id,
+           coloc_gene_id = gene_id, gene_name, idx1_unif, idx2_unif),
+  protein_metadata |>
+    select(coding_gene_id = gene_id, phenotype_id),
+  by = "phenotype_id") |>
   rename(
     protein_id = phenotype_id,
     cs_ind1 = idx1_unif,
@@ -277,7 +349,7 @@ susie_perf_max_curve_data <- left_join(
     fp = any(sig_coloc) & !all(gene_match),
     fn = !any(sig_coloc) & all(gene_match),
     tn = !any(sig_coloc) & !all(gene_match),
-    .by = c(prior_type, gene_name, protein_id, level, cs_ind1, cs_ind2)
+    .by = c(prior_type, gene_name, protein_id, level)
   ) |>
   summarise(
     n_tp = sum(tp),
@@ -319,10 +391,15 @@ susie_perf_max_curve_plot <- susie_perf_max_curve_data  |>
     legend.position = "right"
   )
 
+susie_perf_both_plot <- susie_perf_max_plot + susie_perf_max_curve_plot +
+  plot_layout(guides = "collect") +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 18))
+
 ggsave(
-  pqtl_eqtl_susie_perf_curve_plot_path,
-  plot = susie_perf_max_curve_plot,
-  width = 10,
+  pqtl_eqtl_susie_perf_both_plot_path,
+  plot = susie_perf_both_plot,
+  width = 14,
   height = 8
 )
 

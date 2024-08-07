@@ -14,7 +14,7 @@ rule all:
     "output/figures/eqtl-dist-plot.pdf",
     "output/figures/onek1k-plot.pdf",
     "output/figures/otg-probs-plot.pdf",
-    "output/figures/pqtl-eqtl-coloc-susie-curve-plot.pdf",
+    "output/figures/pqtl-eqtl-coloc-susie-perf-both-plot.pdf",
     "output/figures/pqtl-eqtl-prior-effect-plot.pdf",
     # Supplementary spreadsheet.
     "output/tables/gwas-eqtl-results.xlsx"
@@ -372,7 +372,7 @@ rule plot_pqtl_eqtl_colocalisatons:
     protein_metadata_path = "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
   output: 
     pqtl_eqtl_abf_perf_both_plot_path = "output/figures/pqtl-eqtl-coloc-abf-perf-both-plot.pdf",
-    pqtl_eqtl_susie_perf_curve_plot_path = "output/figures/pqtl-eqtl-coloc-susie-curve-plot.pdf",
+    pqtl_eqtl_susie_perf_both_plot_path = "output/figures/pqtl-eqtl-coloc-susie-perf-both-plot.pdf",
     prior_effect_plot_path = "output/figures/pqtl-eqtl-prior-effect-plot.pdf"
   localrule: True
   script: "code/plot-pqtl-eqtl-colocs.R"
