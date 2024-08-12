@@ -342,6 +342,8 @@ for (i in seq_len(nrow(coloc_metadata))) {
     coloc_to_tibble(coloc_polyfun_eqtl, "polyfun-eqtl"),
     coloc_to_tibble(coloc_polyfun_pqtl, "polyfun-pqtl"),
     tibble(
+      med_lbf = median(eqtl_lbf_mat),
+      max_lbf = max(eqtl_lbf_mat),
       phenotype_id = coloc_metadata$phenotype_id[[i]],
       chromosome = coloc_metadata$chromosome[[i]],
       gene_id = coloc_metadata$gene_id[[i]],

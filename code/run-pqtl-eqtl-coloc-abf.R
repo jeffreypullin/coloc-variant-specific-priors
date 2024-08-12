@@ -345,6 +345,9 @@ for (i in seq_len(nrow(coloc_metadata))) {
     p12 = 5e-6
   )
 
+  processed_eqtl_data <- coloc:::process.dataset(eqtl_dataset, "1")
+  labf <- processed_eqtl_data[["lABF.1"]]
+
   coloc_results <- bind_cols(
     coloc_to_tibble(coloc_unif, "unif"),
     # eQTLGen.
@@ -369,6 +372,8 @@ for (i in seq_len(nrow(coloc_metadata))) {
     coloc_to_tibble(coloc_polyfun_eqtl, "polyfun-eqtl"),
     coloc_to_tibble(coloc_polyfun_pqtl, "polyfun-pqtl"),
     tibble(
+      med_lbf = median(labf), 
+      max_lbf = max(labf),
       phenotype_id = coloc_metadata$phenotype_id[[i]],
       chromosome = coloc_metadata$chromosome[[i]],
       gene_id = coloc_metadata$gene_id[[i]],

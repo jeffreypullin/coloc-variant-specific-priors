@@ -430,9 +430,9 @@ diff_scatter_plot <- pqtl_eqtl_coloc_abf_data |>
   theme_jp()
 
 coloc_abf_diff_data <- pqtl_eqtl_coloc_abf_data |>
-  select(gene_name, starts_with("PP.H4.abf")) |>
+  select(gene_name, starts_with("PP.H4.abf"), max_lbf) |>
   pivot_longer(
-    -c(gene_name, PP.H4.abf_unif),
+    -c(gene_name, PP.H4.abf_unif, max_lbf),
     names_to = "prior_type",
     values_to = "pp_h4"
   ) |>
@@ -459,9 +459,9 @@ coloc_abf_diff_data <- pqtl_eqtl_coloc_abf_data |>
   mutate(method = "coloc-single")
 
 coloc_susie_diff_data <- pqtl_eqtl_coloc_susie_data |>
-  select(gene_name, starts_with("PP.H4.abf")) |>
+  select(gene_name, starts_with("PP.H4.abf"), max_lbf) |>
   pivot_longer(
-    -c(gene_name, PP.H4.abf_unif),
+    -c(gene_name, PP.H4.abf_unif, max_lbf),
     names_to = "prior_type",
     values_to = "pp_h4"
   ) |>
@@ -505,13 +505,38 @@ prop_small_diff_plot <- bind_rows(
   coord_flip() +
   theme_jp_vgrid()
 
-prior_effect_plot <- (prop_small_diff_plot | (scatter_plot / diff_scatter_plot)) +
+max_lbf_by_method_plot <- bind_rows(
+  coloc_abf_diff_data,
+  coloc_susie_diff_data
+  ) |>
+  summarise(diff = median(diff), .by = c(PP.H4.abf_unif, max_lbf, method)) |>
+  ggplot(aes(method, max_lbf)) +
+  geom_boxplot() +
+  labs(
+    x = "Coloc method",
+    y = "Maximum log Bayes factor"
+  ) + 
+  theme_jp()
+
+max_lbf_diff_plot <- coloc_abf_diff_data |>
+  summarise(diff = median(diff), .by = c(PP.H4.abf_unif, max_lbf, method)) |>
+  ggplot(aes(max_lbf, diff)) +
+  geom_point() +
+  labs(
+    x = "Maximum log Bayes factor",
+    y = "Unifrom vs variant-specific difference"
+  ) +
+  theme_jp()
+
+prior_effect_plot <- (prop_small_diff_plot |
+  (max_lbf_by_method_plot / max_lbf_diff_plot) |
+  (scatter_plot / diff_scatter_plot)) +
   plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 18))
 
 ggsave(
   prior_effect_plot_path,
   plot = prior_effect_plot,
-  width = 12,
+  width = 14,
   height = 10
 )
