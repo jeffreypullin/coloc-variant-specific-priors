@@ -21,6 +21,13 @@ source("code/coloc-utils.R")
 source("code/plot-utils.R")
 source("code/prior-probabilities-funs.R")
 
+# For debugging.
+config <- yaml::read_yaml("config.yaml")
+coloc_abf_paths <- glue(
+  "data/output/gwas-eqtl-coloc-abf-{gwas_id_eqtl_id}-{chr}.rds",
+  gwas_id_eqtl_id = rep(config$gwas_eqtl_coloc_ids, 22),
+  chr = rep(1:22, each = length(config$gwas_eqtl_coloc_ids))
+)
 
 coloc_abf_paths <- snakemake@input[["coloc_abf_paths"]]
 autoimmune_gwas_path <- snakemake@input[["autoimmune_gwas_path"]]
