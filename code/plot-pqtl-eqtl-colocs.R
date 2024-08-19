@@ -499,10 +499,10 @@ prop_small_diff_plot <- bind_rows(
   ggplot(aes(prior_type, prop_small_diff, fill = method)) +
   geom_col(position = "dodge") +
   labs(
-    y = TeX("Proportion of $\\ \\Pr(H_4)\\ $ difference < 0.01"),
+    y = TeX("Prop. abs($\\ \\Pr(H_4)\\ $ difference) < 0.01"),
     x = "Prior type"
   ) +
-  coord_flip() +
+  coord_flip(ylim = c(0.75, 1)) +
   theme_jp_vgrid()
 
 max_lbf_by_method_plot <- bind_rows(
