@@ -160,14 +160,11 @@ compute_gnocchi_prior_weights <- function(pos, chrom, gnocchi_data) {
 }
 
 compute_eqtl_tss_dist_prior_weights <- function(pos, tss, density_data) {
-  
   rel <- pos - tss
   x <- density_data$x
   y <- density_data$y
-  # FIXME: I think we can do this in one pass, assuming pos is sorted.
   closest <- numeric(length(pos))
   for (i in seq_along(pos)) {
-    # HACK!
     z <- which(abs(x - rel[[i]]) == min(abs(x - rel[[i]])))
     if (length(z) > 1) {
       closest[[i]] <- z[[1]]
