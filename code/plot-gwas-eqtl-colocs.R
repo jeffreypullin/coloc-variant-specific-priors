@@ -230,6 +230,6 @@ bind_rows(
 ) |>
   mutate(gwas_id = gwas_id_lookup[gwas_id]) |>
   mutate(unchanged = if_else(substr(type, 1, 9) == "Unchanged", "unchanged", "changed")) |>
-  summarise(n = sum(n), .by = c(gwas_id, prior, unchanged)) |>
-  mutate(prop = 100 * n / sum(n), .by = c(gwas_id, prior)) |>
+  summarise(n = sum(n), .by = c(gwas_id, prior, unchanged, method)) |>
+  mutate(prop = 100 * n / sum(n), .by = c(gwas_id, prior, method)) |>
   write_csv("output/tables/gwas-eqtl-overall-results.csv")
