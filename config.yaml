@@ -120,6 +120,13 @@ finngen_gwas_ids:
  - AUTOIMMUNE
  - I9_HYPTENS
  - T2D_WIDE
+ - K11_IBD_STRICT
+ - T1D
+ - RHEUMA_SEROPOS_WIDE
+ - HEIGHT_IRN
+ - WEIGHT_IRN
+ - RX_STATIN
+ - C3_BREAST_EXALLC
 gwas_eqtl_coloc_ids:
  - "AUTOIMMUNE-QTD000373" # Lepik blood
  - "AUTOIMMUNE-QTD000341" # GTEx thyroid
@@ -136,6 +143,41 @@ gwas_eqtl_coloc_ids:
  - "I9_HYPTENS-QTD000256" # GTEx left heart ventricle
  - "I9_HYPTENS-QTD000136" # GTEx artery coronary
  - "I9_HYPTENS-QTD000261" # GTEx kidney
+ - "K11_IBD_STRICT-QTD000373" # Lepik blood
+ - "K11_IBD_STRICT-QTD000001" # Alasoo Naive macrophage
+ - "K11_IBD_STRICT-QTD000031" # BLUEPRINT T cells
+ - "K11_IBD_STRICT-QTD000321" # GTEx small intestine
+ - "K11_IBD_STRICT-QTD000261" # GENCORD LCL
+ - "T1D-QTD000373" # Lepik blood
+ - "T1D-QTD000296" # GTEx pancreas
+ - "T1D-QTD000031" # BLUEPRINT T cells
+ - "T1D-QTD000095" # GENCORD LCL
+ - "T1D-QTD000554" # Pancreatic islet
+ - "RHEUMA_SEROPOS_WIDE-QTD000373" # Lepik blood
+ - "RHEUMA_SEROPOS_WIDE-QTD000549" # TwinsUK blood
+ - "RHEUMA_SEROPOS_WIDE-QTD000519" # Steinberg Synovium naive
+ - "RHEUMA_SEROPOS_WIDE-QTD000031" # BLUEPRINT T cells
+ - "RHEUMA_SEROPOS_WIDE-QTD000095" # GENCORD LCL
+ - "HEIGHT_IRN-QTD000373" # Lepik blood
+ - "HEIGHT_IRN-QTD000549" # TwinsUK blood
+ - "HEIGHT_IRN-QTD000271" # GTEx lung
+ - "HEIGHT_IRN-QTD000301" # GTEx pituitary
+ - "HEIGHT_IRN-QTD000549" # TwinsUK blood
+ - "WEIGHT_IRN-QTD000373" # Lepik blood
+ - "WEIGHT_IRN-QTD000090" # FUSION adipose
+ - "WEIGHT_IRN-QTD000296" # GTEx pancreas
+ - "WEIGHT_IRN-QTD000321" # GTEx small intestine
+ - "WEIGHT_IRN-QTD000301" # GTEx pituitary
+ - "RX_STATIN-QTD000373" # Lepik blood
+ - "RX_STATIN-QTD000549" # TwinsUK blood
+ - "RX_STATIN-QTD000256" # GTEx left heart ventricle
+ - "RX_STATIN-QTD000136" # GTEx artery coronary
+ - "RX_STATIN-QTD000261" # GTEx kidney
+ - "C3_BREAST_EXALLC-QTD000373" # Lepik blood 
+ - "C3_BREAST_EXALLC-QTD000211" # GTEx breast
+ - "C3_BREAST_EXALLC-QTD000121" # GTEx adipose visceral
+ - "C3_BREAST_EXALLC-QTD000031" # BLUEPRINT T cells
+ - "C3_BREAST_EXALLC-QTD000116" # GTEX adipose subcutaneous 
 simulation_genes:
   - "PTPN22"
   - "IL21"

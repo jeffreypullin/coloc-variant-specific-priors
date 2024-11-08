@@ -61,12 +61,6 @@ gwas_eqtl_coloc_susie_data <- tibble(path = coloc_susie_paths) |>
   mutate(data = list(read_rds(path))) |>
   unnest(data)
 
-gwas_id_lookup <- c(
-  "AUTOIMMUNE" = "Autoimmune\ndisease",
-  "I9_HYPTENS" = "Hypertension",
-  "T2D_WIDE" = "Type 2 diabetes"
-)
-
 abf_change_coloc_data <- gwas_eqtl_coloc_abf_data |>
   select(gene_name, gwas_id, starts_with("PP.H4.abf")) |>
   pivot_longer(
@@ -80,8 +74,8 @@ abf_change_coloc_data <- gwas_eqtl_coloc_abf_data |>
   filter(prior %in% c("onek1k_r1", "eqtlgen")) |>
   mutate(prior = prior_method_lookup[prior]) |>
   mutate(type = case_when(
-    pp_h4_unif > 0.8 & pp_h4 > 0.8 ~ "Unchanged significant",
-    pp_h4_unif < 0.8 & pp_h4 < 0.8 ~ "Unchanged not significant",
+    pp_h4_unif > 0.8 & pp_h4 > 0.8 ~ "Unchanged",
+    pp_h4_unif < 0.8 & pp_h4 < 0.8 ~ "Unchanged",
     pp_h4_unif < 0.8 & pp_h4 > 0.8 ~ "Newly signifcant",
     pp_h4_unif > 0.8 & pp_h4 < 0.8 ~ "Newly non-significant",
   )) |>
@@ -100,8 +94,8 @@ susie_change_coloc_data <- gwas_eqtl_coloc_susie_data |>
   filter(prior %in% c("onek1k_r1", "eqtlgen")) |>
   mutate(prior = prior_method_lookup[prior]) |>
   mutate(type = case_when(
-    pp_h4_unif > 0.8 & pp_h4 > 0.8 ~ "Unchanged significant",
-    pp_h4_unif < 0.8 & pp_h4 < 0.8 ~ "Unchanged not significant",
+    pp_h4_unif > 0.8 & pp_h4 > 0.8 ~ "Unchanged",
+    pp_h4_unif < 0.8 & pp_h4 < 0.8 ~ "Unchanged",
     pp_h4_unif < 0.8 & pp_h4 > 0.8 ~ "Newly signifcant",
     pp_h4_unif > 0.8 & pp_h4 < 0.8 ~ "Newly non-significant",
   )) |>
@@ -116,21 +110,23 @@ n_colocs_plot <- bind_rows(
     mutate(method = "coloc-susie")
 ) |>
   mutate(gwas_id = gwas_id_lookup[gwas_id]) |>
+  mutate(gwas_id = fct_reorder(gwas_id, n, .fun = sum)) |>
   ggplot(aes(x = gwas_id, y = n, fill = type)) +
   geom_col() +
-  scale_fill_manual(values = c("#CC3311", "#009988", "#EE7733", "#33BBEE")) +
+  scale_fill_manual(values = c("#CC3311", "#009988", "grey")) +
   facet_grid(
-    vars(method),
     vars(prior),
+    vars(method),
     scales = "free"
   ) +
+  coord_flip() +
   labs(
     x = "Trait",
     y = "Number of loci",
     fill = "Effect"
   ) +
-  theme_jp() +
-  guides(fill = guide_legend(nrow = 2, byrow = TRUE))
+  theme_jp_vgrid() +
+  guides(fill = guide_legend(nrow = 1, byrow = TRUE))
 
 abf_eqtlgen_scatter_plot <- gwas_eqtl_coloc_abf_data |>
   select(gene_name, gwas_id, starts_with("PP.H4.abf")) |>

@@ -88,15 +88,21 @@ all_gwas_data <- tabix.read.table(gwas_file, paste0(chr, ":1-2147483647")) |>
     molecular_trait_id = gwas_id,
     variant = paste0("chr", chromosome, "_", position, "_", ref, "_", alt)
   ) |>
-  select(-c(af_alt_cases, af_alt_controls, ref, alt)) |>
+  select(-c(ref, alt)) |>
   left_join(
     manifest_data |>
       select(phenocode, num_cases, num_controls),
     by = join_by(molecular_trait_id == phenocode)
   ) |>
   mutate(N = num_cases + num_controls) |>
-  select(-c(num_cases, num_controls)) |>
-  lazy_dt()
+  select(-c(num_cases, num_controls))
+
+if (!(gwas_id %in% c("HEIGHT_IRN", "WEIGHT_IRN"))) {
+    all_gwas_data <- all_gwas_data |>
+        select(-c(af_alt_cases, af_alt_controls))
+}
+
+all_gwas_data <- lazy_dt(all_gwas_data)
 
 # Remove the HLA region.
 if (chr == 6) {
@@ -201,15 +207,26 @@ for (i in seq_len(nrow(coloc_metadata))) {
   if (is_oneover_na || is_nvx_na) {
     next
   }
-
-  gwas_dataset <- list(
-    varbeta = gwas_data$se^2,
-    N = gwas_data$N,
-    MAF = gwas_data$maf,
-    type = "cc",
-    beta = gwas_data$beta,
-    snp = gwas_data$variant
-  )
+  
+  if (gwas_id %in% c("HEIGHT_IRN", "WEIGHT_IRN")) {
+    gwas_dataset <- list(
+        varbeta = gwas_data$se^2,
+        N = gwas_data$N,
+        MAF = gwas_data$maf,
+        type = "quant",
+        beta = gwas_data$beta,
+        snp = gwas_data$variant
+    )
+  } else {
+    gwas_dataset <- list(
+        varbeta = gwas_data$se^2,
+        N = gwas_data$N,
+        MAF = gwas_data$maf,
+        type = "cc",
+        beta = gwas_data$beta,
+        snp = gwas_data$variant
+    )
+  }
 
   position <- eqtl_dataset$position
   tss <- coloc_metadata$tss[[i]]

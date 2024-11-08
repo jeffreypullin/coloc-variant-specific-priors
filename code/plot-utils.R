@@ -68,3 +68,16 @@ prior_cols <- c(
   "PolyFun" = "#CC3311",
   "Gnocchi" = "#EE3377"
 )
+
+gwas_id_lookup <- c(
+  "AUTOIMMUNE" = "Autoimmune disease",
+  "I9_HYPTENS" = "Hypertension",
+  "T2D_WIDE" = "Type 2 diabetes",
+  "K11_IBD_STRICT" = "IBD",
+  "T1D" = "Type 1 diabetes",
+  "RHEUMA_SEROPOS_WIDE" = "Rheumatoid arthritis",
+  "HEIGHT_IRN" = "Height",
+  "WEIGHT_IRN" = "Weight",
+  "RX_STATIN" = "Statin treatment",
+  "C3_BREAST_EXALLC" = "Breast cancer"
+)
