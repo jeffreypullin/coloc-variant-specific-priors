@@ -15,14 +15,14 @@ source(here::here("code/plot-utils.R"))
 
 otg_plot_path <- snakemake@output[["otg_plot_path"]]
 
-cs_data <- open_dataset("/home/jp2045/otg-coloc-analysis/data/v2d_credset") |>
+cs_data <- open_dataset("/home/jp2045/rds/hpc-work/otg-data/v2d_credset") |>
   slice_sample(n = 1e6) |>
   select(postprob, lead_variant_id) |>
   filter(postprob > 0.5) |>
   distinct(postprob, lead_variant_id) |>
   collect()
 
-coloc_data <- open_dataset("/home/jp2045/otg-coloc-analysis/data/v2d_coloc") |>
+coloc_data <- open_dataset("/home/jp2045/rds/hpc-work/otg-data/v2d_coloc") |>
   slice_sample(n = 1e6) |>
   select(coloc_h4) |>
   filter(coloc_h4 > 0.5) |>

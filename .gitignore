@@ -13,3 +13,4 @@ output
 logs
 .lintr
 *.code-workspace
+polyfun

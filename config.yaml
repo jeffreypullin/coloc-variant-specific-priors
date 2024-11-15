@@ -127,6 +127,10 @@ finngen_gwas_ids:
  - WEIGHT_IRN
  - RX_STATIN
  - C3_BREAST_EXALLC
+ukbb_saige_icd_codes:
+ - "250.2" # Type 2 diabetes
+ - "401" # Hypertension
+ - "244" # Hypothyroidism
 gwas_eqtl_coloc_ids:
  - "AUTOIMMUNE-QTD000373" # Lepik blood
  - "AUTOIMMUNE-QTD000341" # GTEx thyroid

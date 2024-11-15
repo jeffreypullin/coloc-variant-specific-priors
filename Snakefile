@@ -17,7 +17,9 @@ rule all:
     "output/figures/pqtl-eqtl-coloc-susie-perf-both-plot.pdf",
     "output/figures/pqtl-eqtl-prior-effect-plot.pdf",
     # Supplementary spreadsheet.
-    "output/tables/gwas-eqtl-results.xlsx"
+    "output/tables/gwas-eqtl-results.xlsx",
+    #expand("data/ukbb-saige/munged-phenocode-{icd_code}.parquet", icd_code = config["ukbb_saige_icd_codes"]),
+    "data/polyfun-precomputed-annotations.tar.gz"
 
 # Download metadata.
 
@@ -80,6 +82,7 @@ rule run_tabix_susie_lbf_eqtl_catalogue_files:
     time_min = 120 
   shell:
     """
+    mkdir -p data/tmp
     cp {input} data/tmp/{wildcards.dataset_id}.gz
     zcat data/tmp/{wildcards.dataset_id}.gz | awk -F'\\t' 'NR==1 {{print $0; next}} {{print $0 | "sort -S20G -k4,4n -k5,5n"}}' | bgzip > data/tmp/{wildcards.dataset_id}-sorted.gz
     tabix -s 4 -b 5 -e 5 -S 1 -f data/tmp/{wildcards.dataset_id}-sorted.gz
@@ -111,6 +114,36 @@ rule process_onek1k_data:
     tss_data_path = "data/tss-data/hg19-tss-data.rds"
   output: processed_data_path = "data/processed-data/onek1k.rds"
   script: "code/process-data/process-onek1k-data.R"
+
+rule download_ukbb_saige_data:
+    output: "data/ukbb-saige/phenocode-{icd_code}.tsv.gz"
+    shell: 
+      """
+      wget -O {output} "https://pheweb.org/UKB-SAIGE/download/{wildcards.icd_code}"
+      """
+
+rule download_annotation_data:
+    output: "data/polyfun-precomputed-annotations.tar.gz"
+    shell:
+      """
+      wget -O {output} "https://broad-alkesgroup-ukbb-ld.s3.amazonaws.com/UKBB_LD/baselineLF_v2.2.UKB.polyfun.tar.gz"
+      """
+
+rule munge_ukbb_saige_sumstats: 
+    input:  "data/ukbb-saige/phenocode-{icd_code}.tsv.gz"
+    output: "data/ukbb-saige/munged-phenocode-{icd_code}.parquet"
+    params:
+      # FIXME: Better calculation of Neff needed.
+      n = lambda wildcards: {"250.2": 18945, "401": 77977, "244": 14871}[wildcards.icd_code]
+    shell: 
+      """
+      python3 polyfun/munge_polyfun_sumstats.py \
+         --sumstats data/ukbb-saige/phenocode-{wildcards.icd_code}.tsv.gz \
+         --n {params.n} \
+         --out "data/ukbb-saige/munged-phenocode-{wildcards.icd_code}.parquet" \
+         --min-info 0.6 \
+         --min-maf 0.001
+      """
 
 # Download and create prior probabilities data.
 
@@ -152,6 +185,7 @@ rule download_abc_score_data:
 rule process_abc_score_data:
   input: "data/raw-abc-data.txt.gz",
   output: "data/abc-data.txt.gz"
+  resources: mem_mb = 10000
   script: "code/process-abc-data.R"
 
 rule download_polyfun_data:
