@@ -34,12 +34,12 @@ config <- read_yaml("config.yaml")
 coloc_abf_paths <- glue(
   "data/output/pqtl-eqtl-coloc-abf-{eqtl_id}-{chr}.rds",
   eqtl_id = rep(config$pqtl_eqtl_coloc_dataset_ids, 22),
-  chr = rep(1:22, each = 5)
+  chr = rep(1:22, each = 6)
 )
 coloc_susie_paths <- glue(
   "data/output/pqtl-eqtl-coloc-susie-{eqtl_id}-{chr}.rds",
   eqtl_id = rep(config$pqtl_eqtl_coloc_dataset_ids, 22),
-  chr = rep(1:22, each = 5)
+  chr = rep(1:22, each = 6)
 )
 protein_metadata <- read_tsv(
   "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz",

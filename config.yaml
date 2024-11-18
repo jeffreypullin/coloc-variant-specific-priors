@@ -116,6 +116,7 @@ pqtl_eqtl_coloc_dataset_ids:
  - QTD000116 # GTEx adipose (subcutaneous)
  - QTD000021 # BLUEPRINT Monocyte
  - QTD000539 # TwinsUK LCL
+ - QTD000266 # GTEx liver
 finngen_gwas_ids:
  - AUTOIMMUNE
  - I9_HYPTENS
