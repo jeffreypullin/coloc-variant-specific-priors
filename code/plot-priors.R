@@ -10,6 +10,8 @@ suppressPackageStartupMessages({
   library(seqminer)
   library(janitor)
   library(purrr)
+  library(forcats)
+  library(patchwork)
 })
 
 source("code/coloc-utils.R")
@@ -24,7 +26,8 @@ density_data_round_2 <- read_rds(sn@input[["density_data_r2_path"]])
 eqtlgen_density_data <- read_rds(sn@input[["eqtlgen_density_data_path"]])
 snp_var_data_1_7 <- read_parquet(sn@input[["snp_var_data_1_7_path"]])
 
-plot_path <- snakemake@output[[1]]
+plot_path <- snakemake@output[["all_priors_plot_path"]]
+polyfun_priors_plot_path <- snakemake@output[["polyfun_priors_plot_path"]]
 
 chr <- 1
 tss <- 107965180
@@ -118,3 +121,54 @@ ggsave(
   height = 6
 )
 
+# Plot Polyfun UKBB priors.
+
+ukbb_244_1 <- read_tsv("data/polyfun-output/244/hg38-polyfun-out.1.snpvar_constrained.gz", show_col_types = FALSE)
+ukbb_250_2_1 <- read_tsv("data/polyfun-output/250.2/hg38-polyfun-out.1.snpvar_constrained.gz", show_col_types = FALSE)
+ukbb_401_1 <- read_tsv("data/polyfun-output/401/hg38-polyfun-out.1.snpvar_constrained.gz",  show_col_types = FALSE)
+
+normalise <- function(x) {
+  x / sum(x)
+}
+
+ukbb_polyfun_weights_plot <- bind_rows(
+  ukbb_244_1 |>
+    filter(BP > tss - width, BP < tss + width) |>
+    mutate(trait = "Hypothyroidism") |>
+    select(pos = BP, weight = "SNPVAR", trait) |>
+    mutate(weight = normalise(weight)),
+  ukbb_250_2_1 |>
+    filter(BP > tss - width, BP < tss + width) |>
+    mutate(trait = "Type 2 diabetes") |>
+    select(pos = BP, weight = "SNPVAR", trait) |>
+    mutate(weight = normalise(weight)),
+  ukbb_401_1 |>
+    filter(BP > tss - width, BP < tss + width) |>
+    mutate(trait = "Hypertension") |>
+    select(pos = BP, weight = "SNPVAR", trait) |>
+    mutate(weight = normalise(weight)),
+  tibble(
+    pos = position,
+    weight = polyfun_prior_weights,
+    trait = "PolyFun pre-computed"
+  )
+) |>
+  mutate(pos = pos / 1e6) |>
+  ggplot(aes(pos, weight)) +
+  geom_point(col = "darkgrey") +
+  geom_vline(xintercept = tss / 1e6, linetype = "dashed", color = "black") +
+  labs(
+    x = "Position (Mb)",
+    y = "Prior probability",
+  ) +
+  scale_x_continuous(breaks = seq(107.5, 108.3, by = 0.4)) +
+  facet_wrap(~trait) +
+  theme_jp() +
+  theme(axis.text = element_text(size = 14))
+
+ggsave(
+  polyfun_priors_plot_path,
+  plot = ukbb_polyfun_weights_plot,
+  width = 14,
+  height = 8
+)

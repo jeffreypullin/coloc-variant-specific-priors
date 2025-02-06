@@ -56,6 +56,21 @@ compute_polyfun_prior_weights <- function(pos, chrom, data, build = "hg38") {
   weights
 }
 
+compute_polyfun_trait_specific_prior_weights <- function(pos, chrom, data) {
+
+  min_snpvar <- min(data$SNPVAR)
+  weights <- tibble(chrom, pos) |>
+    left_join(
+      data |>
+        select(CHR, BP, SNPVAR),
+      join_by(chrom == CHR, pos == BP)
+    ) |>
+    mutate(SNPVAR = if_else(is.na(SNPVAR), min_snpvar, SNPVAR)) |>
+    pull(SNPVAR)
+
+  weights / sum(weights)
+}
+
 compute_abc_prior_weights <- function(pos, chrom, gene_name, abc_data, build = "hg38") {
 
   # FIXME: Could just save the abc_data with hg38 coordinates.

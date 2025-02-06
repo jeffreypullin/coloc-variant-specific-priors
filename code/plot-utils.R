@@ -81,3 +81,18 @@ gwas_id_lookup <- c(
   "RX_STATIN" = "Statin treatment",
   "C3_BREAST_EXALLC" = "Breast cancer"
 )
+
+ukbb_lookup <- c(
+  "244" = "Hypothyroidism",
+  "250.2" = "Type 2 diabetes",
+  "401" = "Hypertension"
+)
+
+ukbb_prior_lookup <- c(
+  "eqtlgen" = "eQTLGen",
+  "polyfun_trait_specific" = "PolyFun\ntrait-specific",
+  "polyfun_precomputed" = "PolyFun\nprecomputed",
+  "polyfun_precomputed_eqtlgen" = "PolyFun (PC) + eQTLGen",
+  "polyfun_trait_specific_eqtlgen" = "PolyFun (TS) + eQTLGen",
+  "unif" = "Uniform"
+)

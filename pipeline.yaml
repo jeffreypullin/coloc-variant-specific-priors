@@ -18,5 +18,6 @@ dependencies:
   - pandas-plink
   - pip
   - packaging
+  - ucsc-liftover
   - pip:
     - bgen==1.2.10

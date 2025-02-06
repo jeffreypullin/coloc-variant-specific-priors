@@ -116,7 +116,6 @@ pqtl_eqtl_coloc_dataset_ids:
  - QTD000116 # GTEx adipose (subcutaneous)
  - QTD000021 # BLUEPRINT Monocyte
  - QTD000539 # TwinsUK LCL
- - QTD000266 # GTEx liver
 finngen_gwas_ids:
  - AUTOIMMUNE
  - I9_HYPTENS
@@ -132,6 +131,22 @@ ukbb_saige_icd_codes:
  - "250.2" # Type 2 diabetes
  - "401" # Hypertension
  - "244" # Hypothyroidism
+ukbb_gwas_eqtl_coloc_ids:
+ - "244-QTD000373" # Lepik blood
+ - "244-QTD000341" # GTEx thyroid
+ - "244-QTD000095" # GENCORD LCL
+ - "244-QTD000021" # BlUEPRINT monocytes
+ - "244-QTD000031" # BLUEPRINT T cells
+ - "250.2-QTD000373" # Lepik blood
+ - "250.2-QTD000090" # FUSION adipose
+ - "250.2-QTD000266" # GTEx liver
+ - "250.2-QTD000321" # GTEx small intestine
+ - "250.2-QTD000296" # GTEx pancreas
+ - "401-QTD000373" # Lepik blood
+ - "401-QTD000549" # TwinsUK blood
+ - "401-QTD000256" # GTEx left heart ventricle
+ - "401-QTD000136" # GTEx artery coronary
+ - "401-QTD000261" # GTEx kidney
 gwas_eqtl_coloc_ids:
  - "AUTOIMMUNE-QTD000373" # Lepik blood
  - "AUTOIMMUNE-QTD000341" # GTEx thyroid
@@ -167,7 +182,7 @@ gwas_eqtl_coloc_ids:
  - "HEIGHT_IRN-QTD000549" # TwinsUK blood
  - "HEIGHT_IRN-QTD000271" # GTEx lung
  - "HEIGHT_IRN-QTD000301" # GTEx pituitary
- - "HEIGHT_IRN-QTD000549" # TwinsUK blood
+ - "HEIGHT_IRN-QTD000331" # GTEx stomach
  - "WEIGHT_IRN-QTD000373" # Lepik blood
  - "WEIGHT_IRN-QTD000090" # FUSION adipose
  - "WEIGHT_IRN-QTD000296" # GTEx pancreas

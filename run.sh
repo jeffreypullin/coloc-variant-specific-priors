@@ -26,7 +26,7 @@ if [[ "$local_flag" = "true" ]]
 then
   snakemake -s Snakefile --profile none --workflow-profile none --cores 1 --rerun-incomplete
 else
-  snakemake -s Snakefile --profile none
+  snakemake -s Snakefile --profile none --resources load=10000
 fi
 
 

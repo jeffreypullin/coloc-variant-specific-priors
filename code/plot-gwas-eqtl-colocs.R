@@ -74,8 +74,8 @@ abf_change_coloc_data <- gwas_eqtl_coloc_abf_data |>
   filter(prior %in% c("onek1k_r1", "eqtlgen")) |>
   mutate(prior = prior_method_lookup[prior]) |>
   mutate(type = case_when(
-    pp_h4_unif > 0.8 & pp_h4 > 0.8 ~ "Unchanged",
-    pp_h4_unif < 0.8 & pp_h4 < 0.8 ~ "Unchanged",
+    pp_h4_unif > 0.8 & pp_h4 > 0.8 ~ "Unchanged significant",
+    pp_h4_unif < 0.8 & pp_h4 < 0.8 ~ "Unchanged not significant",
     pp_h4_unif < 0.8 & pp_h4 > 0.8 ~ "Newly signifcant",
     pp_h4_unif > 0.8 & pp_h4 < 0.8 ~ "Newly non-significant",
   )) |>
@@ -94,8 +94,8 @@ susie_change_coloc_data <- gwas_eqtl_coloc_susie_data |>
   filter(prior %in% c("onek1k_r1", "eqtlgen")) |>
   mutate(prior = prior_method_lookup[prior]) |>
   mutate(type = case_when(
-    pp_h4_unif > 0.8 & pp_h4 > 0.8 ~ "Unchanged",
-    pp_h4_unif < 0.8 & pp_h4 < 0.8 ~ "Unchanged",
+    pp_h4_unif > 0.8 & pp_h4 > 0.8 ~ "Unchanged significant",
+    pp_h4_unif < 0.8 & pp_h4 < 0.8 ~ "Unchanged not significant",
     pp_h4_unif < 0.8 & pp_h4 > 0.8 ~ "Newly signifcant",
     pp_h4_unif > 0.8 & pp_h4 < 0.8 ~ "Newly non-significant",
   )) |>
@@ -109,11 +109,13 @@ n_colocs_plot <- bind_rows(
     count(prior, gwas_id, type) |>
     mutate(method = "coloc-susie")
 ) |>
+  mutate(prop = n / sum(n), .by = c(prior, gwas_id, method)) |>
   mutate(gwas_id = gwas_id_lookup[gwas_id]) |>
   mutate(gwas_id = fct_reorder(gwas_id, n, .fun = sum)) |>
-  ggplot(aes(x = gwas_id, y = n, fill = type)) +
+  ggplot(aes(x = gwas_id, y = prop, fill = type)) +
   geom_col() +
-  scale_fill_manual(values = c("#CC3311", "#009988", "grey")) +
+  scale_fill_manual(values = c("#CC3311", "#009988", "grey", "grey35")) +
+  scale_y_continuous(labels = scales::percent) +
   facet_grid(
     vars(prior),
     vars(method),
@@ -122,7 +124,7 @@ n_colocs_plot <- bind_rows(
   coord_flip() +
   labs(
     x = "Trait",
-    y = "Number of loci",
+    y = "Percentage of loci",
     fill = "Effect"
   ) +
   theme_jp_vgrid() +
@@ -228,4 +230,6 @@ bind_rows(
   mutate(unchanged = if_else(substr(type, 1, 9) == "Unchanged", "unchanged", "changed")) |>
   summarise(n = sum(n), .by = c(gwas_id, prior, unchanged, method)) |>
   mutate(prop = 100 * n / sum(n), .by = c(gwas_id, prior, method)) |>
+  filter(unchanged == "changed") |>
+  arrange(desc(prop)) |>
   write_csv("output/tables/gwas-eqtl-overall-results.csv")

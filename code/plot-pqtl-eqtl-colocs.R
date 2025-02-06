@@ -34,12 +34,12 @@ config <- read_yaml("config.yaml")
 coloc_abf_paths <- glue(
   "data/output/pqtl-eqtl-coloc-abf-{eqtl_id}-{chr}.rds",
   eqtl_id = rep(config$pqtl_eqtl_coloc_dataset_ids, 22),
-  chr = rep(1:22, each = 6)
+  chr = rep(1:22, each = 5)
 )
 coloc_susie_paths <- glue(
   "data/output/pqtl-eqtl-coloc-susie-{eqtl_id}-{chr}.rds",
   eqtl_id = rep(config$pqtl_eqtl_coloc_dataset_ids, 22),
-  chr = rep(1:22, each = 6)
+  chr = rep(1:22, each = 5)
 )
 protein_metadata <- read_tsv(
   "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz",
@@ -50,8 +50,7 @@ coloc_abf_paths <- snakemake@input[["coloc_abf_paths"]]
 coloc_susie_paths <- snakemake@input[["coloc_susie_paths"]]
 protein_metadata_path <- snakemake@input[["protein_metadata_path"]]
 
-pqtl_eqtl_abf_perf_both_plot_path <- snakemake@output[["pqtl_eqtl_abf_perf_both_plot_path"]]
-pqtl_eqtl_susie_perf_both_plot_path <- snakemake@output[["pqtl_eqtl_susie_perf_both_plot_path"]]
+pqtl_eqtl_perf_both_plot_path <- snakemake@output[["pqtl_eqtl_perf_both_plot_path"]]
 prior_effect_plot_path <- snakemake@output[["prior_effect_plot_path"]]
 
 pqtl_eqtl_coloc_abf_data <- tibble(path = coloc_abf_paths) |>
@@ -231,17 +230,8 @@ abf_perf_max_curve_plot <- abf_perf_max_curve_data |>
     legend.position = "right"
   )
 
-pqtl_eqtl_perf_plot <- abf_perf_max_plot + abf_perf_max_curve_plot +
-  plot_layout(guides = "collect") +
-  plot_annotation(tag_levels = "a") &
-  theme(plot.tag = element_text(size = 18))
-
-ggsave(
-  pqtl_eqtl_abf_perf_both_plot_path,
-  plot = pqtl_eqtl_perf_plot,
-  width = 14,
-  height = 8
-)
+abf_perf_both_plot <- (abf_perf_max_plot + ggtitle("coloc-single")) / abf_perf_max_curve_plot + 
+  plot_layout(guides = "collect")
 
 # coloc.susie()
 
@@ -377,7 +367,7 @@ susie_perf_max_curve_plot <- susie_perf_max_curve_data  |>
   ) |>
   ggplot(aes(fpr, tpr, color = method, shape = dataset)) +
   geom_point(size = 2) +
-  geom_line() + 
+  geom_line() +
   scale_colour_manual(values = prior_cols) +
   labs(
     x = "False positive rate",
@@ -391,14 +381,17 @@ susie_perf_max_curve_plot <- susie_perf_max_curve_data  |>
     legend.position = "right"
   )
 
-susie_perf_both_plot <- susie_perf_max_plot + susie_perf_max_curve_plot +
+a <- ((abf_perf_max_plot + ggtitle("coloc-single")) / abf_perf_max_curve_plot)
+b <- ((susie_perf_max_plot + ggtitle("coloc-susie")) / susie_perf_max_curve_plot)
+
+pqtl_eqtl_perf_plot <- (a | b) +
   plot_layout(guides = "collect") +
   plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(size = 18))
 
 ggsave(
-  pqtl_eqtl_susie_perf_both_plot_path,
-  plot = susie_perf_both_plot,
+  pqtl_eqtl_perf_both_plot_path,
+  plot = pqtl_eqtl_perf_plot,
   width = 14,
   height = 8
 )

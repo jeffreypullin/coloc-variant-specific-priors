@@ -7,19 +7,19 @@ rule all:
     # Main text figures.
     "output/figures/prior-plot.pdf",
     "output/figures/simulation-plot.pdf",
-    "output/figures/pqtl-eqtl-coloc-abf-perf-both-plot.pdf",
     "output/figures/gwas-eqtl-overall-impact-plot.pdf",
     "output/figures/nek6-psmb7-example-plot.pdf",
+    "output/figures/pqtl-eqtl-perf-both-plot.pdf",
+    "output/figures/ukbb-gwas-eqtl-plot.pdf",
     # Supplementary figures.
     "output/figures/eqtl-dist-plot.pdf",
     "output/figures/onek1k-plot.pdf",
     "output/figures/otg-probs-plot.pdf",
-    "output/figures/pqtl-eqtl-coloc-susie-perf-both-plot.pdf",
     "output/figures/pqtl-eqtl-prior-effect-plot.pdf",
+    "output/figures/benchmark-plot.pdf",
     # Supplementary spreadsheet.
     "output/tables/gwas-eqtl-results.xlsx",
-    #expand("data/ukbb-saige/munged-phenocode-{icd_code}.parquet", icd_code = config["ukbb_saige_icd_codes"]),
-    "data/polyfun-precomputed-annotations.tar.gz"
+    expand("data/output/ukbb-gwas-eqtl-coloc-abf-{icd_code_eqtl_id}-{chr}.rds", icd_code_eqtl_id = config["ukbb_gwas_eqtl_coloc_ids"], chr = chrs) 
 
 # Download metadata.
 
@@ -115,6 +115,17 @@ rule process_onek1k_data:
   output: processed_data_path = "data/processed-data/onek1k.rds"
   script: "code/process-data/process-onek1k-data.R"
 
+# Run PolyFun
+
+rule download_annotation_data:
+    output: "data/polyfun-precomputed-annotations.tar.gz"
+    shell:
+      """
+      wget -O {output} "https://broad-alkesgroup-ukbb-ld.s3.amazonaws.com/UKBB_LD/baselineLF_v2.2.UKB.polyfun.tar.gz"
+      gunzip polyfun-precomputed-annotations.tar.gz
+      tar tvf polyfun-precomputed-annotations.tar.gz 
+      """
+
 rule download_ukbb_saige_data:
     output: "data/ukbb-saige/phenocode-{icd_code}.tsv.gz"
     shell: 
@@ -122,27 +133,197 @@ rule download_ukbb_saige_data:
       wget -O {output} "https://pheweb.org/UKB-SAIGE/download/{wildcards.icd_code}"
       """
 
-rule download_annotation_data:
-    output: "data/polyfun-precomputed-annotations.tar.gz"
+rule download_liftover_file:
+    output: "data/liftover/hg19ToHg38.over.chain.gz"
+    shell:
+       """
+       wget -O {output} https://hgdownload.soe.ucsc.edu/goldenpath/hg19/liftOver/hg19ToHg38.over.chain.gz
+       """
+
+rule liftover_hg19tohg38_ukbb_saige_data:
+    input: 
+        summary_stats = "data/ukbb-saige/phenocode-{icd_code}.tsv.gz",  
+        chain_file = "data/liftover/hg19ToHg38.over.chain.gz"
+    output: "data/ukbb-saige/hg38-phenocode-{icd_code}.tsv.gz"
+    # We download the file to avoid accidentally changing the SAIGE
+    # UKBB summary statistics files, which causes PolyFun to be re-run.
+    shell:
+      """ 
+      wget -O data/ukbb-saige/tmp-{wildcards.icd_code}.tsv.gz https://pheweb.org/UKB-SAIGE/download/{wildcards.icd_code}
+
+      gzip -df data/ukbb-saige/tmp-{wildcards.icd_code}.tsv.gz
+
+      awk 'BEGIN {{OFS="\t"}} NR>1 {{print "chr"$1, $2-1, $2, $0}}' data/ukbb-saige/tmp-{wildcards.icd_code}.tsv > \
+       data/ukbb-saige/tmp-{wildcards.icd_code}.bed
+
+      liftOver -bedPlus=3 -tab data/ukbb-saige/tmp-{wildcards.icd_code}.bed \
+        {input.chain_file} \
+        data/ukbb-saige/hg38-tmp-{wildcards.icd_code}.tsv \
+        data/ukbb-saige/unmapped-{wildcards.icd_code}.bed
+
+      awk 'BEGIN {{OFS="\t"}} {{print $4, $3, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16 }}' \
+        data/ukbb-saige/hg38-tmp-{wildcards.icd_code}.tsv > \
+        data/ukbb-saige/hg38-tmp-unnamed-{wildcards.icd_code}.tsv   
+     
+      sed "1s/.*/chrom\tpos\tref\talt\trsids\tnearest_genes\tconsequence\tpval\tbeta\tsebeta\taf\tac\ttstat/" \
+        data/ukbb-saige/hg38-tmp-unnamed-{wildcards.icd_code}.tsv > \
+        data/ukbb-saige/hg38-phenocode-{wildcards.icd_code}.tsv  
+
+      rm data/ukbb-saige/hg38-tmp-{wildcards.icd_code}.tsv
+      rm data/ukbb-saige/hg38-tmp-unnamed-{wildcards.icd_code}.tsv
+      rm data/ukbb-saige/tmp-{wildcards.icd_code}.tsv
+      rm data/ukbb-saige/tmp-{wildcards.icd_code}.bed
+
+      gzip -f data/ukbb-saige/hg38-phenocode-{wildcards.icd_code}.tsv
+      """
+
+rule tabix_hg38_ukbb_data:
+    input:  "data/ukbb-saige/hg38-phenocode-{icd_code}.tsv.gz"
+    output: "data/ukbb-saige/hg38-phenocode-{icd_code}.tsv.gz.tbi"
     shell:
       """
-      wget -O {output} "https://broad-alkesgroup-ukbb-ld.s3.amazonaws.com/UKBB_LD/baselineLF_v2.2.UKB.polyfun.tar.gz"
+      cp {input} data/ukbb-saige/tmp-tabix-{wildcards.icd_code}.tsv.gz
+      zcat data/ukbb-saige/tmp-tabix-{wildcards.icd_code}.tsv.gz | \
+        sort -k1,1n -k2,2n | \
+        bgzip > data/ukbb-saige/tmp-tabix-{wildcards.icd_code}-sorted.tsv.gz
+      tabix -S 1 -s 1 -b 2 -e 2 data/ukbb-saige/tmp-tabix-{wildcards.icd_code}-sorted.tsv.gz
+      rm data/ukbb-saige/tmp-tabix-{wildcards.icd_code}.tsv.gz
+      mv data/ukbb-saige/tmp-tabix-{wildcards.icd_code}-sorted.tsv.gz {input}
+      mv data/ukbb-saige/tmp-tabix-{wildcards.icd_code}-sorted.tsv.gz.tbi {output}
+      """
+
+rule rename_ukbb_saige_data:
+    input: "data/ukbb-saige/phenocode-{icd_code}.tsv.gz"
+    output: "data/ukbb-saige/renamed-phenocode-{icd_code}.tsv.gz"
+    shell:
+      """
+        gzip -cd "data/ukbb-saige/phenocode-{wildcards.icd_code}.tsv.gz" | \
+            sed "1s/.*/CHROM\tPOS\tA1\tA0\tRSID\tnearest_genes\tconsequence\tP\tBETA\tSE\tMAF\tac\ttstat/" | \
+            gzip > "data/ukbb-saige/renamed-phenocode-{wildcards.icd_code}.tsv.gz"
       """
 
 rule munge_ukbb_saige_sumstats: 
-    input:  "data/ukbb-saige/phenocode-{icd_code}.tsv.gz"
+    input:  "data/ukbb-saige/renamed-phenocode-{icd_code}.tsv.gz"
     output: "data/ukbb-saige/munged-phenocode-{icd_code}.parquet"
     params:
-      # FIXME: Better calculation of Neff needed.
       n = lambda wildcards: {"250.2": 18945, "401": 77977, "244": 14871}[wildcards.icd_code]
+    resources:
+      mem_mb = 20000,
+      time_min = 60
     shell: 
       """
       python3 polyfun/munge_polyfun_sumstats.py \
-         --sumstats data/ukbb-saige/phenocode-{wildcards.icd_code}.tsv.gz \
+         --sumstats data/ukbb-saige/renamed-phenocode-{wildcards.icd_code}.tsv.gz \
          --n {params.n} \
          --out "data/ukbb-saige/munged-phenocode-{wildcards.icd_code}.parquet" \
-         --min-info 0.6 \
-         --min-maf 0.001
+         --min-info 0 \
+         --min-maf 0.01
+      """
+
+rule run_polyfun_l2_reg_s_ldsc:
+    input: "data/ukbb-saige/munged-phenocode-{icd_code}.parquet"
+    output: "data/polyfun-output/step-2-{icd_code}.txt"
+    resources:
+        mem_mb = 120000,
+        time_min = 240
+    shell:
+      """
+      source ~/.bashrc
+      micromamba activate polyfun
+      mkdir -p data/polyfun-output/{wildcards.icd_code}
+      python polyfun/polyfun.py \
+        --compute-h2-L2 \
+        --allow-missing \
+        --output-prefix data/polyfun-output/{wildcards.icd_code}/polyfun-out  \
+        --sumstats "data/ukbb-saige/munged-phenocode-{wildcards.icd_code}.parquet" \
+        --ref-ld-chr data/baselineLF2.2.UKB/baselineLF2.2.UKB. \
+        --w-ld-chr data/baselineLF2.2.UKB/weights.UKB.
+      micromamba deactivate
+      touch data/polyfun-output/step-2-{wildcards.icd_code}.txt
+      """
+
+rule run_polyfun_ld_scores_snp_bin:
+    input: "data/polyfun-output/step-2-{icd_code}.txt"
+    output: "data/polyfun-output/step-3-{icd_code}-{chr}.txt"
+    resources:
+        mem_mb = 30000,
+        time_min = 240,
+        tmpdir = "/home/jp2045/coloc-variant-specific-priors/data",
+        # This limits the number of jobs submitted to 10 when 
+        # snakemake is called with --resources load=10000
+        # load is set to a high value so as not to affect 
+        # other rules. Limiting the number of jobs is necessary 
+        # to prevent running out of disk space.
+        load = 1000
+    shell:
+      """
+      mkdir -p data/polyfun-output
+      source ~/.bashrc
+      micromamba activate polyfun
+      python polyfun/polyfun.py \
+        --compute-ldscores \
+        --output-prefix data/polyfun-output/{wildcards.icd_code}/polyfun-out \
+        --ld-ukb \
+        --chr {wildcards.chr}
+      micromamba deactivate
+      touch "data/polyfun-output/step-3-{wildcards.icd_code}-{wildcards.chr}.txt"
+      """
+
+rule reestimate_per_snp_heritabilities:
+   input: expand("data/polyfun-output/step-3-{icd_code}-{chr}.txt", icd_code = config["ukbb_saige_icd_codes"], chr = chrs)
+   output: "data/polyfun-output/step-4-{icd_code}.txt"
+   resources:
+     mem_mb = 30000,
+     time_min = 240
+   shell:
+      """
+      source ~/.bashrc
+      micromamba activate polyfun
+      python polyfun/polyfun.py \
+        --compute-h2-bins \
+        --allow-missing \
+        --output-prefix data/polyfun-output/{wildcards.icd_code}/polyfun-out \
+        --sumstats "data/ukbb-saige/munged-phenocode-{wildcards.icd_code}.parquet" \
+        --w-ld-chr data/baselineLF2.2.UKB/weights.UKB.
+      micromamba deactivate
+      touch "data/polyfun-output/step-4-{wildcards.icd_code}.txt"
+      """
+
+rule liftover_hg19tohg38_polyfun_output:
+    input: 
+        summary_stats = "data/polyfun-output/{icd_code}/polyfun-out.{chr}.snpvar_constrained.gz",
+        chain_file = "data/liftover/hg19ToHg38.over.chain.gz"
+    output: "data/polyfun-output/{icd_code}/hg38-polyfun-out.{chr}.snpvar_constrained.gz"
+    # TODO Move to external file.
+    shell:
+      """
+      cp {input.summary_stats} data/polyfun-output/cp-{wildcards.icd_code}-{wildcards.chr}.gz
+
+      gzip -df data/polyfun-output/cp-{wildcards.icd_code}-{wildcards.chr}.gz
+
+      awk 'BEGIN {{OFS="\t"}} NR>1 {{print "chr"$1, $3-1, $3, $0}}' \
+       data/polyfun-output/cp-{wildcards.icd_code}-{wildcards.chr} > \
+       data/polyfun-output/tmp-{wildcards.icd_code}-{wildcards.chr}.bed
+
+      liftOver -bedPlus=3 -tab data/polyfun-output/tmp-{wildcards.icd_code}-{wildcards.chr}.bed \
+        {input.chain_file} \
+        data/polyfun-output/tmp-hg38-raw-{wildcards.icd_code}-{wildcards.chr}.tsv \
+        data/polyfun-output/unmapped-{wildcards.icd_code}-{wildcards.chr}.bed
+
+      awk 'BEGIN {{OFS="\t"}} {{print $4, $5, $3, $7, $8, $9, $10, $11, $12 }}' \
+        data/polyfun-output/tmp-hg38-raw-{wildcards.icd_code}-{wildcards.chr}.tsv > \
+        data/polyfun-output/tmp-hg38-unnamed-{wildcards.icd_code}-{wildcards.chr}.tsv   
+     
+      sed "1s/.*/CHR\tSNP\tBP\tA1\tA2\tSNPVAR\tMAF\tN\tZ/" \
+        data/polyfun-output/tmp-hg38-unnamed-{wildcards.icd_code}-{wildcards.chr}.tsv > \
+        data/polyfun-output/{wildcards.icd_code}/hg38-polyfun-out.{wildcards.chr}.snpvar_constrained
+
+      rm data/polyfun-output/cp-{wildcards.icd_code}-{wildcards.chr}
+      rm data/polyfun-output/tmp-{wildcards.icd_code}-{wildcards.chr}.bed
+      rm data/polyfun-output/tmp-hg38-raw-{wildcards.icd_code}-{wildcards.chr}.tsv
+      rm data/polyfun-output/tmp-hg38-unnamed-{wildcards.icd_code}-{wildcards.chr}.tsv   
+
+      gzip -f data/polyfun-output/{wildcards.icd_code}/hg38-polyfun-out.{wildcards.chr}.snpvar_constrained  
       """
 
 # Download and create prior probabilities data.
@@ -339,6 +520,30 @@ rule run_gwas_eqtl_coloc_susie_colocalisation:
     time_min = lambda wildcards, attempt: 20 * attempt ** 3
   script: "code/run-gwas-eqtl-coloc-susie.R"
 
+rule run_ukbb_gwas_eqtl_coloc_abf_colocalisation:
+  input: 
+    # Input files.
+    eqtl_data_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.cc.tsv.gz",
+    permutation_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.permuted.tsv.gz",
+    eqtl_index_file = "data/eqtl-catalogue/sumstats/{eqtl_id}.cc.tsv.gz.tbi",
+    gwas_data_file = "data/ukbb-saige/hg38-phenocode-{icd_code}.tsv.gz",
+     gwas_index_file = "data/ukbb-saige/hg38-phenocode-{icd_code}.tsv.gz.tbi",
+    eqtl_metadata_file = "data/metadata/gene_counts_Ensembl_105_phenotype_metadata.tsv.gz",
+    # Prior data.
+    polyfun_data_1_7_path = "data/snpvar_meta.chr1_7.parquet",
+    polyfun_data_8_22_path = "data/snpvar_meta.chr8_22.parquet",
+    polyfun_trait_specific_data_path = "data/polyfun-output/{icd_code}/hg38-polyfun-out.{chr}.snpvar_constrained.gz",
+    eqtlgen_density_path = "output/densities/eqtlgen.rds",
+    onek1k_r1_density_path = "output/densities/onek1k_round_1.rds",
+  output: 
+    coloc_results_file = "data/output/ukbb-gwas-eqtl-coloc-abf-{icd_code}-{eqtl_id}-{chr}.rds",
+    finemapping_results_file = "data/output/ukbb-gwas-eqtl-finemapping-{icd_code}-{eqtl_id}-{chr}.rds"
+  retries: 1
+  resources: 
+    mem_mb = lambda wildcards, attempt: 7000 * attempt,
+    time_min = lambda wildcards, attempt: 20 * attempt ** 3
+  script: "code/run-ukbb-gwas-eqtl-coloc-abf.R"
+
 # Run simulations.
 
 rule make_ref_block:
@@ -381,7 +586,9 @@ rule plot_priors:
     density_data_r2_path = "output/densities/onek1k_round_2.rds",
     eqtlgen_density_data_path = "output/densities/eqtlgen.rds",
     snp_var_data_1_7_path = "data/snpvar_meta.chr1_7.parquet"
-  output: "output/figures/prior-plot.pdf"
+  output: 
+    all_priors_plot_path = "output/figures/prior-plot.pdf",
+    polyfun_priors_plot_path = "output/figures/ukbb-polyfun-prior-plot.pdf"
   localrule: True
   script: "code/plot-priors.R"
 
@@ -405,8 +612,7 @@ rule plot_pqtl_eqtl_colocalisatons:
     ), 
     protein_metadata_path = "data/metadata/SomaLogic_Ensembl_96_phenotype_metadata.tsv.gz"
   output: 
-    pqtl_eqtl_abf_perf_both_plot_path = "output/figures/pqtl-eqtl-coloc-abf-perf-both-plot.pdf",
-    pqtl_eqtl_susie_perf_both_plot_path = "output/figures/pqtl-eqtl-coloc-susie-perf-both-plot.pdf",
+    pqtl_eqtl_perf_both_plot_path = "output/figures/pqtl-eqtl-perf-both-plot.pdf",
     prior_effect_plot_path = "output/figures/pqtl-eqtl-prior-effect-plot.pdf"
   localrule: True
   script: "code/plot-pqtl-eqtl-colocs.R"
@@ -443,4 +649,24 @@ rule plot_locus_example:
   localrule: True
   script: "code/plot-locus.R"
 
+rule plot_ukbb_gwas_eqtl_colocalisations:
+  input: 
+    coloc_paths = expand(
+      "data/output/ukbb-gwas-eqtl-coloc-abf-{gwas_id_eqtl_id}-{chr}.rds", 
+      gwas_id_eqtl_id = config["ukbb_gwas_eqtl_coloc_ids"],
+      chr = chrs 
+    ),
+    fm_paths = expand(
+      "data/output/ukbb-gwas-eqtl-finemapping-{gwas_id_eqtl_id}-{chr}.rds",
+      gwas_id_eqtl_id = config["ukbb_gwas_eqtl_coloc_ids"],
+      chr = chrs 
+    )
+  output: ukbb_gwas_eqtl_plot_path = "output/figures/ukbb-gwas-eqtl-plot.pdf"
+  localrule: True 
+  script: "code/plot-ukbb-gwas-eqtl-colocs.R"
+
+rule plot_benchmark: 
+  output: benchmark_plot_path = "output/figures/benchmark-plot.pdf",
+  localrule: True 
+  script: "code/plot-coloc-benchmark.R"
 
