@@ -1,9 +1,11 @@
-# Code accompanying "Variant-specific priors in colocalisation analysis"
+# Code accompanying the paper "Variant-specific priors clarify colocalisation analysis
 
 This repository contains code accompanying the paper:
 
-> Variant-specific priors in colocalisation analysis  
-> Jeffrey M Pullin, Chris Wallace  
-> bioRxiv 2024.08.21.608957; doi: https://doi.org/10.1101/2024.08.21.608957
+> Pullin, J. M. & Wallace, C. 
+> Variant-specific priors clarify colocalisation analysis. 
+> PLOS Genetics 21, e1011697 (2025).
+> doi: https://doi.org/10.1371/journal.pgen.1011697
 
 For a high level overview of the computational workflow see the `Snakefile`. 
+
