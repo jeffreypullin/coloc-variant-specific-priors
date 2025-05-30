@@ -1,4 +1,4 @@
-# Code accompanying the paper "Variant-specific priors clarify colocalisation analysis
+# Code accompanying the paper "Variant-specific priors clarify colocalisation analysis"
 
 This repository contains code accompanying the paper:
 
